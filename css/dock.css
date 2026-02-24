@@ -1,0 +1,126 @@
+/* macOS Dock */
+.dock-container {
+    position: fixed;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9998;
+    padding: 0 0 0 0;
+}
+
+.dock {
+    display: flex;
+    align-items: flex-end;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-radius: 18px;
+    border: 0.5px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 0 0.5px rgba(0,0,0,0.12), 0 8px 40px rgba(0,0,0,0.2);
+    gap: 2px;
+}
+
+.dock-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2px;
+    cursor: default;
+    position: relative;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: bottom center;
+}
+
+.dock-item:hover {
+    transform: scale(1.35) translateY(-8px);
+}
+
+.dock-item:hover::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(20px);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    border: 0.5px solid rgba(255,255,255,0.15);
+    z-index: 100;
+}
+
+.dock-item:active {
+    transform: scale(1.2) translateY(-4px);
+}
+
+.dock-item svg {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    border-radius: 12px;
+}
+
+.dock-indicator {
+    width: 4px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 50%;
+    margin-top: 2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.dock-indicator.active {
+    opacity: 1;
+}
+
+.dock-separator {
+    width: 1px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.3);
+    margin: 0 6px;
+    align-self: center;
+}
+
+/* Dock magnification effect - neighbors */
+.dock-item.neighbor-1 {
+    transform: scale(1.2) translateY(-4px);
+}
+
+.dock-item.neighbor-2 {
+    transform: scale(1.1) translateY(-2px);
+}
+
+/* Dock bounce animation for opening apps */
+@keyframes dockBounce {
+    0%, 100% { transform: translateY(0); }
+    25% { transform: translateY(-20px); }
+    50% { transform: translateY(-5px); }
+    75% { transform: translateY(-12px); }
+}
+
+.dock-item.bouncing svg {
+    animation: dockBounce 0.8s ease-in-out;
+}
+
+/* Minimized windows in dock */
+.dock-minimized {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    margin-left: 2px;
+}
+
+.dock-minimized-item {
+    width: 54px;
+    height: 40px;
+    background: rgba(200, 200, 200, 0.3);
+    border-radius: 6px;
+    cursor: default;
+    border: 0.5px solid rgba(255,255,255,0.2);
+    overflow: hidden;
+    position: relative;
+}

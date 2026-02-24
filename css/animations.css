@@ -1,0 +1,134 @@
+/* macOS Animations & Transitions */
+
+/* General transitions */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth window transitions */
+.macos-window {
+    transition: border-radius 0.3s ease;
+}
+
+/* Focus ring animation */
+@keyframes focusRing {
+    0% { box-shadow: 0 0 0 0 rgba(0, 122, 255, 0.4); }
+    100% { box-shadow: 0 0 0 4px rgba(0, 122, 255, 0); }
+}
+
+/* Pulse animation for indicators */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Subtle hover animations */
+.settings-nav-item,
+.finder-sidebar-item,
+.notes-list-item,
+.mail-folder,
+.photos-nav-item {
+    transition: background 0.15s ease;
+}
+
+/* Toggle switch animation */
+.settings-toggle {
+    transition: background 0.25s ease;
+}
+
+.settings-toggle::after {
+    transition: left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Dock tooltip animation */
+.dock-item::before {
+    animation: tooltipFadeIn 0.15s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(4px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* Loading spinner */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(0,0,0,0.1);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Genie effect placeholder */
+@keyframes genieMinimize {
+    0% {
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+        opacity: 1;
+    }
+    100% {
+        clip-path: polygon(45% 100%, 55% 100%, 55% 100%, 45% 100%);
+        opacity: 0;
+    }
+}
+
+/* Desktop fade in */
+@keyframes desktopFadeIn {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.desktop.showing {
+    animation: desktopFadeIn 0.5s ease-out;
+}
+
+/* Keyboard bounce effect */
+@keyframes keyPress {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+}
+
+/* Button press effect */
+.calc-btn:active {
+    animation: keyPress 0.1s ease;
+}
+
+/* Subtle shadow animation for focused windows */
+.macos-window.focused {
+    transition: box-shadow 0.2s ease;
+}
+
+/* Selection animation */
+::selection {
+    background: rgba(0, 122, 255, 0.3);
+}
+
+/* Wallpaper crossfade for dark mode */
+.wallpaper {
+    transition: filter 0.5s ease;
+}
+
+.wallpaper.dark-mode {
+    filter: brightness(0.6);
+}
+
+/* Notification badge bounce */
+@keyframes badgeBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}

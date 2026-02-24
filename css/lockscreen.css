@@ -1,0 +1,124 @@
+/* Lock Screen */
+.lock-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+}
+
+.lock-screen-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg,
+        #1a1a2e 0%,
+        #16213e 15%,
+        #0f3460 30%,
+        #533483 45%,
+        #e94560 60%,
+        #f38181 70%,
+        #fce38a 80%,
+        #eaffd0 90%,
+        #95e1d3 100%
+    );
+    background-size: 400% 400%;
+    animation: wallpaperShift 120s ease infinite;
+    filter: blur(0px) brightness(0.7);
+}
+
+.lock-screen-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    color: white;
+}
+
+.lock-time {
+    font-size: 82px;
+    font-weight: 700;
+    letter-spacing: -2px;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.lock-date {
+    font-size: 22px;
+    font-weight: 500;
+    opacity: 0.9;
+    text-shadow: 0 1px 10px rgba(0,0,0,0.3);
+    margin-bottom: 60px;
+}
+
+.lock-user-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.lock-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    background: #555;
+}
+
+.lock-username {
+    font-size: 17px;
+    font-weight: 600;
+}
+
+.lock-password-container {
+    position: relative;
+}
+
+.lock-password-input {
+    width: 200px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(20px);
+    color: white;
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+    font-family: var(--system-font);
+}
+
+.lock-password-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.lock-hint {
+    font-size: 12px;
+    opacity: 0.5;
+    margin-top: 4px;
+}
+
+/* Lock screen animation */
+.lock-screen.unlocking {
+    animation: lockScreenUnlock 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes lockScreenUnlock {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.1);
+    }
+}

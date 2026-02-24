@@ -1,0 +1,140 @@
+/* macOS Menu Bar */
+.menu-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--menu-bar-height);
+    background: rgba(30, 30, 30, 0.35);
+    backdrop-filter: blur(var(--blur-amount));
+    -webkit-backdrop-filter: blur(var(--blur-amount));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    z-index: 9999;
+    border-bottom: 0.5px solid rgba(255,255,255,0.1);
+}
+
+.menu-bar-left,
+.menu-bar-right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.menu-item {
+    color: white;
+    font-size: 13px;
+    padding: 0 10px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    cursor: default;
+    position: relative;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+}
+
+.menu-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+.menu-item.apple-menu {
+    padding: 0 12px;
+}
+
+.menu-item.app-name {
+    padding: 0 10px;
+    margin-right: 4px;
+}
+
+.menu-bar-right {
+    gap: 2px;
+}
+
+.menu-bar-icon {
+    color: white;
+    padding: 0 6px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    cursor: default;
+    border-radius: 4px;
+}
+
+.menu-bar-icon:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.menu-bar-clock {
+    font-size: 13px;
+    font-weight: 500;
+    color: white;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+}
+
+/* Dropdown Menus */
+.dropdown-menu {
+    position: fixed;
+    top: var(--menu-bar-height);
+    background: rgba(246, 246, 246, 0.92);
+    backdrop-filter: blur(50px);
+    -webkit-backdrop-filter: blur(50px);
+    border-radius: 0 0 8px 8px;
+    min-width: 240px;
+    padding: 4px 0;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(0,0,0,0.12);
+    z-index: 10001;
+    border: 0.5px solid rgba(0,0,0,0.1);
+}
+
+.dropdown-item {
+    padding: 4px 18px;
+    font-size: 13px;
+    color: #1d1d1f;
+    cursor: default;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 22px;
+    border-radius: 4px;
+    margin: 0 4px;
+}
+
+.dropdown-item:hover {
+    background: var(--accent-color);
+    color: white;
+}
+
+.dropdown-item:hover .shortcut {
+    color: rgba(255,255,255,0.8);
+}
+
+.dropdown-item .shortcut {
+    color: #86868b;
+    font-size: 12px;
+    margin-left: 30px;
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    color: #86868b;
+}
+
+.dropdown-item:hover .dropdown-arrow {
+    color: rgba(255,255,255,0.8);
+}
+
+.dropdown-separator {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+    margin: 4px 12px;
+}
+
+.dropdown-item.disabled {
+    color: #c7c7c7;
+    pointer-events: none;
+}

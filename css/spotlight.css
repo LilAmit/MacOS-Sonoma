@@ -1,0 +1,124 @@
+/* Spotlight Search */
+.spotlight-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 10002;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 160px;
+}
+
+.spotlight-container {
+    width: 680px;
+    background: rgba(246, 246, 246, 0.94);
+    backdrop-filter: blur(60px);
+    -webkit-backdrop-filter: blur(60px);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(0,0,0,0.12);
+    overflow: hidden;
+    animation: spotlightOpen 0.15s ease-out;
+}
+
+@keyframes spotlightOpen {
+    0% {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.spotlight-input-container {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    gap: 10px;
+    border-bottom: 0.5px solid rgba(0,0,0,0.1);
+}
+
+.spotlight-search-icon {
+    flex-shrink: 0;
+}
+
+#spotlight-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    font-weight: 300;
+    outline: none;
+    font-family: var(--system-font);
+    color: var(--text-primary);
+}
+
+#spotlight-input::placeholder {
+    color: #c7c7cc;
+}
+
+.spotlight-results {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.spotlight-result-section {
+    padding: 4px 0;
+}
+
+.spotlight-result-header {
+    font-size: 12px;
+    font-weight: 600;
+    color: #86868b;
+    padding: 6px 20px;
+}
+
+.spotlight-result-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 20px;
+    gap: 10px;
+    cursor: default;
+    border-radius: 6px;
+    margin: 0 8px;
+}
+
+.spotlight-result-item:hover,
+.spotlight-result-item.selected {
+    background: var(--accent-color);
+    color: white;
+}
+
+.spotlight-result-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.spotlight-result-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.spotlight-result-name {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.spotlight-result-detail {
+    font-size: 11px;
+    color: #86868b;
+}
+
+.spotlight-result-item:hover .spotlight-result-detail,
+.spotlight-result-item.selected .spotlight-result-detail {
+    color: rgba(255,255,255,0.75);
+}

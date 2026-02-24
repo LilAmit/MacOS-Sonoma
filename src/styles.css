@@ -1,0 +1,145 @@
+/* macOS Sonoma - Global Styles */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+}
+
+::selection {
+    background: rgba(0, 122, 255, 0.3);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.35);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+/* Sonoma Dynamic Wallpaper */
+.wallpaper-sonoma {
+    background:
+        radial-gradient(ellipse at 20% 80%, #1a0533 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, #0c1445 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, #1a1a3e 0%, transparent 60%),
+        radial-gradient(ellipse at 30% 30%, #2d1b69 0%, transparent 40%),
+        radial-gradient(ellipse at 70% 70%, #0d2137 0%, transparent 40%),
+        linear-gradient(135deg,
+            #0a0a1a 0%,
+            #0f0f2e 10%,
+            #1a1145 20%,
+            #2b1667 30%,
+            #3d1f8a 38%,
+            #6929c4 45%,
+            #8a3ffc 50%,
+            #a56eff 55%,
+            #d4bbff 60%,
+            #e8d4ff 63%,
+            #ffd6e0 66%,
+            #ff9fb2 70%,
+            #ff6b8a 74%,
+            #f74f68 78%,
+            #d63851 82%,
+            #b22234 86%,
+            #8c1a28 90%,
+            #5c1018 95%,
+            #1a0508 100%
+        );
+    background-size: 200% 200%;
+}
+
+/* Glass morphism effects */
+.glass {
+    background: rgba(246, 246, 246, 0.72);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+}
+
+.glass-dark {
+    background: rgba(30, 30, 30, 0.55);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+}
+
+.glass-menu {
+    background: rgba(246, 246, 246, 0.88);
+    backdrop-filter: blur(50px) saturate(200%);
+    -webkit-backdrop-filter: blur(50px) saturate(200%);
+}
+
+.glass-dock {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(30px) saturate(150%);
+    -webkit-backdrop-filter: blur(30px) saturate(150%);
+}
+
+/* Window shadow */
+.window-shadow {
+    box-shadow:
+        0 22px 70px 4px rgba(0,0,0,0.28),
+        0 0 0 0.5px rgba(0,0,0,0.12);
+}
+
+.window-shadow-focused {
+    box-shadow:
+        0 22px 70px 4px rgba(0,0,0,0.35),
+        0 0 0 0.5px rgba(0,0,0,0.18);
+}
+
+.window-shadow-unfocused {
+    box-shadow:
+        0 10px 40px rgba(0,0,0,0.12),
+        0 0 0 0.5px rgba(0,0,0,0.06);
+}
+
+/* Dock item hover magnification */
+.dock-item-base {
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: bottom center;
+}
+
+/* Input styles */
+input, textarea {
+    user-select: text;
+}
+
+[contenteditable] {
+    user-select: text;
+}
+
+/* Safari iframe */
+.safari-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: white;
+}
+
+/* Terminal cursor */
+.terminal-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 15px;
+    background: #28cd41;
+    animation: blink 1s step-end infinite;
+    vertical-align: text-bottom;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+/* Smooth transitions for toggle */
+.toggle-switch {
+    transition: background-color 0.25s ease;
+}
+.toggle-knob {
+    transition: left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
