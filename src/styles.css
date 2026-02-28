@@ -175,11 +175,21 @@ input, textarea {
 input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
+    height: 20px;
+    border-radius: 2px;
+    background: transparent;
+    outline: none;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    user-select: auto;
+    -webkit-user-select: auto;
+    touch-action: none;
+}
+input[type="range"]::-webkit-slider-runnable-track {
     height: 4px;
     border-radius: 2px;
     background: #d1d5db;
-    outline: none;
-    cursor: pointer;
 }
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
@@ -191,6 +201,12 @@ input[type="range"]::-webkit-slider-thumb {
     box-shadow: 0 0.5px 1px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.15);
     cursor: pointer;
     border: 0.5px solid rgba(0,0,0,0.08);
+    margin-top: -7px;
+}
+input[type="range"]::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: #d1d5db;
 }
 input[type="range"]::-moz-range-thumb {
     width: 18px;
@@ -201,11 +217,10 @@ input[type="range"]::-moz-range-thumb {
     cursor: pointer;
     border: 0.5px solid rgba(0,0,0,0.08);
 }
-input[type="range"]::-webkit-slider-runnable-track {
-    height: 4px;
-    border-radius: 2px;
+.dark-mode input[type="range"]::-webkit-slider-runnable-track {
+    background: #4a4a4a;
 }
-.dark-mode input[type="range"] {
+.dark-mode input[type="range"]::-moz-range-track {
     background: #4a4a4a;
 }
 .dark-mode input[type="range"]::-webkit-slider-thumb {
@@ -402,10 +417,10 @@ input[type="range"]::-webkit-slider-runnable-track {
 
 /* ===== Cursor Context Changes ===== */
 button, [role="button"], .cursor-default { cursor: default; }
-input, textarea, [contenteditable] { cursor: text !important; }
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]), textarea, [contenteditable] { cursor: text !important; }
 a, [href] { cursor: pointer; }
-input[type="range"] { cursor: grab; }
-input[type="range"]:active { cursor: grabbing; }
+input[type="range"] { cursor: grab !important; }
+input[type="range"]:active { cursor: grabbing !important; }
 
 /* ===== Stage Manager ===== */
 .animate-stage-slide-in {

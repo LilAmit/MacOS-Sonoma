@@ -1,3 +1,11 @@
+// Settings slider wrapper - defined outside to prevent remounting on re-render
+const SettingsSlider = ({ value, onChange, min = 0, max = 100, accentColor }) => (
+    <div className="flex items-center gap-3 flex-1">
+        <MacSlider min={min} max={max} value={value} onChange={onChange} className="flex-1" accentColor={accentColor}/>
+        <span className="text-[12px] text-gray-400 w-8 text-right">{value}%</span>
+    </div>
+);
+
 // System Settings App - Fully Functional
 const SettingsApp = () => {
     const [activeSection, setActiveSection] = React.useState('apple-id');
@@ -71,15 +79,6 @@ const SettingsApp = () => {
             onClick={onChange}
         >
             <div className={`w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] shadow-md transition-all ${checked ? 'left-[18px]' : 'left-[2px]'}`}/>
-        </div>
-    );
-
-    const Slider = ({ value, onChange, min = 0, max = 100 }) => (
-        <div className="flex items-center gap-3 flex-1">
-            <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))}
-                className="flex-1 h-1 bg-gray-200 rounded-full appearance-none cursor-pointer"
-                style={{ accentColor: accentColor }}/>
-            <span className="text-[12px] text-gray-400 w-8 text-right">{value}%</span>
         </div>
     );
 
@@ -226,7 +225,7 @@ const SettingsApp = () => {
                             <div className="px-4 py-3 border-b border-black/[0.04]">
                                 <div className="flex items-center gap-3">
                                     <span className="text-[16px]">🔈</span>
-                                    <Slider value={volume} onChange={v => MacStore.setState({ volume: v })}/>
+                                    <SettingsSlider accentColor={accentColor}value={volume} onChange={v => MacStore.setState({ volume: v })}/>
                                     <span className="text-[16px]">🔊</span>
                                 </div>
                             </div>
@@ -236,7 +235,7 @@ const SettingsApp = () => {
                             <div className="px-4 py-3 border-b border-black/[0.04]">
                                 <div className="flex items-center gap-3">
                                     <span className="text-[13px] text-gray-500">Input volume</span>
-                                    <Slider value={local.inputVolume} onChange={v => setLocalKey('inputVolume', v)}/>
+                                    <SettingsSlider accentColor={accentColor}value={local.inputVolume} onChange={v => setLocalKey('inputVolume', v)}/>
                                 </div>
                             </div>
                         </SettingsGroup>
@@ -426,9 +425,9 @@ const SettingsApp = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-[11px] text-gray-400">Small</span>
-                                    <input type="range" min="32" max="80" value={local.dockSize}
-                                        onChange={e => setLocalKey('dockSize', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
+                                    <MacSlider min={32} max={80} value={local.dockSize}
+                                        onChange={v => setLocalKey('dockSize', v)}
+                                        className="flex-1" accentColor={accentColor}/>
                                     <span className="text-[11px] text-gray-400">Large</span>
                                 </div>
                             </div>
@@ -478,7 +477,7 @@ const SettingsApp = () => {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span className="text-[16px]">🔅</span>
-                                    <Slider value={brightness} onChange={v => MacStore.setState({ brightness: v })}/>
+                                    <SettingsSlider accentColor={accentColor}value={brightness} onChange={v => MacStore.setState({ brightness: v })}/>
                                     <span className="text-[16px]">🔆</span>
                                 </div>
                             </div>
@@ -601,9 +600,9 @@ const SettingsApp = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-[11px] text-gray-400">Slow</span>
-                                    <input type="range" min="1" max="10" value={local.keyRepeatSpeed}
-                                        onChange={e => setLocalKey('keyRepeatSpeed', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
+                                    <MacSlider min={1} max={10} value={local.keyRepeatSpeed}
+                                        onChange={v => setLocalKey('keyRepeatSpeed', v)}
+                                        className="flex-1" accentColor={accentColor}/>
                                     <span className="text-[11px] text-gray-400">Fast</span>
                                 </div>
                             </div>
@@ -613,9 +612,9 @@ const SettingsApp = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-[11px] text-gray-400">Long</span>
-                                    <input type="range" min="1" max="6" value={local.delayUntilRepeat}
-                                        onChange={e => setLocalKey('delayUntilRepeat', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
+                                    <MacSlider min={1} max={6} value={local.delayUntilRepeat}
+                                        onChange={v => setLocalKey('delayUntilRepeat', v)}
+                                        className="flex-1" accentColor={accentColor}/>
                                     <span className="text-[11px] text-gray-400">Short</span>
                                 </div>
                             </div>
@@ -645,9 +644,9 @@ const SettingsApp = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-[11px] text-gray-400">Slow</span>
-                                    <input type="range" min="1" max="10" value={local.trackingSpeed}
-                                        onChange={e => setLocalKey('trackingSpeed', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
+                                    <MacSlider min={1} max={10} value={local.trackingSpeed}
+                                        onChange={v => setLocalKey('trackingSpeed', v)}
+                                        className="flex-1" accentColor={accentColor}/>
                                     <span className="text-[11px] text-gray-400">Fast</span>
                                 </div>
                             </div>

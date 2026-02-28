@@ -663,13 +663,13 @@ const MusicApp = () => {
                     </div>
                     <div className="flex items-center gap-2 w-full max-w-[400px]">
                         <span className="text-[10px] text-gray-400 w-8 text-right">{formatTime(currentTime)}</span>
-                        <input type="range" min="0" max="100" value={progress} onChange={e => seekTo(+e.target.value)} className="flex-1 accent-red-500 h-1"/>
+                        <MacSlider min={0} max={100} value={progress} onChange={v => seekTo(v)} className="flex-1" accentColor="#ef4444"/>
                         <span className="text-[10px] text-gray-400 w-8">{formatTime(audioDuration)}</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-2 w-[140px]">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="#999"><path d="M3 9v6h4l5 5V4L7 9H3z"/></svg>
-                    <input type="range" min="0" max="100" value={volume} onChange={e => setVolume(+e.target.value)} className="flex-1 accent-gray-500 h-1"/>
+                    <MacSlider min={0} max={100} value={volume} onChange={v => setVolume(v)} className="flex-1" accentColor="#6b7280"/>
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="#999"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
                 </div>
             </div>

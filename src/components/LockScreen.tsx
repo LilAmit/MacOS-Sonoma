@@ -68,11 +68,10 @@ const LockScreen = () => {
 
                 {/* User avatar */}
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-20 h-20 rounded-full overflow-hidden shadow-xl bg-gray-500 ring-2 ring-white/20">
-                        <img src="AboutPhoto/MePhoto.jpeg" alt="User" className="w-full h-full object-cover" draggable="false"
-                            onError={(e) => { e.target.style.display='none'; e.target.parentElement.innerHTML='<svg viewBox="0 0 100 100" width="80" height="80"><circle cx="50" cy="50" r="50" fill="#7d7d7d"/><circle cx="50" cy="38" r="18" fill="#a0a0a0"/><ellipse cx="50" cy="80" rx="30" ry="22" fill="#a0a0a0"/></svg>'; }}/>
+                    <div className="w-20 h-20 rounded-full overflow-hidden shadow-xl bg-gray-500 ring-2 ring-white/20 flex items-center justify-center">
+                        <svg viewBox="0 0 100 100" width="80" height="80"><circle cx="50" cy="50" r="50" fill="#7d7d7d"/><circle cx="50" cy="38" r="18" fill="#a0a0a0"/><ellipse cx="50" cy="80" rx="30" ry="22" fill="#a0a0a0"/></svg>
                     </div>
-                    <div className="text-[17px] font-semibold">Amit</div>
+                    <div className="text-[17px] font-semibold">User</div>
                     <input
                         ref={inputRef}
                         type="password"

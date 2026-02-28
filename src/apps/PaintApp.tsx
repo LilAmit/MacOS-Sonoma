@@ -276,8 +276,8 @@ const PaintApp = () => {
                 {/* Size */}
                 <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-gray-500">Size</span>
-                    <input type="range" min="1" max="40" value={brushSize} onChange={e => setBrushSize(+e.target.value)}
-                        className="w-[80px] accent-blue-500 h-1"/>
+                    <MacSlider min={1} max={40} value={brushSize} onChange={v => setBrushSize(v)}
+                        className="w-[80px]" accentColor="#3b82f6"/>
                     <span className="text-[10px] text-gray-500 w-5">{brushSize}</span>
                 </div>
 

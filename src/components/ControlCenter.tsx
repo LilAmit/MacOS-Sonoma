@@ -45,7 +45,7 @@ const ControlCenter = () => {
                     <div className="text-[12px] font-semibold text-gray-400 mb-1.5">Display</div>
                     <div className="flex items-center gap-2 bg-white/60 rounded-xl px-3 py-2">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="#666"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69z"/></svg>
-                        <input type="range" min="10" max="100" value={brightness} onChange={e => MacStore.setState({ brightness: +e.target.value })} className="flex-1 h-1.5" style={{ accentColor }}/>
+                        <MacSlider min={10} max={100} value={brightness} onChange={v => MacStore.setState({ brightness: v })} className="flex-1" accentColor={accentColor}/>
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="#333"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
                     </div>
                 </div>
@@ -54,7 +54,7 @@ const ControlCenter = () => {
                     <div className="text-[12px] font-semibold text-gray-400 mb-1.5">Sound</div>
                     <div className="flex items-center gap-2 bg-white/60 rounded-xl px-3 py-2">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="#666"><path d="M3 9v6h4l5 5V4L7 9H3z"/></svg>
-                        <input type="range" min="0" max="100" value={volume} onChange={e => MacStore.setState({ volume: +e.target.value })} className="flex-1 h-1.5" style={{ accentColor }}/>
+                        <MacSlider min={0} max={100} value={volume} onChange={v => MacStore.setState({ volume: v })} className="flex-1" accentColor={accentColor}/>
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="#333"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
                     </div>
                 </div>
