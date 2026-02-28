@@ -1,82 +1,89 @@
 // macOS Window Component with full drag, resize, and focus management
 const Window = ({ windowData, children }) => {
-    const dragRef = React.useRef(null);
     const [isDragging, setIsDragging] = React.useState(false);
     const [isResizing, setIsResizing] = React.useState(false);
-    const [resizeDir, setResizeDir] = React.useState('');
-    const startRef = React.useRef({ x: 0, y: 0, winX: 0, winY: 0, winW: 0, winH: 0 });
+    const dragState = React.useRef({ dragging: false, resizing: false, dir: '', startX: 0, startY: 0, winX: 0, winY: 0, winW: 0, winH: 0, winId: null });
 
     const { id, title, focused, zIndex, minimized, maximized, opening, closing, x, y, width, height } = windowData;
+    const darkMode = useStore(s => s.darkMode);
 
-    // Drag handlers
-    const onDragStart = (e) => {
-        if (e.target.closest('button')) return;
-        setIsDragging(true);
-        startRef.current = { x: e.clientX, y: e.clientY, winX: x, winY: y, winW: width, winH: height };
-        document.body.style.cursor = 'move';
-        e.preventDefault();
-    };
-
+    // Unified mouse handlers on window level - never lost even on fast moves
     React.useEffect(() => {
         const onMouseMove = (e) => {
-            if (isDragging) {
-                const dx = e.clientX - startRef.current.x;
-                const dy = e.clientY - startRef.current.y;
-                MacStore.updateWindow(id, {
-                    x: startRef.current.winX + dx,
-                    y: Math.max(0, startRef.current.winY + dy),
+            const ds = dragState.current;
+            if (!ds.dragging && !ds.resizing) return;
+            e.preventDefault();
+            const dx = e.clientX - ds.startX;
+            const dy = e.clientY - ds.startY;
+            if (ds.dragging) {
+                MacStore.updateWindow(ds.winId, {
+                    x: ds.winX + dx,
+                    y: Math.max(0, ds.winY + dy),
                 });
             }
-            if (isResizing) {
-                const dx = e.clientX - startRef.current.x;
-                const dy = e.clientY - startRef.current.y;
-                const { winX, winY, winW, winH } = startRef.current;
-                let newW = winW, newH = winH, newX = winX, newY = winY;
-
-                if (resizeDir.includes('e')) newW = Math.max(300, winW + dx);
-                if (resizeDir.includes('w')) { newW = Math.max(300, winW - dx); newX = winX + (winW - newW); }
-                if (resizeDir.includes('s')) newH = Math.max(200, winH + dy);
-                if (resizeDir.includes('n')) { newH = Math.max(200, winH - dy); newY = Math.max(0, winY + (winH - newH)); }
-
-                MacStore.updateWindow(id, { x: newX, y: newY, width: newW, height: newH });
+            if (ds.resizing) {
+                let newW = ds.winW, newH = ds.winH, newX = ds.winX, newY = ds.winY;
+                if (ds.dir.includes('e')) newW = Math.max(300, ds.winW + dx);
+                if (ds.dir.includes('w')) { newW = Math.max(300, ds.winW - dx); newX = ds.winX + (ds.winW - newW); }
+                if (ds.dir.includes('s')) newH = Math.max(200, ds.winH + dy);
+                if (ds.dir.includes('n')) { newH = Math.max(200, ds.winH - dy); newY = Math.max(0, ds.winY + (ds.winH - newH)); }
+                MacStore.updateWindow(ds.winId, { x: newX, y: newY, width: newW, height: newH });
             }
         };
         const onMouseUp = () => {
+            if (!dragState.current.dragging && !dragState.current.resizing) return;
+            dragState.current.dragging = false;
+            dragState.current.resizing = false;
             setIsDragging(false);
             setIsResizing(false);
             document.body.style.cursor = '';
+            document.body.style.userSelect = '';
         };
-        if (isDragging || isResizing) {
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
-        }
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
         return () => {
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
         };
-    }, [isDragging, isResizing, resizeDir, id]);
+    }, []);
+
+    // Drag handlers
+    const onDragStart = (e) => {
+        if (e.target.closest('button')) return;
+        e.preventDefault();
+        dragState.current = { dragging: true, resizing: false, dir: '', startX: e.clientX, startY: e.clientY, winX: x, winY: y, winW: width, winH: height, winId: id };
+        setIsDragging(true);
+        document.body.style.cursor = 'move';
+        document.body.style.userSelect = 'none';
+    };
 
     const startResize = (dir) => (e) => {
         e.preventDefault();
         e.stopPropagation();
+        dragState.current = { dragging: false, resizing: true, dir, startX: e.clientX, startY: e.clientY, winX: x, winY: y, winW: width, winH: height, winId: id };
         setIsResizing(true);
-        setResizeDir(dir);
-        startRef.current = { x: e.clientX, y: e.clientY, winX: x, winY: y, winW: width, winH: height };
+        document.body.style.userSelect = 'none';
     };
 
-    if (minimized) return null;
+    const { minimizing, restoring } = windowData;
+    if (minimized && !minimizing) return null;
 
     const windowStyle = maximized
         ? { top: 0, left: 0, width: '100vw', height: 'calc(100vh - 25px)', zIndex, borderRadius: 0 }
         : { top: y, left: x, width, height, zIndex };
 
-    const animClass = opening ? 'animate-window-open' : closing ? 'animate-window-close pointer-events-none' : '';
-    const shadowClass = focused ? 'window-shadow-focused' : 'window-shadow-unfocused';
+    const animClass = opening ? 'animate-window-open'
+        : closing ? 'animate-window-close pointer-events-none'
+        : minimizing ? 'animate-minimize pointer-events-none'
+        : restoring ? 'animate-restore'
+        : '';
+    const shadowClass = isDragging ? 'window-shadow-dragging' : focused ? 'window-shadow-focused' : 'window-shadow-unfocused';
+    const transitionClass = (!isDragging && !isResizing && !opening && !closing && !minimizing && !restoring) ? 'window-transition' : '';
 
     return (
         <div
-            className={`absolute flex flex-col rounded-xl overflow-hidden border border-black/10 ${shadowClass} ${animClass}`}
-            style={windowStyle}
+            className={`absolute flex flex-col rounded-xl overflow-hidden border border-black/10 ${shadowClass} ${animClass} ${transitionClass}`}
+            style={{ ...windowStyle, opacity: isDragging ? 0.88 : 1, transition: isDragging ? 'none' : undefined }}
             onMouseDown={() => { if (!focused) MacStore.focusWindow(id); }}
         >
             {/* Translucent background */}
@@ -84,19 +91,21 @@ const Window = ({ windowData, children }) => {
 
             {/* Title bar */}
             <div
-                className={`flex items-center h-[38px] min-h-[38px] px-3 border-b border-black/5 relative cursor-default ${focused ? '' : 'bg-gray-200/80'}`}
+                className={`flex items-center h-[38px] min-h-[38px] px-3 border-b relative cursor-default ${darkMode ? 'border-white/5' : 'border-black/5'}`}
                 onMouseDown={onDragStart}
                 onDoubleClick={() => MacStore.toggleMaximize(id)}
-                style={{ background: focused ? 'rgba(236,236,236,0.95)' : 'rgba(230,230,230,0.95)' }}
+                style={{ background: darkMode
+                    ? (focused ? 'rgba(56,56,56,0.98)' : 'rgba(48,48,48,0.95)')
+                    : (focused ? 'rgba(236,236,236,0.95)' : 'rgba(230,230,230,0.95)') }}
             >
                 <TrafficLights windowId={id} focused={focused} />
-                <div className="absolute left-0 right-0 text-center text-[13px] font-medium text-gray-500 pointer-events-none select-none">
+                <div className={`absolute left-0 right-0 text-center text-[13px] font-medium pointer-events-none select-none ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                     {title}
                 </div>
             </div>
 
             {/* Window content */}
-            <div className="flex-1 overflow-hidden relative bg-white">
+            <div className={`flex-1 overflow-hidden relative ${darkMode ? 'bg-[#1e1e1e] text-gray-200' : 'bg-white'}`}>
                 {children}
             </div>
 

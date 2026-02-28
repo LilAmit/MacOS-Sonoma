@@ -23,23 +23,50 @@
                         'macos': { 'bg': 'rgba(246,246,246,0.92)', 'dark': 'rgba(30,30,30,0.35)', 'accent': '#007AFF', 'red': '#FF5F57', 'yellow': '#FFBD2E', 'green': '#28C840', 'text': '#1d1d1f', 'secondary': '#86868b', 'border': 'rgba(0,0,0,0.12)', 'sidebar': 'rgba(236,236,236,0.5)' }
                     },
                     animation: {
-                        'wallpaper': 'wallpaper 120s ease infinite', 'spotlight-in': 'spotlight-in 0.15s ease-out',
-                        'window-open': 'window-open 0.25s cubic-bezier(0.25,0.46,0.45,0.94)', 'window-close': 'window-close 0.2s cubic-bezier(0.55,0.06,0.68,0.19)',
-                        'slide-in-right': 'slide-in-right 0.2s ease-out', 'fade-in': 'fade-in 0.3s ease-out',
-                        'bounce-dock': 'bounce-dock 0.8s ease-in-out', 'cursor-blink': 'blink 1s step-end infinite',
-                        'toast-in': 'toast-in 0.3s ease-out', 'unlock': 'unlock 0.6s cubic-bezier(0.25,0.46,0.45,0.94) forwards',
+                        'wallpaper': 'wallpaper 120s ease infinite',
+                        'spotlight-in': 'spotlight-in 0.15s ease-out',
+                        'spotlight-out': 'spotlight-out 0.15s ease-in forwards',
+                        'window-open': 'window-open 0.25s cubic-bezier(0.25,0.46,0.45,0.94)',
+                        'window-close': 'window-close 0.2s cubic-bezier(0.55,0.06,0.68,0.19) forwards',
+                        'slide-in-right': 'slide-in-right 0.2s ease-out',
+                        'slide-out-right': 'slide-out-right 0.2s ease-in forwards',
+                        'fade-in': 'fade-in 0.3s ease-out',
+                        'fade-out': 'fade-out 0.2s ease-in forwards',
+                        'launchpad-in': 'launchpad-in 0.25s ease-out',
+                        'launchpad-out': 'launchpad-out 0.2s ease-in forwards',
+                        'bounce-dock': 'bounce-dock 0.8s ease-in-out',
+                        'cursor-blink': 'blink 1s step-end infinite',
+                        'toast-in': 'toast-in 0.3s ease-out',
+                        'toast-out': 'toast-out 0.25s ease-in forwards',
+                        'unlock': 'unlock 0.6s cubic-bezier(0.25,0.46,0.45,0.94) forwards',
+                        'context-menu-in': 'context-menu-in 0.12s ease-out',
+                        'context-menu-out': 'context-menu-out 0.1s ease-in forwards',
+                        'menu-dropdown-in': 'menu-dropdown-in 0.12s ease-out',
+                        'minimize': 'minimize 0.4s cubic-bezier(0.2,0,0.6,1) forwards',
+                        'restore': 'restore 0.3s cubic-bezier(0.25,0.46,0.45,0.94)',
                     },
                     keyframes: {
                         'wallpaper': { '0%': { backgroundPosition: '0% 50%' }, '25%': { backgroundPosition: '50% 0%' }, '50%': { backgroundPosition: '100% 50%' }, '75%': { backgroundPosition: '50% 100%' }, '100%': { backgroundPosition: '0% 50%' } },
                         'spotlight-in': { '0%': { transform: 'scale(0.96)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+                        'spotlight-out': { '0%': { transform: 'scale(1)', opacity: 1 }, '100%': { transform: 'scale(0.96)', opacity: 0 } },
                         'window-open': { '0%': { transform: 'scale(0.88)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
                         'window-close': { '0%': { transform: 'scale(1)', opacity: 1 }, '100%': { transform: 'scale(0.88)', opacity: 0 } },
                         'slide-in-right': { '0%': { transform: 'translateX(20px)', opacity: 0 }, '100%': { transform: 'translateX(0)', opacity: 1 } },
+                        'slide-out-right': { '0%': { transform: 'translateX(0)', opacity: 1 }, '100%': { transform: 'translateX(20px)', opacity: 0 } },
                         'fade-in': { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+                        'fade-out': { '0%': { opacity: 1 }, '100%': { opacity: 0 } },
+                        'launchpad-in': { '0%': { transform: 'scale(1.1)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+                        'launchpad-out': { '0%': { transform: 'scale(1)', opacity: 1 }, '100%': { transform: 'scale(1.1)', opacity: 0 } },
                         'bounce-dock': { '0%, 100%': { transform: 'translateY(0)' }, '25%': { transform: 'translateY(-20px)' }, '50%': { transform: 'translateY(-5px)' }, '75%': { transform: 'translateY(-12px)' } },
                         'blink': { '50%': { opacity: 0 } },
                         'toast-in': { '0%': { transform: 'translateX(100%)', opacity: 0 }, '100%': { transform: 'translateX(0)', opacity: 1 } },
+                        'toast-out': { '0%': { transform: 'translateX(0)', opacity: 1 }, '100%': { transform: 'translateX(100%)', opacity: 0 } },
                         'unlock': { '0%': { opacity: 1, transform: 'scale(1)' }, '100%': { opacity: 0, transform: 'scale(1.1)' } },
+                        'context-menu-in': { '0%': { transform: 'scale(0.92)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+                        'context-menu-out': { '0%': { transform: 'scale(1)', opacity: 0.8 }, '100%': { transform: 'scale(0.92)', opacity: 0 } },
+                        'menu-dropdown-in': { '0%': { transform: 'translateY(-4px)', opacity: 0 }, '100%': { transform: 'translateY(0)', opacity: 1 } },
+                        'minimize': { '0%': { transform: 'scale(1)', opacity: 1 }, '100%': { transform: 'scale(0.4) translateY(50vh)', opacity: 0 } },
+                        'restore': { '0%': { transform: 'scale(0.4) translateY(50vh)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
                     }
                 }
             }
@@ -54,7 +81,7 @@
 }
 
 ::selection {
-    background: rgba(0, 122, 255, 0.3);
+    background: rgba(var(--accent-rgb, 0,122,255), 0.3);
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -139,12 +166,29 @@
     box-shadow:
         0 22px 70px 4px rgba(0,0,0,0.35),
         0 0 0 0.5px rgba(0,0,0,0.18);
+    transition: box-shadow 0.3s ease;
 }
 
 .window-shadow-unfocused {
     box-shadow:
         0 10px 40px rgba(0,0,0,0.12),
         0 0 0 0.5px rgba(0,0,0,0.06);
+    transition: box-shadow 0.3s ease;
+}
+
+.window-shadow-dragging {
+    box-shadow:
+        0 35px 90px 8px rgba(0,0,0,0.4),
+        0 0 0 0.5px rgba(0,0,0,0.15);
+}
+
+/* Smooth window maximize/unmaximize transition */
+.window-transition {
+    transition: top 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                left 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                width 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                border-radius 0.3s ease;
 }
 
 /* Dock item hover magnification */
@@ -184,12 +228,251 @@ input, textarea {
     50% { opacity: 0; }
 }
 
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 /* Smooth transitions for toggle */
 .toggle-switch {
     transition: background-color 0.25s ease;
 }
 .toggle-knob {
     transition: left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ===== Accent Color Variable ===== */
+:root {
+    --accent-color: #007AFF;
+    --accent-rgb: 0,122,255;
+}
+
+/* Custom range input styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: #d1d5db;
+    outline: none;
+    cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.15);
+    cursor: pointer;
+    border: 0.5px solid rgba(0,0,0,0.08);
+}
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.15);
+    cursor: pointer;
+    border: 0.5px solid rgba(0,0,0,0.08);
+}
+input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+}
+.dark-mode input[type="range"] {
+    background: #4a4a4a;
+}
+.dark-mode input[type="range"]::-webkit-slider-thumb {
+    background: #e5e5e7;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
+    border-color: rgba(255,255,255,0.1);
+}
+.dark-mode input[type="range"]::-moz-range-thumb {
+    background: #e5e5e7;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
+    border-color: rgba(255,255,255,0.1);
+}
+
+/* ===== Dark Mode - Comprehensive ===== */
+
+/* --- Glass effects --- */
+.dark-mode .glass {
+    background: rgba(40, 40, 40, 0.82);
+    color: #e5e5e7;
+}
+.dark-mode .glass-menu {
+    background: rgba(45, 45, 45, 0.92);
+    color: #e5e5e7;
+}
+.dark-mode .glass-dock {
+    background: rgba(30, 30, 30, 0.5);
+}
+.dark-mode .window-shadow-focused {
+    box-shadow: 0 22px 70px 4px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.08);
+}
+.dark-mode .window-shadow-unfocused {
+    box-shadow: 0 10px 40px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(255,255,255,0.04);
+}
+
+/* --- Background color overrides --- */
+.dark-mode .bg-white { background-color: #1e1e1e !important; }
+.dark-mode .bg-\[\#f5f5f5\] { background-color: #252525 !important; }
+.dark-mode .bg-gray-50 { background-color: #252525 !important; }
+.dark-mode .bg-gray-100 { background-color: #2d2d2d !important; }
+.dark-mode .bg-gray-200 { background-color: #383838 !important; }
+.dark-mode .bg-gray-300 { background-color: #4a4a4a !important; }
+.dark-mode .bg-gray-50\/95 { background-color: rgba(37, 37, 37, 0.95) !important; }
+.dark-mode .bg-gray-100\/50 { background-color: rgba(42, 42, 42, 0.5) !important; }
+.dark-mode .bg-gray-100\/70 { background-color: rgba(42, 42, 42, 0.7) !important; }
+.dark-mode .bg-white\/60 { background-color: rgba(55, 55, 55, 0.6) !important; }
+.dark-mode .bg-white\/70 { background-color: rgba(55, 55, 55, 0.7) !important; }
+.dark-mode .bg-white\/80 { background-color: rgba(60, 60, 60, 0.8) !important; }
+.dark-mode .bg-black\/5 { background-color: rgba(255, 255, 255, 0.05) !important; }
+.dark-mode .bg-black\/10 { background-color: rgba(255, 255, 255, 0.1) !important; }
+.dark-mode .bg-black\/\[0\.04\] { background-color: rgba(255, 255, 255, 0.04) !important; }
+.dark-mode .bg-black\/\[0\.05\] { background-color: rgba(255, 255, 255, 0.05) !important; }
+
+/* --- Text color overrides --- */
+.dark-mode .text-gray-900 { color: #f5f5f7 !important; }
+.dark-mode .text-gray-800 { color: #e5e5e7 !important; }
+.dark-mode .text-gray-700 { color: #d1d1d6 !important; }
+.dark-mode .text-gray-600 { color: #aeaeb2 !important; }
+.dark-mode .text-gray-500 { color: #98989d !important; }
+.dark-mode .text-gray-400 { color: #8e8e93 !important; }
+.dark-mode .text-gray-300 { color: #58585c !important; }
+
+/* --- Border color overrides --- */
+.dark-mode .border-black\/5 { border-color: rgba(255, 255, 255, 0.08) !important; }
+.dark-mode .border-black\/10 { border-color: rgba(255, 255, 255, 0.12) !important; }
+.dark-mode .border-black\/\[0\.04\] { border-color: rgba(255, 255, 255, 0.06) !important; }
+.dark-mode .border-gray-300 { border-color: rgba(255, 255, 255, 0.15) !important; }
+
+/* --- Hover state overrides --- */
+.dark-mode .hover\:bg-black\/5:hover { background-color: rgba(255, 255, 255, 0.08) !important; }
+.dark-mode .hover\:bg-black\/\[0\.03\]:hover,
+.dark-mode .hover\:bg-black\/\[0\.02\]:hover { background-color: rgba(255, 255, 255, 0.06) !important; }
+.dark-mode .hover\:bg-gray-200:hover { background-color: #3a3a3a !important; }
+.dark-mode .hover\:bg-white\/80:hover { background-color: rgba(60, 60, 60, 0.8) !important; }
+.dark-mode .hover\:bg-red-100:hover { background-color: rgba(239, 68, 68, 0.15) !important; }
+
+/* --- Form elements --- */
+.dark-mode input:not([type="range"]):not([type="checkbox"]),
+.dark-mode textarea,
+.dark-mode select {
+    color: #e5e5e7 !important;
+}
+.dark-mode input::placeholder,
+.dark-mode textarea::placeholder {
+    color: #636366 !important;
+}
+
+/* --- Scrollbars --- */
+.dark-mode ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+/* --- SVG icon fill overrides --- */
+.dark-mode svg[fill="#333"],
+.dark-mode path[fill="#333"] { fill: #d1d1d6 !important; }
+.dark-mode svg[fill="#666"],
+.dark-mode path[fill="#666"] { fill: #aaa !important; }
+.dark-mode svg[fill="#999"],
+.dark-mode path[fill="#999"] { fill: #8e8e93 !important; }
+.dark-mode svg[fill="#c7c7cc"],
+.dark-mode path[fill="#c7c7cc"] { fill: #636366 !important; }
+
+/* --- Additional border overrides --- */
+.dark-mode .border-gray-800 { border-color: #e5e5e7 !important; }
+.dark-mode .border-white\/5 { border-color: rgba(255, 255, 255, 0.05) !important; }
+
+/* --- Safari iframe loading bg --- */
+.dark-mode .safari-iframe { background: #1e1e1e; }
+
+/* --- Selection color in dark mode --- */
+.dark-mode ::selection { background: rgba(var(--accent-rgb, 0,122,255), 0.4); }
+
+/* ===== Reduce Motion ===== */
+.reduce-motion * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+}
+
+/* ===== Increase Contrast ===== */
+.increase-contrast .glass {
+    background: rgba(246, 246, 246, 0.95);
+    border: 1px solid rgba(0,0,0,0.3) !important;
+}
+.increase-contrast .glass-dark {
+    background: rgba(20, 20, 20, 0.85);
+    border: 1px solid rgba(255,255,255,0.2) !important;
+}
+.increase-contrast .glass-menu {
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(0,0,0,0.3) !important;
+}
+
+/* ===== Reduce Transparency ===== */
+.reduce-transparency .glass {
+    background: rgb(246, 246, 246);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.reduce-transparency .glass-dark {
+    background: rgb(40, 40, 40);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.reduce-transparency .glass-menu {
+    background: rgb(250, 250, 250);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.reduce-transparency .glass-dock {
+    background: rgb(200, 200, 200);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+/* ===== Larger Text ===== */
+.larger-text {
+    font-size: 115%;
+}
+.larger-text .text-\[11px\] { font-size: 13px; }
+.larger-text .text-\[12px\] { font-size: 14px; }
+.larger-text .text-\[13px\] { font-size: 15px; }
+
+/* ===== Dark Mode + Reduce Transparency ===== */
+.dark-mode.reduce-transparency .glass {
+    background: rgb(50, 50, 50);
+    color: #e5e5e7;
+}
+.dark-mode.reduce-transparency .glass-menu {
+    background: rgb(55, 55, 55);
+    color: #e5e5e7;
+}
+.dark-mode.reduce-transparency .glass-dock {
+    background: rgb(40, 40, 40);
+}
+
+/* ===== Dark Mode + Increase Contrast ===== */
+.dark-mode.increase-contrast .glass {
+    background: rgba(50, 50, 50, 0.98);
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    color: #e5e5e7;
+}
+.dark-mode.increase-contrast .glass-menu {
+    background: rgba(55, 55, 55, 0.98);
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    color: #e5e5e7;
 }
 
     </style>
@@ -203,11 +486,21 @@ const { useState: _useState, useCallback: _useCallback, useEffect: _useEffect, u
 
 // Wallpaper definitions
 const WALLPAPERS = [
+    // Local wallpapers
     { name: 'Sonoma', path: 'wallpapers/wallpaper1.jpg' },
     { name: 'Sequoia', path: 'wallpapers/wallpaper2.jpg' },
     { name: 'Ventura', path: 'wallpapers/wallpaper3.jpg' },
     { name: 'Monterey', path: 'wallpapers/wallpaper4.jpg' },
     { name: 'Big Sur', path: 'wallpapers/wallpaper5.jpg' },
+    // Online wallpapers (standard resolution ~5K - loads much faster than 6K)
+    { name: 'Sequoia', path: 'https://512pixels.net/downloads/macos-wallpapers/15-Sequoia-Light.jpg' },
+    { name: 'Catalina Day', path: 'https://512pixels.net/downloads/macos-wallpapers/10-15-Day.jpg' },
+    { name: 'Catalina Night', path: 'https://512pixels.net/downloads/macos-wallpapers/10-15-Night.jpg' },
+    { name: 'Mojave Day', path: 'https://512pixels.net/downloads/macos-wallpapers/10-14-Day.jpg' },
+    { name: 'Mojave Night', path: 'https://512pixels.net/downloads/macos-wallpapers/10-14-Night.jpg' },
+    { name: 'High Sierra', path: 'https://512pixels.net/downloads/macos-wallpapers/10-13.jpg' },
+    { name: 'Sierra', path: 'https://512pixels.net/downloads/macos-wallpapers/10-12.jpg' },
+    { name: 'El Capitan', path: 'https://512pixels.net/downloads/macos-wallpapers/10-11.jpg' },
 ];
 
 // Virtual File System
@@ -222,39 +515,22 @@ const VFS = {
         // Default filesystem
         this._fs = {
             '/Users/user': { type: 'dir', children: ['Applications','Desktop','Documents','Downloads','Movies','Music','Pictures','Public'] },
-            '/Users/user/Applications': { type: 'dir', children: ['Safari.app','Xcode.app','VSCode.app','Spotify.app','Discord.app','Figma.app'] },
-            '/Users/user/Desktop': { type: 'dir', children: ['Projects','todo.txt','vacation-photo.jpg'] },
+            '/Users/user/Applications': { type: 'dir', children: [] },
+            '/Users/user/Desktop': { type: 'dir', children: ['Projects','todo.txt'] },
             '/Users/user/Desktop/Projects': { type: 'dir', children: [] },
-            '/Users/user/Documents': { type: 'dir', children: ['Work','Personal','resume.pdf','notes.md','budget.xlsx','project-plan.docx'] },
+            '/Users/user/Documents': { type: 'dir', children: ['Work','Personal'] },
             '/Users/user/Documents/Work': { type: 'dir', children: [] },
             '/Users/user/Documents/Personal': { type: 'dir', children: [] },
-            '/Users/user/Downloads': { type: 'dir', children: ['macOS-sonoma.dmg','screenshot-2024.png','presentation.key','archive.zip','installer.pkg'] },
+            '/Users/user/Downloads': { type: 'dir', children: ['macOS-sonoma.dmg'] },
             '/Users/user/Movies': { type: 'dir', children: [] },
             '/Users/user/Music': { type: 'dir', children: [] },
-            '/Users/user/Pictures': { type: 'dir', children: ['Photos Library','Screenshots','wallpaper.heic','avatar.png'] },
+            '/Users/user/Pictures': { type: 'dir', children: ['Photos Library','Screenshots'] },
             '/Users/user/Pictures/Photos Library': { type: 'dir', children: [] },
             '/Users/user/Pictures/Screenshots': { type: 'dir', children: [] },
             '/Users/user/Public': { type: 'dir', children: [] },
             // File metadata
             '/Users/user/Desktop/todo.txt': { type: 'file', icon: '📝', size: '1 KB', content: 'My todo list:\n- Review pull requests\n- Update documentation\n- Ship v2.0\n- Set up CI/CD\n- Write tests' },
-            '/Users/user/Desktop/vacation-photo.jpg': { type: 'file', icon: '🖼️', size: '4.5 MB', content: '' },
-            '/Users/user/Documents/resume.pdf': { type: 'file', icon: '📄', size: '245 KB', content: '' },
-            '/Users/user/Documents/notes.md': { type: 'file', icon: '📝', size: '12 KB', content: '# Notes\n\nSome important notes here.' },
-            '/Users/user/Documents/budget.xlsx': { type: 'file', icon: '📊', size: '89 KB', content: '' },
-            '/Users/user/Documents/project-plan.docx': { type: 'file', icon: '📄', size: '156 KB', content: '' },
             '/Users/user/Downloads/macOS-sonoma.dmg': { type: 'file', icon: '💿', size: '12.3 GB', content: '' },
-            '/Users/user/Downloads/screenshot-2024.png': { type: 'file', icon: '🖼️', size: '2.1 MB', content: '' },
-            '/Users/user/Downloads/presentation.key': { type: 'file', icon: '📊', size: '45 MB', content: '' },
-            '/Users/user/Downloads/archive.zip': { type: 'file', icon: '📦', size: '890 MB', content: '' },
-            '/Users/user/Downloads/installer.pkg': { type: 'file', icon: '📦', size: '234 MB', content: '' },
-            '/Users/user/Pictures/wallpaper.heic': { type: 'file', icon: '🖼️', size: '18 MB', content: '' },
-            '/Users/user/Pictures/avatar.png': { type: 'file', icon: '🖼️', size: '2.3 MB', content: '' },
-            '/Users/user/Applications/Safari.app': { type: 'app', icon: '🌐', size: '120 MB', appType: 'safari' },
-            '/Users/user/Applications/Xcode.app': { type: 'app', icon: '🔨', size: '35 GB' },
-            '/Users/user/Applications/VSCode.app': { type: 'app', icon: '💻', size: '350 MB' },
-            '/Users/user/Applications/Spotify.app': { type: 'app', icon: '🎵', size: '200 MB' },
-            '/Users/user/Applications/Discord.app': { type: 'app', icon: '💬', size: '180 MB' },
-            '/Users/user/Applications/Figma.app': { type: 'app', icon: '🎨', size: '150 MB' },
         };
         this.save();
     },
@@ -441,6 +717,61 @@ const VFS = {
         MacStore.setState(s => ({ vfsVersion: (s.vfsVersion || 0) + 1 }));
     },
 
+    // Move file/folder from one directory to another
+    move(srcParent, name, destParent) {
+        const srcPath = srcParent + '/' + name;
+        const destPath = destParent + '/' + name;
+        if (!this._fs[srcPath]) return false;
+        if (destPath === srcPath) return false;
+        // Don't move a folder into itself
+        if (destPath.startsWith(srcPath + '/')) return false;
+        // Check dest is a directory
+        if (!this._fs[destParent] || this._fs[destParent].type !== 'dir') return false;
+        // Handle name collision - append number
+        let finalName = name;
+        let finalDest = destPath;
+        let counter = 1;
+        while (this._fs[finalDest]) {
+            const dot = name.lastIndexOf('.');
+            if (dot > 0) {
+                finalName = name.slice(0, dot) + ' ' + counter + name.slice(dot);
+            } else {
+                finalName = name + ' ' + counter;
+            }
+            finalDest = destParent + '/' + finalName;
+            counter++;
+        }
+        // Move the entry
+        this._fs[finalDest] = this._fs[srcPath];
+        delete this._fs[srcPath];
+        // Update source parent children
+        const srcDir = this._fs[srcParent];
+        if (srcDir && srcDir.type === 'dir') {
+            srcDir.children = srcDir.children.filter(c => c !== name);
+        }
+        // Update dest parent children
+        const destDir = this._fs[destParent];
+        if (destDir && destDir.type === 'dir' && !destDir.children.includes(finalName)) {
+            destDir.children.push(finalName);
+        }
+        // If directory, recursively update child paths
+        if (this._fs[finalDest].type === 'dir') {
+            const updatePaths = (oldBase, newBase) => {
+                Object.keys(this._fs).forEach(key => {
+                    if (key.startsWith(oldBase + '/')) {
+                        const newKey = newBase + key.slice(oldBase.length);
+                        this._fs[newKey] = this._fs[key];
+                        delete this._fs[key];
+                    }
+                });
+            };
+            updatePaths(srcPath, finalDest);
+        }
+        this.save();
+        MacStore.setState(s => ({ vfsVersion: (s.vfsVersion || 0) + 1 }));
+        return true;
+    },
+
     // Desktop shortcuts (app aliases on desktop)
     getDesktopApps() {
         const saved = localStorage.getItem('macos_desktop_apps');
@@ -493,6 +824,28 @@ const MacStore = {
         bluetoothOn: true,
         focusOn: false,
         vfsVersion: 0,
+        // Dock settings
+        dockSize: 48,
+        dockMagnification: true,
+        dockAutoHide: false,
+        dockPosition: 'bottom',
+        showRecents: true,
+        // Appearance
+        accentColor: '#007AFF',
+        // Display
+        nightShift: false,
+        // Accessibility
+        reduceMotion: false,
+        increaseContrast: false,
+        reduceTransparency: false,
+        largerText: false,
+        // Battery
+        showBatteryPercentage: true,
+        // Notifications
+        notifSounds: true,
+        notifLockScreen: true,
+        // Global drag state for cross-component file drag-and-drop
+        fileDrag: null, // { name, sourcePath, type, sourceComponent }
     },
 
     getState() {
@@ -519,6 +872,21 @@ const MacStore = {
             brightness: s.brightness,
             wifiOn: s.wifiOn,
             bluetoothOn: s.bluetoothOn,
+            focusOn: s.focusOn,
+            dockSize: s.dockSize,
+            dockMagnification: s.dockMagnification,
+            dockAutoHide: s.dockAutoHide,
+            dockPosition: s.dockPosition,
+            showRecents: s.showRecents,
+            accentColor: s.accentColor,
+            nightShift: s.nightShift,
+            reduceMotion: s.reduceMotion,
+            increaseContrast: s.increaseContrast,
+            reduceTransparency: s.reduceTransparency,
+            largerText: s.largerText,
+            showBatteryPercentage: s.showBatteryPercentage,
+            notifSounds: s.notifSounds,
+            notifLockScreen: s.notifLockScreen,
         }));
     },
 
@@ -637,17 +1005,26 @@ const MacStore = {
     },
 
     minimizeWindow(windowId) {
-        this.setState(s => {
-            const windows = s.windows.map(w =>
-                w.id === windowId ? {...w, minimized: true, focused: false} : w
-            );
-            const remaining = windows.filter(w => !w.minimized);
-            const newActive = remaining.length > 0 ? remaining[remaining.length - 1].id : null;
-            return {
-                windows: windows.map(w => w.id === newActive ? {...w, focused: true} : w),
-                activeWindowId: newActive,
-            };
-        });
+        // Start minimize animation
+        this.setState(s => ({
+            windows: s.windows.map(w =>
+                w.id === windowId ? {...w, minimizing: true, focused: false} : w
+            )
+        }));
+        // After animation, actually minimize
+        setTimeout(() => {
+            this.setState(s => {
+                const windows = s.windows.map(w =>
+                    w.id === windowId ? {...w, minimized: true, minimizing: false} : w
+                );
+                const remaining = windows.filter(w => !w.minimized);
+                const newActive = remaining.length > 0 ? remaining[remaining.length - 1].id : null;
+                return {
+                    windows: windows.map(w => w.id === newActive ? {...w, focused: true} : w),
+                    activeWindowId: newActive,
+                };
+            });
+        }, 400);
     },
 
     restoreWindow(windowId) {
@@ -657,6 +1034,7 @@ const MacStore = {
                 windows: s.windows.map(w => ({
                     ...w,
                     minimized: w.id === windowId ? false : w.minimized,
+                    restoring: w.id === windowId ? true : false,
                     focused: w.id === windowId,
                     zIndex: w.id === windowId ? newZ : w.zIndex,
                 })),
@@ -664,6 +1042,11 @@ const MacStore = {
                 activeWindowId: windowId,
             };
         });
+        setTimeout(() => {
+            this.setState(s => ({
+                windows: s.windows.map(w => w.id === windowId ? {...w, restoring: false} : w)
+            }));
+        }, 300);
     },
 
     toggleMaximize(windowId) {
@@ -719,6 +1102,29 @@ function useStore(selector) {
     }, []);
     return state;
 }
+
+// Hook for animated mount/unmount of overlays
+function useAnimatedVisibility(isOpen, duration = 200) {
+    const [visible, setVisible] = _useState(isOpen);
+    const [closing, setClosing] = _useState(false);
+
+    _useEffect(() => {
+        if (isOpen) {
+            setVisible(true);
+            setClosing(false);
+        } else if (visible) {
+            setClosing(true);
+            const timer = setTimeout(() => {
+                setVisible(false);
+                setClosing(false);
+            }, duration);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
+
+    return { shouldRender: visible, isClosing: closing };
+}
+
 
 
 
@@ -841,6 +1247,20 @@ const MacIcons = {
             <rect x="53" y="70" width="14" height="10" rx="2" fill="#8B5E3C"/>
         </svg>
     ),
+    AboutDev: ({ size = 54 }) => (
+        <svg viewBox="0 0 120 120" width={size} height={size}>
+            <defs>
+                <linearGradient id="abd1" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#6366F1"/>
+                    <stop offset="100%" stopColor="#8B5CF6"/>
+                </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="116" height="116" rx="26" fill="url(#abd1)"/>
+            <circle cx="60" cy="42" r="16" fill="white" opacity="0.9"/>
+            <ellipse cx="60" cy="82" rx="26" ry="18" fill="white" opacity="0.9"/>
+            <text x="60" y="108" textAnchor="middle" fontSize="9" fill="white" opacity="0.7" fontFamily="Inter" fontWeight="600">DEV</text>
+        </svg>
+    ),
     Trash: ({ size = 54 }) => (
         <img src="app icons/trashicon.jpg" width={size} height={size} style={{ borderRadius: size * 0.22, objectFit: 'cover' }} draggable="false" alt="Trash"/>
     ),
@@ -904,83 +1324,90 @@ window.TrafficLights = TrafficLights;
 <script type="text/babel">
 // macOS Window Component with full drag, resize, and focus management
 const Window = ({ windowData, children }) => {
-    const dragRef = React.useRef(null);
     const [isDragging, setIsDragging] = React.useState(false);
     const [isResizing, setIsResizing] = React.useState(false);
-    const [resizeDir, setResizeDir] = React.useState('');
-    const startRef = React.useRef({ x: 0, y: 0, winX: 0, winY: 0, winW: 0, winH: 0 });
+    const dragState = React.useRef({ dragging: false, resizing: false, dir: '', startX: 0, startY: 0, winX: 0, winY: 0, winW: 0, winH: 0, winId: null });
 
     const { id, title, focused, zIndex, minimized, maximized, opening, closing, x, y, width, height } = windowData;
+    const darkMode = useStore(s => s.darkMode);
 
-    // Drag handlers
-    const onDragStart = (e) => {
-        if (e.target.closest('button')) return;
-        setIsDragging(true);
-        startRef.current = { x: e.clientX, y: e.clientY, winX: x, winY: y, winW: width, winH: height };
-        document.body.style.cursor = 'move';
-        e.preventDefault();
-    };
-
+    // Unified mouse handlers on window level - never lost even on fast moves
     React.useEffect(() => {
         const onMouseMove = (e) => {
-            if (isDragging) {
-                const dx = e.clientX - startRef.current.x;
-                const dy = e.clientY - startRef.current.y;
-                MacStore.updateWindow(id, {
-                    x: startRef.current.winX + dx,
-                    y: Math.max(0, startRef.current.winY + dy),
+            const ds = dragState.current;
+            if (!ds.dragging && !ds.resizing) return;
+            e.preventDefault();
+            const dx = e.clientX - ds.startX;
+            const dy = e.clientY - ds.startY;
+            if (ds.dragging) {
+                MacStore.updateWindow(ds.winId, {
+                    x: ds.winX + dx,
+                    y: Math.max(0, ds.winY + dy),
                 });
             }
-            if (isResizing) {
-                const dx = e.clientX - startRef.current.x;
-                const dy = e.clientY - startRef.current.y;
-                const { winX, winY, winW, winH } = startRef.current;
-                let newW = winW, newH = winH, newX = winX, newY = winY;
-
-                if (resizeDir.includes('e')) newW = Math.max(300, winW + dx);
-                if (resizeDir.includes('w')) { newW = Math.max(300, winW - dx); newX = winX + (winW - newW); }
-                if (resizeDir.includes('s')) newH = Math.max(200, winH + dy);
-                if (resizeDir.includes('n')) { newH = Math.max(200, winH - dy); newY = Math.max(0, winY + (winH - newH)); }
-
-                MacStore.updateWindow(id, { x: newX, y: newY, width: newW, height: newH });
+            if (ds.resizing) {
+                let newW = ds.winW, newH = ds.winH, newX = ds.winX, newY = ds.winY;
+                if (ds.dir.includes('e')) newW = Math.max(300, ds.winW + dx);
+                if (ds.dir.includes('w')) { newW = Math.max(300, ds.winW - dx); newX = ds.winX + (ds.winW - newW); }
+                if (ds.dir.includes('s')) newH = Math.max(200, ds.winH + dy);
+                if (ds.dir.includes('n')) { newH = Math.max(200, ds.winH - dy); newY = Math.max(0, ds.winY + (ds.winH - newH)); }
+                MacStore.updateWindow(ds.winId, { x: newX, y: newY, width: newW, height: newH });
             }
         };
         const onMouseUp = () => {
+            if (!dragState.current.dragging && !dragState.current.resizing) return;
+            dragState.current.dragging = false;
+            dragState.current.resizing = false;
             setIsDragging(false);
             setIsResizing(false);
             document.body.style.cursor = '';
+            document.body.style.userSelect = '';
         };
-        if (isDragging || isResizing) {
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
-        }
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
         return () => {
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
         };
-    }, [isDragging, isResizing, resizeDir, id]);
+    }, []);
+
+    // Drag handlers
+    const onDragStart = (e) => {
+        if (e.target.closest('button')) return;
+        e.preventDefault();
+        dragState.current = { dragging: true, resizing: false, dir: '', startX: e.clientX, startY: e.clientY, winX: x, winY: y, winW: width, winH: height, winId: id };
+        setIsDragging(true);
+        document.body.style.cursor = 'move';
+        document.body.style.userSelect = 'none';
+    };
 
     const startResize = (dir) => (e) => {
         e.preventDefault();
         e.stopPropagation();
+        dragState.current = { dragging: false, resizing: true, dir, startX: e.clientX, startY: e.clientY, winX: x, winY: y, winW: width, winH: height, winId: id };
         setIsResizing(true);
-        setResizeDir(dir);
-        startRef.current = { x: e.clientX, y: e.clientY, winX: x, winY: y, winW: width, winH: height };
+        document.body.style.userSelect = 'none';
     };
 
-    if (minimized) return null;
+    const { minimizing, restoring } = windowData;
+    if (minimized && !minimizing) return null;
 
     const windowStyle = maximized
         ? { top: 0, left: 0, width: '100vw', height: 'calc(100vh - 25px)', zIndex, borderRadius: 0 }
         : { top: y, left: x, width, height, zIndex };
 
-    const animClass = opening ? 'animate-window-open' : closing ? 'animate-window-close pointer-events-none' : '';
-    const shadowClass = focused ? 'window-shadow-focused' : 'window-shadow-unfocused';
+    const animClass = opening ? 'animate-window-open'
+        : closing ? 'animate-window-close pointer-events-none'
+        : minimizing ? 'animate-minimize pointer-events-none'
+        : restoring ? 'animate-restore'
+        : '';
+    const shadowClass = isDragging ? 'window-shadow-dragging' : focused ? 'window-shadow-focused' : 'window-shadow-unfocused';
+    const transitionClass = (!isDragging && !isResizing && !opening && !closing && !minimizing && !restoring) ? 'window-transition' : '';
 
     return (
         <div
-            className={`absolute flex flex-col rounded-xl overflow-hidden border border-black/10 ${shadowClass} ${animClass}`}
-            style={windowStyle}
+            className={`absolute flex flex-col rounded-xl overflow-hidden border border-black/10 ${shadowClass} ${animClass} ${transitionClass}`}
+            style={{ ...windowStyle, opacity: isDragging ? 0.88 : 1, transition: isDragging ? 'none' : undefined }}
             onMouseDown={() => { if (!focused) MacStore.focusWindow(id); }}
         >
             {/* Translucent background */}
@@ -988,19 +1415,21 @@ const Window = ({ windowData, children }) => {
 
             {/* Title bar */}
             <div
-                className={`flex items-center h-[38px] min-h-[38px] px-3 border-b border-black/5 relative cursor-default ${focused ? '' : 'bg-gray-200/80'}`}
+                className={`flex items-center h-[38px] min-h-[38px] px-3 border-b relative cursor-default ${darkMode ? 'border-white/5' : 'border-black/5'}`}
                 onMouseDown={onDragStart}
                 onDoubleClick={() => MacStore.toggleMaximize(id)}
-                style={{ background: focused ? 'rgba(236,236,236,0.95)' : 'rgba(230,230,230,0.95)' }}
+                style={{ background: darkMode
+                    ? (focused ? 'rgba(56,56,56,0.98)' : 'rgba(48,48,48,0.95)')
+                    : (focused ? 'rgba(236,236,236,0.95)' : 'rgba(230,230,230,0.95)') }}
             >
                 <TrafficLights windowId={id} focused={focused} />
-                <div className="absolute left-0 right-0 text-center text-[13px] font-medium text-gray-500 pointer-events-none select-none">
+                <div className={`absolute left-0 right-0 text-center text-[13px] font-medium pointer-events-none select-none ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                     {title}
                 </div>
             </div>
 
             {/* Window content */}
-            <div className="flex-1 overflow-hidden relative bg-white">
+            <div className={`flex-1 overflow-hidden relative ${darkMode ? 'bg-[#1e1e1e] text-gray-200' : 'bg-white'}`}>
                 {children}
             </div>
 
@@ -1026,14 +1455,21 @@ window.Window = Window;
 </script>
 
 <script type="text/babel">
-// Finder App - File browser with VFS, right-click context menu support
+// Finder App - File browser with VFS, drag-and-drop, right-click context menu support
 const FinderApp = () => {
     const [currentPath, setCurrentPath] = React.useState('/Users/user');
     const [selectedItem, setSelectedItem] = React.useState(null);
     const [activeSidebar, setActiveSidebar] = React.useState('Home');
     const [renaming, setRenaming] = React.useState(null);
     const [renameValue, setRenameValue] = React.useState('');
+    const [dragOverItem, setDragOverItem] = React.useState(null);
+    const [dragOverSidebar, setDragOverSidebar] = React.useState(null);
+    const [draggingItem, setDraggingItem] = React.useState(null);
+    const [dragGhost, setDragGhost] = React.useState(null);
     const vfsVersion = useStore(s => s.vfsVersion);
+    const fileDrag = useStore(s => s.fileDrag);
+    const dragRef = React.useRef({ startX: 0, startY: 0, name: null, moved: false, currentPath: '' });
+    const containerRef = React.useRef(null);
 
     const sidebarItems = [
         { section: 'Favorites', items: [
@@ -1105,15 +1541,142 @@ const FinderApp = () => {
         if (e.key === 'Enter' && selectedItem && !renaming) startRename(selectedItem);
     };
 
+    // Helper: find drop target from mouse position using elementFromPoint
+    const findDropTarget = (clientX, clientY) => {
+        const el = document.elementFromPoint(clientX, clientY);
+        if (!el) return { folder: null, sidebar: null };
+
+        // Check if over a folder in the file grid
+        const folderEl = el.closest('[data-finder-folder]');
+        if (folderEl) {
+            return { folder: folderEl.getAttribute('data-finder-folder'), sidebar: null };
+        }
+
+        // Check if over a sidebar item
+        const sidebarEl = el.closest('[data-sidebar-path]');
+        if (sidebarEl) {
+            return { folder: null, sidebar: sidebarEl.getAttribute('data-sidebar-path') };
+        }
+
+        return { folder: null, sidebar: null };
+    };
+
+    // --- Drag-and-drop for Finder files ---
+    const handleFileMouseDown = (e, fileName) => {
+        if (e.button !== 0 || renaming) return;
+        dragRef.current = { startX: e.clientX, startY: e.clientY, name: fileName, moved: false, currentPath };
+
+        const onMove = (ev) => {
+            const dx = ev.clientX - dragRef.current.startX;
+            const dy = ev.clientY - dragRef.current.startY;
+            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragRef.current.moved = true;
+            if (!dragRef.current.moved) return;
+
+            setDraggingItem(dragRef.current.name);
+            setDragGhost({ x: ev.clientX, y: ev.clientY });
+
+            // Set global drag state
+            const state = MacStore.getState();
+            if (!state.fileDrag || state.fileDrag.name !== dragRef.current.name) {
+                MacStore.setState({ fileDrag: { name: dragRef.current.name, sourcePath: dragRef.current.currentPath, type: 'finder' } });
+            }
+
+            // Detect drop targets via elementFromPoint
+            const { folder, sidebar } = findDropTarget(ev.clientX, ev.clientY);
+            setDragOverItem(folder && folder !== dragRef.current.name ? folder : null);
+            setDragOverSidebar(sidebar);
+        };
+
+        const onUp = (ev) => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+
+            if (dragRef.current.moved) {
+                const dragName = dragRef.current.name;
+                const srcPath = dragRef.current.currentPath;
+
+                // Detect final drop target
+                const { folder, sidebar } = findDropTarget(ev.clientX, ev.clientY);
+
+                if (folder && folder !== dragName) {
+                    // Dropped on a folder in the file grid
+                    const destPath = srcPath + '/' + folder;
+                    if (VFS.isDir(destPath)) {
+                        VFS.move(srcPath, dragName, destPath);
+                        MacStore.addNotification('Finder', 'Moved', dragName + ' → ' + folder);
+                    }
+                } else if (sidebar && sidebar !== srcPath) {
+                    // Dropped on a sidebar location
+                    VFS.move(srcPath, dragName, sidebar);
+                    MacStore.addNotification('Finder', 'Moved', dragName + ' → ' + sidebar.split('/').pop());
+                } else {
+                    // Check if dropped outside Finder (onto desktop)
+                    const el = document.elementFromPoint(ev.clientX, ev.clientY);
+                    if (el && (el.id === 'desktop-bg' || (el.closest('#desktop-bg') && !el.closest('.glass-dock') && !el.closest('[data-finder-file]')))) {
+                        if (srcPath !== '/Users/user/Desktop') {
+                            VFS.move(srcPath, dragName, '/Users/user/Desktop');
+                            MacStore.addNotification('Finder', 'Moved to Desktop', dragName);
+                        }
+                    }
+                }
+            }
+
+            setDraggingItem(null);
+            setDragGhost(null);
+            setDragOverItem(null);
+            setDragOverSidebar(null);
+            MacStore.setState({ fileDrag: null });
+            dragRef.current.moved = false;
+        };
+
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    };
+
+    // Handle drops from Desktop onto Finder
+    React.useEffect(() => {
+        if (!containerRef.current) return;
+        const el = containerRef.current;
+
+        const onMouseUp = (e) => {
+            const drag = MacStore.getState().fileDrag;
+            if (drag && drag.type === 'desktop' && drag.sourcePath) {
+                const target = document.elementFromPoint(e.clientX, e.clientY);
+                if (target && (el.contains(target) || target === el)) {
+                    const folderEl = target.closest('[data-finder-folder]');
+                    if (folderEl) {
+                        const folderName = folderEl.getAttribute('data-finder-folder');
+                        const destPath = currentPath + '/' + folderName;
+                        if (VFS.isDir(destPath)) {
+                            VFS.move(drag.sourcePath, drag.name, destPath);
+                            MacStore.addNotification('Finder', 'Moved', drag.name + ' → ' + folderName);
+                        }
+                    } else {
+                        if (drag.sourcePath !== currentPath) {
+                            VFS.move(drag.sourcePath, drag.name, currentPath);
+                            MacStore.addNotification('Finder', 'Moved', drag.name + ' → ' + currentPath.split('/').pop());
+                        }
+                    }
+                }
+            }
+        };
+
+        el.addEventListener('mouseup', onMouseUp);
+        return () => el.removeEventListener('mouseup', onMouseUp);
+    }, [currentPath]);
+
     return (
-        <div className="flex h-full" onKeyDown={handleKeyDown} tabIndex={0}>
+        <div ref={containerRef} className="flex h-full" onKeyDown={handleKeyDown} tabIndex={0}>
             <div className="w-[200px] min-w-[200px] bg-gray-100/50 border-r border-black/5 py-2 overflow-y-auto">
                 {sidebarItems.map(section => (
                     <div key={section.section} className="mb-3">
                         <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-5 py-1">{section.section}</div>
                         {section.items.map(item => (
                             <div key={item.name}
-                                className={`flex items-center gap-2 px-5 py-[3px] mx-2 rounded-md text-[13px] cursor-default ${activeSidebar === item.name ? 'bg-blue-500 text-white' : 'hover:bg-black/5'}`}
+                                data-sidebar-path={item.path || ''}
+                                className={`flex items-center gap-2 px-5 py-[3px] mx-2 rounded-md text-[13px] cursor-default transition-colors
+                                    ${activeSidebar === item.name ? 'bg-blue-500 text-white' : 'hover:bg-black/5'}
+                                    ${dragOverSidebar === item.path ? 'bg-blue-400/30 ring-2 ring-blue-400/50' : ''}`}
                                 onClick={() => { setActiveSidebar(item.name); if (item.path) setCurrentPath(item.path); }}>
                                 {item.color ? <div className="w-3 h-3 rounded-full" style={{ background: item.color }}/> : <span className="text-sm">{item.icon}</span>}
                                 <span>{item.name}</span>
@@ -1143,41 +1706,53 @@ const FinderApp = () => {
                 </div>
 
                 <div className="flex-1 p-3 overflow-auto grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', alignContent: 'start' }}>
-                    {files.map(file => (
-                        <div key={file.name}
-                            data-finder-file={file.name}
-                            data-finder-path={currentPath}
-                            data-file-type={file.type}
-                            className={`flex flex-col items-center p-2 rounded-lg cursor-default gap-1 ${selectedItem === file.name ? 'bg-blue-500/15' : 'hover:bg-black/[0.03]'}`}
-                            onClick={() => setSelectedItem(file.name)}
-                            onDoubleClick={() => {
-                                if (file.type === 'folder') navigateTo(file);
-                                else if (file.name.endsWith('.py')) {
-                                    MacStore.setState({ pendingOpenFile: { path: currentPath, name: file.name } });
-                                    MacStore.openWindow('vscode', 'VS Code', 950, 650);
-                                }
-                                else if (file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
-                                    MacStore.setState({ pendingOpenFile: { path: currentPath, name: file.name } });
-                                    MacStore.openWindow('word', 'Word', 900, 700);
-                                }
-                            }}>
-                            <div className="w-[54px] h-[54px] flex items-center justify-center text-4xl">
-                                {file.type === 'folder' ? (
-                                    <svg viewBox="0 0 48 48" width="48" height="48">
-                                        <path d="M6 8h14l4 4h18c1.1 0 2 .9 2 2v24c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V10c0-1.1.9-2 2-2z" fill={file.color || '#64B5F6'}/>
-                                        <rect x="4" y="14" width="40" height="24" rx="2" fill={file.color || '#42A5F5'} opacity="0.85"/>
-                                    </svg>
-                                ) : <span>{file.icon}</span>}
+                    {files.map(file => {
+                        const isDragging = draggingItem === file.name;
+                        const isDropTarget = dragOverItem === file.name && file.type === 'folder';
+                        const isExternalDropTarget = fileDrag && fileDrag.type === 'desktop' && dragOverItem === file.name && file.type === 'folder';
+
+                        return (
+                            <div key={file.name}
+                                data-finder-file={file.name}
+                                data-finder-path={currentPath}
+                                data-file-type={file.type}
+                                data-finder-folder={file.type === 'folder' ? file.name : undefined}
+                                className={`flex flex-col items-center p-2 rounded-lg cursor-default gap-1 transition-all
+                                    ${selectedItem === file.name ? 'bg-blue-500/15' : 'hover:bg-black/[0.03]'}
+                                    ${isDragging ? 'opacity-40' : ''}
+                                    ${isDropTarget || isExternalDropTarget ? 'bg-blue-400/20 ring-2 ring-blue-400/50 scale-105' : ''}`}
+                                onClick={() => setSelectedItem(file.name)}
+                                onMouseDown={(e) => handleFileMouseDown(e, file.name)}
+                                onDoubleClick={() => {
+                                    if (dragRef.current.moved) return;
+                                    if (file.type === 'folder') navigateTo(file);
+                                    else if (file.name.endsWith('.py')) {
+                                        MacStore.setState({ pendingOpenFile: { path: currentPath, name: file.name } });
+                                        MacStore.openWindow('vscode', 'VS Code', 950, 650);
+                                    }
+                                    else if (file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
+                                        MacStore.setState({ pendingOpenFile: { path: currentPath, name: file.name } });
+                                        MacStore.openWindow('word', 'Word', 900, 700);
+                                    }
+                                }}>
+                                <div className="w-[54px] h-[54px] flex items-center justify-center text-4xl">
+                                    {file.type === 'folder' ? (
+                                        <svg viewBox="0 0 48 48" width="48" height="48">
+                                            <path d="M6 8h14l4 4h18c1.1 0 2 .9 2 2v24c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V10c0-1.1.9-2 2-2z" fill={file.color || '#64B5F6'}/>
+                                            <rect x="4" y="14" width="40" height="24" rx="2" fill={file.color || '#42A5F5'} opacity="0.85"/>
+                                        </svg>
+                                    ) : <span>{file.icon}</span>}
+                                </div>
+                                <div className="text-[11px] text-center leading-tight max-w-[80px] break-words">
+                                    {renaming === file.name ? (
+                                        <input type="text" value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
+                                            onBlur={finishRename} onKeyDown={(e) => { if (e.key === 'Enter') finishRename(); if (e.key === 'Escape') setRenaming(null); }}
+                                            className="w-full text-center bg-white border border-blue-500 rounded px-1 outline-none text-[11px]" autoFocus/>
+                                    ) : file.name}
+                                </div>
                             </div>
-                            <div className="text-[11px] text-center leading-tight max-w-[80px] break-words">
-                                {renaming === file.name ? (
-                                    <input type="text" value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
-                                        onBlur={finishRename} onKeyDown={(e) => { if (e.key === 'Enter') finishRename(); if (e.key === 'Escape') setRenaming(null); }}
-                                        className="w-full text-center bg-white border border-blue-500 rounded px-1 outline-none text-[11px]" autoFocus/>
-                                ) : file.name}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {files.length === 0 && (
                         <div className="col-span-full text-center text-gray-400 text-[13px] py-12">This folder is empty</div>
                     )}
@@ -1189,6 +1764,16 @@ const FinderApp = () => {
                     <span>{currentPath.replace('/Users/user', '~')}</span>
                 </div>
             </div>
+
+            {/* Drag ghost overlay */}
+            {dragGhost && draggingItem && (
+                <div className="fixed pointer-events-none z-[99999]"
+                    style={{ left: dragGhost.x + 12, top: dragGhost.y - 12 }}>
+                    <div className="bg-blue-500/80 text-white text-[11px] px-2 py-1 rounded-md shadow-lg whitespace-nowrap">
+                        {draggingItem}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -2063,24 +2648,46 @@ const SettingsApp = () => {
     const focusOn = useStore(s => s.focusOn);
     const darkMode = useStore(s => s.darkMode);
     const wallpaperIndex = useStore(s => s.wallpaperIndex);
+    const accentColor = useStore(s => s.accentColor);
+
+    // Keys that sync to global store (affect other components)
+    const globalKeys = {
+        dockSize: 'dockSize', dockMagnification: 'dockMagnification',
+        dockAutoHide: 'dockAutoHide', dockPosition: 'dockPosition',
+        showRecents: 'showRecents', accentColor: 'accentColor',
+        nightShift: 'nightShift', reduceMotion: 'reduceMotion',
+        increaseContrast: 'increaseContrast', reduceTransparency: 'reduceTransparency',
+        largerText: 'largerText', showPercentage: 'showBatteryPercentage',
+        notifSounds: 'notifSounds', notifLockScreen: 'notifLockScreen',
+    };
 
     // Local toggles persisted to localStorage
     const [local, setLocal] = React.useState(() => {
         const saved = localStorage.getItem('macos_settings_local');
-        if (saved) try { return JSON.parse(saved); } catch(e) {}
-        return {
+        const state = MacStore.getState();
+        const defaults = {
             airDrop: true, handoff: true, autoUpdates: true, locationServices: true,
-            analytics: false, siri: true, trueTone: true, nightShift: false,
-            notifSounds: true, notifBadges: true, notifBanners: true, notifLockScreen: true,
+            analytics: false, siri: true, trueTone: true, nightShift: state.nightShift || false,
+            notifSounds: state.notifSounds !== undefined ? state.notifSounds : true,
+            notifBadges: true, notifBanners: true,
+            notifLockScreen: state.notifLockScreen !== undefined ? state.notifLockScreen : true,
             alertSound: 'Glass', outputDevice: 'MacBook Pro Speakers', inputDevice: 'MacBook Pro Microphone',
-            inputVolume: 70, reduceMotion: false, increaseContrast: false, reduceTransparency: false,
-            largerText: false, dockSize: 48, dockMagnification: true, dockAutoHide: false, dockPosition: 'bottom',
-            showRecents: true, minimizeEffect: 'Genie', resolution: 'Default', nightShiftSchedule: false,
-            lowPowerMode: false, optimizedCharging: true, showPercentage: true,
+            inputVolume: 70, reduceMotion: state.reduceMotion || false,
+            increaseContrast: state.increaseContrast || false,
+            reduceTransparency: state.reduceTransparency || false,
+            largerText: state.largerText || false,
+            dockSize: state.dockSize || 48, dockMagnification: state.dockMagnification !== false,
+            dockAutoHide: state.dockAutoHide || false, dockPosition: state.dockPosition || 'bottom',
+            showRecents: state.showRecents !== false, minimizeEffect: 'Genie',
+            resolution: 'Default', nightShiftSchedule: false,
+            lowPowerMode: false, optimizedCharging: true,
+            showPercentage: state.showBatteryPercentage !== false,
             keyRepeatSpeed: 6, delayUntilRepeat: 3, capsLockAction: 'Caps Lock',
             trackingSpeed: 5, tapToClick: true, naturalScrolling: true, forceClick: true,
-            accentColor: '#007AFF', highlightColor: '#007AFF',
+            accentColor: state.accentColor || '#007AFF', highlightColor: state.accentColor || '#007AFF',
         };
+        if (saved) try { return { ...defaults, ...JSON.parse(saved) }; } catch(e) {}
+        return defaults;
     });
 
     const setLocalKey = (key, value) => {
@@ -2089,13 +2696,18 @@ const SettingsApp = () => {
             localStorage.setItem('macos_settings_local', JSON.stringify(next));
             return next;
         });
+        // Sync to global store if this key affects other components
+        if (globalKeys[key]) {
+            MacStore.setState({ [globalKeys[key]]: value });
+        }
     };
 
     const toggleLocal = (key) => setLocalKey(key, !local[key]);
 
     const Toggle = ({ checked, onChange }) => (
         <div
-            className={`w-[38px] h-[22px] rounded-full relative cursor-default transition-colors ${checked ? 'bg-green-500' : 'bg-gray-300'}`}
+            className={`w-[38px] h-[22px] rounded-full relative cursor-default transition-colors ${checked ? '' : 'bg-gray-300'}`}
+            style={checked ? { background: '#34C759' } : undefined}
             onClick={onChange}
         >
             <div className={`w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] shadow-md transition-all ${checked ? 'left-[18px]' : 'left-[2px]'}`}/>
@@ -2105,8 +2717,8 @@ const SettingsApp = () => {
     const Slider = ({ value, onChange, min = 0, max = 100 }) => (
         <div className="flex items-center gap-3 flex-1">
             <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))}
-                className="flex-1 h-1 bg-gray-200 rounded-full appearance-none cursor-pointer accent-blue-500"
-                style={{ accentColor: '#007AFF' }}/>
+                className="flex-1 h-1 bg-gray-200 rounded-full appearance-none cursor-pointer"
+                style={{ accentColor: accentColor }}/>
             <span className="text-[12px] text-gray-400 w-8 text-right">{value}%</span>
         </div>
     );
@@ -2273,7 +2885,8 @@ const SettingsApp = () => {
                                 <div className="text-[13px] mb-2">Alert sound</div>
                                 <div className="grid grid-cols-3 gap-1">
                                     {['Boop','Breeze','Bubble','Crystal','Funky','Glass','Hero','Jump','Mezzo','Pebble','Pluck','Sonar'].map(s => (
-                                        <div key={s} className={`px-2 py-1 rounded text-[12px] cursor-default ${local.alertSound === s ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
+                                        <div key={s} className={`px-2 py-1 rounded text-[12px] cursor-default ${local.alertSound === s ? 'text-white' : 'hover:bg-gray-100'}`}
+                                            style={local.alertSound === s ? { background: accentColor } : undefined}
                                             onClick={() => setLocalKey('alertSound', s)}>{s}</div>
                                     ))}
                                 </div>
@@ -2345,19 +2958,21 @@ const SettingsApp = () => {
                     <div>
                         <h2 className="text-[22px] font-bold mb-5">Appearance</h2>
                         <div className="flex gap-4 mb-6">
-                            {['Light', 'Dark', 'Auto'].map(mode => (
+                            {['Light', 'Dark', 'Auto'].map(mode => {
+                                const isSelected = (mode === 'Light' && !darkMode) || (mode === 'Dark' && darkMode);
+                                return (
                                 <div key={mode} className="flex flex-col items-center gap-2 cursor-default"
                                     onClick={() => {
                                         if (mode === 'Dark' && !darkMode) MacStore.setState({ darkMode: true });
                                         else if (mode === 'Light' && darkMode) MacStore.setState({ darkMode: false });
                                     }}>
-                                    <div className={`w-20 h-14 rounded-lg border-2 ${
-                                        (mode === 'Light' && !darkMode) ? 'border-blue-500' :
-                                        (mode === 'Dark' && darkMode) ? 'border-blue-500' : 'border-gray-300'
-                                    }`} style={{ background: mode === 'Dark' ? '#1c1c1e' : mode === 'Auto' ? 'linear-gradient(90deg, white 50%, #1c1c1e 50%)' : 'white' }}/>
+                                    <div className={`w-20 h-14 rounded-lg border-2 ${isSelected ? '' : 'border-gray-300'}`}
+                                        style={{ background: mode === 'Dark' ? '#1c1c1e' : mode === 'Auto' ? 'linear-gradient(90deg, white 50%, #1c1c1e 50%)' : 'white',
+                                            borderColor: isSelected ? accentColor : undefined }}/>
                                     <span className="text-[12px]">{mode}</span>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         <SettingsGroup title="Accent Color">
                             <div className="flex gap-3 px-4 py-3">
@@ -2367,7 +2982,7 @@ const SettingsApp = () => {
                                     { c: '#8E8E93', n: 'Graphite' }, { c: '#FF3B30', n: 'Red' },
                                 ].map(item => (
                                     <div key={item.c} className="flex flex-col items-center gap-1 cursor-default" onClick={() => setLocalKey('accentColor', item.c)}>
-                                        <div className={`w-6 h-6 rounded-full border-2 ${local.accentColor === item.c ? 'border-gray-800 scale-110' : 'border-black/10'}`}
+                                        <div className={`w-6 h-6 rounded-full border-2 ${accentColor === item.c ? 'border-gray-800 scale-110' : 'border-black/10'}`}
                                             style={{ background: item.c }}/>
                                         <span className="text-[9px] text-gray-400">{item.n}</span>
                                     </div>
@@ -2378,7 +2993,7 @@ const SettingsApp = () => {
                             <div className="flex gap-4 px-4 py-3">
                                 {['Small', 'Medium', 'Large'].map(s => (
                                     <label key={s} className="flex items-center gap-2 cursor-default text-[13px]">
-                                        <input type="radio" name="sidebarSize" defaultChecked={s === 'Medium'} className="accent-blue-500"/>
+                                        <input type="radio" name="sidebarSize" defaultChecked={s === 'Medium'} className="accent-current"/>
                                         {s}
                                     </label>
                                 ))}
@@ -2453,7 +3068,7 @@ const SettingsApp = () => {
                                     <span className="text-[11px] text-gray-400">Small</span>
                                     <input type="range" min="32" max="80" value={local.dockSize}
                                         onChange={e => setLocalKey('dockSize', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer accent-blue-500"/>
+                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
                                     <span className="text-[11px] text-gray-400">Large</span>
                                 </div>
                             </div>
@@ -2464,7 +3079,8 @@ const SettingsApp = () => {
                                     <div className="flex gap-1">
                                         {['Left', 'Bottom', 'Right'].map(pos => (
                                             <button key={pos}
-                                                className={`px-3 py-1 rounded text-[12px] ${local.dockPosition === pos.toLowerCase() ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                                className={`px-3 py-1 rounded text-[12px] ${local.dockPosition === pos.toLowerCase() ? 'text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                                style={local.dockPosition === pos.toLowerCase() ? { background: accentColor } : undefined}
                                                 onClick={() => setLocalKey('dockPosition', pos.toLowerCase())}>{pos}</button>
                                         ))}
                                     </div>
@@ -2512,7 +3128,8 @@ const SettingsApp = () => {
                         <SettingsGroup title="Resolution">
                             <div className="flex gap-2 px-4 py-3">
                                 {['Larger Text', 'Default', 'More Space'].map(r => (
-                                    <div key={r} className={`flex-1 py-2 rounded-lg text-center text-[12px] cursor-default ${local.resolution === r ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                    <div key={r} className={`flex-1 py-2 rounded-lg text-center text-[12px] cursor-default ${local.resolution === r ? 'text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                        style={local.resolution === r ? { background: accentColor } : undefined}
                                         onClick={() => setLocalKey('resolution', r)}>{r}</div>
                                 ))}
                             </div>
@@ -2525,28 +3142,42 @@ const SettingsApp = () => {
                 );
 
             case 'wallpaper':
+                const WallpaperCard = ({ wp, i }) => {
+                    const [loaded, setLoaded] = React.useState(!wp.path.startsWith('http'));
+                    return (
+                        <div key={i}
+                            className={`cursor-default rounded-xl overflow-hidden border-2 transition-all ${wallpaperIndex === i ? 'shadow-lg' : 'border-transparent hover:border-gray-300'}`}
+                            style={wallpaperIndex === i ? { borderColor: accentColor, boxShadow: '0 0 0 2px ' + accentColor + '40' } : undefined}
+                            onClick={() => MacStore.setWallpaper(i)}>
+                            <div className="relative bg-gray-200" style={{ minHeight: '90px' }}>
+                                {!loaded && <div className="absolute inset-0 flex items-center justify-center"><div className="w-5 h-5 border-2 border-gray-300 border-t-gray-500 rounded-full" style={{ animation: 'spin 0.8s linear infinite' }}/></div>}
+                                <img src={wp.path} alt={wp.name} className={`w-full h-[90px] object-cover transition-opacity ${loaded ? 'opacity-100' : 'opacity-0'}`} draggable="false"
+                                    loading="lazy" onLoad={() => setLoaded(true)} onError={e => { e.target.style.display = 'none'; setLoaded(true); }}/>
+                                {wallpaperIndex === i && (
+                                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: accentColor }}>
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="py-1.5 px-1 bg-gray-50 text-center">
+                                <span className="text-[11px] font-medium">{wp.name}</span>
+                            </div>
+                        </div>
+                    );
+                };
+                const localWPs = WALLPAPERS.filter(w => !w.path.startsWith('http'));
+                const onlineWPs = WALLPAPERS.filter(w => w.path.startsWith('http'));
                 return (
                     <div>
                         <h2 className="text-[22px] font-bold mb-5">Wallpaper</h2>
                         <p className="text-[13px] text-gray-500 mb-4">Choose a wallpaper for your desktop and lock screen.</p>
-                        <div className="grid grid-cols-3 gap-4">
-                            {WALLPAPERS.map((wp, i) => (
-                                <div key={i}
-                                    className={`cursor-default rounded-xl overflow-hidden border-2 transition-all ${wallpaperIndex === i ? 'border-blue-500 shadow-lg ring-2 ring-blue-500/30' : 'border-transparent hover:border-gray-300'}`}
-                                    onClick={() => MacStore.setWallpaper(i)}>
-                                    <div className="relative">
-                                        <img src={wp.path} alt={wp.name} className="w-full h-[100px] object-cover" draggable="false"/>
-                                        {wallpaperIndex === i && (
-                                            <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
-                                                <svg viewBox="0 0 24 24" width="12" height="12" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="p-2 bg-gray-50 text-center">
-                                        <span className="text-[12px] font-medium">{wp.name}</span>
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="text-[12px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Included</div>
+                        <div className="grid grid-cols-4 gap-3 mb-5">
+                            {localWPs.map((wp, i) => <WallpaperCard key={i} wp={wp} i={WALLPAPERS.indexOf(wp)}/>)}
+                        </div>
+                        <div className="text-[12px] font-semibold text-gray-400 uppercase tracking-wide mb-2">macOS Collection</div>
+                        <div className="grid grid-cols-4 gap-3">
+                            {onlineWPs.map((wp, i) => <WallpaperCard key={i} wp={wp} i={WALLPAPERS.indexOf(wp)}/>)}
                         </div>
                     </div>
                 );
@@ -2612,7 +3243,7 @@ const SettingsApp = () => {
                                     <span className="text-[11px] text-gray-400">Slow</span>
                                     <input type="range" min="1" max="10" value={local.keyRepeatSpeed}
                                         onChange={e => setLocalKey('keyRepeatSpeed', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer accent-blue-500"/>
+                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
                                     <span className="text-[11px] text-gray-400">Fast</span>
                                 </div>
                             </div>
@@ -2624,7 +3255,7 @@ const SettingsApp = () => {
                                     <span className="text-[11px] text-gray-400">Long</span>
                                     <input type="range" min="1" max="6" value={local.delayUntilRepeat}
                                         onChange={e => setLocalKey('delayUntilRepeat', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer accent-blue-500"/>
+                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
                                     <span className="text-[11px] text-gray-400">Short</span>
                                 </div>
                             </div>
@@ -2656,7 +3287,7 @@ const SettingsApp = () => {
                                     <span className="text-[11px] text-gray-400">Slow</span>
                                     <input type="range" min="1" max="10" value={local.trackingSpeed}
                                         onChange={e => setLocalKey('trackingSpeed', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer accent-blue-500"/>
+                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
                                     <span className="text-[11px] text-gray-400">Fast</span>
                                 </div>
                             </div>
@@ -2699,7 +3330,8 @@ const SettingsApp = () => {
                     if (s.sep) return <div key={i} className="h-px bg-black/5 my-2 mx-4"/>;
                     if (s.isProfile) return (
                         <div key={s.id}
-                            className={`flex items-center gap-3 p-3 mx-1 rounded-xl cursor-default ${activeSection === s.id ? 'bg-blue-500 text-white' : 'hover:bg-black/[0.03]'}`}
+                            className={`flex items-center gap-3 p-3 mx-1 rounded-xl cursor-default ${activeSection === s.id ? 'text-white' : 'hover:bg-black/[0.03]'}`}
+                            style={activeSection === s.id ? { background: accentColor } : undefined}
                             onClick={() => setActiveSection(s.id)}>
                             <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
                                 <svg viewBox="0 0 100 100" width="48" height="48"><circle cx="50" cy="50" r="50" fill="#c7c7cc"/><circle cx="50" cy="38" r="18" fill="#e5e5ea"/><ellipse cx="50" cy="80" rx="30" ry="22" fill="#e5e5ea"/></svg>
@@ -2712,7 +3344,8 @@ const SettingsApp = () => {
                     );
                     return (
                         <div key={s.id}
-                            className={`flex items-center gap-2.5 px-3 py-[5px] mx-1 rounded-lg cursor-default text-[13px] ${activeSection === s.id ? 'bg-blue-500 text-white' : 'hover:bg-black/[0.03]'}`}
+                            className={`flex items-center gap-2.5 px-3 py-[5px] mx-1 rounded-lg cursor-default text-[13px] ${activeSection === s.id ? 'text-white' : 'hover:bg-black/[0.03]'}`}
+                            style={activeSection === s.id ? { background: accentColor } : undefined}
                             onClick={() => setActiveSection(s.id)}>
                             <span className="text-sm">{s.icon}</span>
                             <span>{s.label}</span>
@@ -6550,8 +7183,12 @@ const AppStoreApp = () => {
 
     const GetButton = ({ app }) => {
         if (downloads[app.name]) return (
-            <button onClick={(e) => { e.stopPropagation(); openApp(app); }}
-                className="px-3.5 py-1 rounded-full bg-gray-100 text-blue-600 text-[11px] font-semibold hover:bg-blue-100 transition-colors">OPEN</button>
+            <div className="flex items-center gap-1.5">
+                <button onClick={(e) => { e.stopPropagation(); openApp(app); }}
+                    className="px-3.5 py-1 rounded-full bg-gray-100 text-blue-600 text-[11px] font-semibold hover:bg-blue-100 transition-colors">OPEN</button>
+                <button onClick={(e) => { e.stopPropagation(); uninstallApp(app.name); }}
+                    className="px-3 py-1 rounded-full bg-red-500 text-white text-[11px] font-semibold hover:bg-red-600 transition-colors">UNINSTALL</button>
+            </div>
         );
         if (installing[app.name] !== undefined) return (
             <div className="w-[60px] h-[24px] relative">
@@ -6722,6 +7359,74 @@ window.AppStoreApp = AppStoreApp;
 </script>
 
 <script type="text/babel">
+// About the Developer
+const AboutDeveloperApp = () => {
+    const darkMode = useStore(s => s.darkMode);
+
+    return (
+        <div className={`h-full overflow-y-auto ${darkMode ? 'bg-[#1e1e1e] text-white' : 'bg-gradient-to-b from-gray-50 to-white text-gray-900'}`}>
+            <div className="max-w-[520px] mx-auto py-10 px-8">
+                {/* Profile photo */}
+                <div className="flex flex-col items-center mb-8">
+                    <div className="w-[130px] h-[130px] rounded-full overflow-hidden shadow-lg ring-4 ring-white/30 mb-4">
+                        <img src="AboutPhoto/MePhoto.jpeg" alt="Amit Mozapi"
+                            className="w-full h-full object-cover" draggable="false"/>
+                    </div>
+                    <h1 className="text-[26px] font-bold tracking-tight">Amit Mozapi</h1>
+                    <p className={`text-[14px] mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Developer &bull; 16 years old &bull; Israel</p>
+                </div>
+
+                {/* Divider */}
+                <div className={`h-px mb-6 ${darkMode ? 'bg-white/10' : 'bg-gray-200'}`}/>
+
+                {/* About text */}
+                <div className={`text-[14px] leading-relaxed space-y-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <p>
+                        Hi, I'm Amit Mozapi a 16 years old developer from Israel with a passion for building things on the web.
+                    </p>
+                    <p>
+                        I'm currently a high school student majoring in <span className="font-semibold">Biotechnology</span> and <span className="font-semibold">Biology</span>, but when I'm not in the lab, I'm writing code. This macOS Sonoma replica was built entirely from scratch using React, Tailwind CSS, TypeScript, and a lot of attention to detail from the dock magnification and window management to a working file system, App Store, and fully playable apps.
+                    </p>
+                    <p>
+                        I love pushing the limits of what's possible in a browser and coding in general.
+                    </p>
+                </div>
+
+                {/* Divider */}
+                <div className={`h-px my-6 ${darkMode ? 'bg-white/10' : 'bg-gray-200'}`}/>
+
+                {/* Contact */}
+                <div className="flex flex-col items-center gap-3">
+                    <p className={`text-[13px] font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Get in touch for any questions
+                    </p>
+                    <a href="https://instagram.com/am1tt3" target="_blank" rel="noopener noreferrer"
+                        className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[13px] font-semibold transition-all hover:scale-105 active:scale-95 ${
+                            darkMode
+                                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/25'
+                                : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30'
+                        }`}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                        </svg>
+                        @am1tt3
+                    </a>
+                </div>
+
+                {/* Footer */}
+                <div className={`text-center text-[11px] mt-8 pb-4 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+                    Built with React, Tailwind CSS, TS & passion
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+window.AboutDeveloperApp = AboutDeveloperApp;
+</script>
+
+<script type="text/babel">
 // macOS Menu Bar - Fully functional with all dropdowns
 const MenuBar = () => {
     const [clock, setClock] = React.useState('');
@@ -6729,6 +7434,8 @@ const MenuBar = () => {
     const activeWin = useStore(s => s.windows.find(w => w.focused));
     const wifiOn = useStore(s => s.wifiOn);
     const volume = useStore(s => s.volume);
+    const showBatteryPercentage = useStore(s => s.showBatteryPercentage);
+    const focusOn = useStore(s => s.focusOn);
     const batteryLevel = React.useRef(Math.floor(Math.random() * 30) + 65);
 
     React.useEffect(() => {
@@ -6862,7 +7569,7 @@ const MenuBar = () => {
                         </svg>
                     </button>
                     {dropdown === 'apple' && (
-                        <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg min-w-[240px] py-1 shadow-xl border border-black/10 z-[10001]">
+                        <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[240px] py-1 shadow-xl border border-black/10 z-[10001]">
                             <DropItem label="About This Mac" onClick={() => { closeDropdown(); MacStore.setState({ aboutMacOpen: true }); }}/>
                             <DropSep/>
                             <DropItem label="System Settings..." onClick={() => { closeDropdown(); MacStore.openWindow('settings', 'System Settings', 920, 600); }}/>
@@ -6891,7 +7598,7 @@ const MenuBar = () => {
                         onMouseEnter={() => dropdown && setDropdown('app')}
                         className="text-white text-[13px] font-semibold px-2.5 h-full flex items-center hover:bg-white/10 rounded">{appName}</button>
                     {dropdown === 'app' && (
-                        <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg min-w-[220px] py-1 shadow-xl border border-black/10 z-[10001]">
+                        <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[220px] py-1 shadow-xl border border-black/10 z-[10001]">
                             {getAppMenuItems()}
                         </div>
                     )}
@@ -6905,7 +7612,7 @@ const MenuBar = () => {
                             className="text-white text-[13px] px-2.5 h-full flex items-center hover:bg-white/10 rounded"
                         >{menu}</button>
                         {dropdown === menu && (
-                            <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg min-w-[220px] py-1 shadow-xl border border-black/10 z-[10001]">
+                            <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[220px] py-1 shadow-xl border border-black/10 z-[10001]">
                                 {menu === 'File' && <>
                                     <DropItem label="New Window" shortcut="⌘N" onClick={() => { closeDropdown(); MacStore.openWindow('finder','Finder',900,550); }}/>
                                     <DropItem label="New Folder" shortcut="⇧⌘N" onClick={() => { closeDropdown(); VFS.mkdir('/Users/user/Desktop', 'untitled folder'); }}/>
@@ -6950,6 +7657,13 @@ const MenuBar = () => {
             </div>
 
             <div className="flex items-center h-full gap-0.5">
+                {/* Focus indicator */}
+                {focusOn && (
+                    <MenuIcon title="Focus On">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="white"><path d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-2.93 1.81-5.45 4.37-6.49z"/></svg>
+                    </MenuIcon>
+                )}
+
                 {/* Control Center */}
                 <MenuIcon title="Control Center" onClick={() => MacStore.setState(s => ({ controlCenterOpen: !s.controlCenterOpen, notificationCenterOpen: false }))}>
                     <svg viewBox="0 0 24 24" width="15" height="15" fill="white"><path d="M7 10h2v4H7zM11 7h2v10h-2zM15 12h2v2h-2zM3 13h2v1H3zM19 9h2v6h-2z"/></svg>
@@ -6964,7 +7678,7 @@ const MenuBar = () => {
                         </svg>
                     </button>
                     {dropdown === 'wifi' && (
-                        <div className="absolute top-[25px] right-0 glass-menu rounded-b-lg min-w-[260px] py-1 shadow-xl border border-black/10 z-[10001]">
+                        <div className="absolute top-[25px] right-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[260px] py-1 shadow-xl border border-black/10 z-[10001]">
                             <div className="flex items-center justify-between px-4 py-2">
                                 <span className="text-[13px] font-semibold">Wi-Fi</span>
                                 <div className={`w-8 h-[18px] rounded-full cursor-default flex items-center transition-colors ${wifiOn ? 'bg-green-500 justify-end' : 'bg-gray-300 justify-start'}`}
@@ -6999,10 +7713,10 @@ const MenuBar = () => {
                             <rect x="2" y="2.5" width={Math.floor(batteryLevel.current * 0.18)} height="9" rx="1" fill="white" opacity="0.9"/>
                             <path d="M24 5.5 v3" strokeWidth="1.5" strokeLinecap="round"/>
                         </svg>
-                        <span className="text-white text-[11px]">{batteryLevel.current}%</span>
+                        {showBatteryPercentage && <span className="text-white text-[11px]">{batteryLevel.current}%</span>}
                     </button>
                     {dropdown === 'battery' && (
-                        <div className="absolute top-[25px] right-0 glass-menu rounded-b-lg min-w-[240px] py-1 shadow-xl border border-black/10 z-[10001]">
+                        <div className="absolute top-[25px] right-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[240px] py-1 shadow-xl border border-black/10 z-[10001]">
                             <div className="px-4 py-2">
                                 <div className="text-[13px] font-semibold">Battery</div>
                                 <div className="text-[12px] text-gray-500 mt-0.5">{batteryLevel.current}% — Charging</div>
@@ -7074,10 +7788,44 @@ window.MenuBar = MenuBar;
 </script>
 
 <script type="text/babel">
-// macOS Dock - uniform icon sizes
+// macOS Dock - reads settings from global store
 const Dock = () => {
     const openApps = useStore(s => s.openApps);
     const windows = useStore(s => s.windows);
+    const dockSize = useStore(s => s.dockSize);
+    const dockMagnification = useStore(s => s.dockMagnification);
+    const dockAutoHide = useStore(s => s.dockAutoHide);
+    const dockPosition = useStore(s => s.dockPosition);
+    const showRecents = useStore(s => s.showRecents);
+    const accentColor = useStore(s => s.accentColor);
+
+    const [hovered, setHovered] = React.useState(false);
+    const [visible, setVisible] = React.useState(!dockAutoHide);
+    const [bouncingApp, setBouncingApp] = React.useState(null);
+    const [mousePos, setMousePos] = React.useState(null); // mouse position relative to dock
+    const dockRef = React.useRef(null);
+
+    // Auto-hide logic
+    React.useEffect(() => {
+        if (!dockAutoHide) { setVisible(true); return; }
+        setVisible(false);
+        const handleMouse = (e) => {
+            if (dockPosition === 'bottom' && e.clientY >= window.innerHeight - 4) setVisible(true);
+            else if (dockPosition === 'left' && e.clientX <= 4) setVisible(true);
+            else if (dockPosition === 'right' && e.clientX >= window.innerWidth - 4) setVisible(true);
+        };
+        window.addEventListener('mousemove', handleMouse);
+        return () => window.removeEventListener('mousemove', handleMouse);
+    }, [dockAutoHide, dockPosition]);
+
+    // Hide when mouse leaves dock area (if auto-hide)
+    React.useEffect(() => {
+        if (!dockAutoHide) return;
+        if (!hovered && visible) {
+            const t = setTimeout(() => setVisible(false), 800);
+            return () => clearTimeout(t);
+        }
+    }, [hovered, dockAutoHide, visible]);
 
     const dockApps = [
         { type: 'finder', name: 'Finder', Icon: MacIcons.Finder },
@@ -7089,33 +7837,48 @@ const Dock = () => {
         { type: 'photos', name: 'Photos', Icon: MacIcons.Photos },
         { type: 'music', name: 'Music', Icon: MacIcons.Music },
         { type: 'appstore', name: 'App Store', Icon: MacIcons.AppStore },
-        'sep',
+    ];
+
+    // Add separator + utility apps
+    const utilApps = [
         { type: 'notes', name: 'Notes', Icon: MacIcons.Notes },
         { type: 'calendar', name: 'Calendar', Icon: MacIcons.Calendar },
         { type: 'calculator', name: 'Calculator', Icon: MacIcons.Calculator },
         { type: 'terminal', name: 'Terminal', Icon: MacIcons.Terminal },
         { type: 'word', name: 'Word', Icon: MacIcons.Word },
         { type: 'settings', name: 'System Settings', Icon: MacIcons.Settings },
-        'sep',
-        { type: 'trash', name: 'Trash', Icon: MacIcons.Trash },
+        { type: 'aboutdev', name: 'About the Developer', Icon: MacIcons.AboutDev },
     ];
 
+    // Build final dock items list
+    const allItems = [...dockApps, 'sep', ...utilApps];
+
+    // Add recent apps section if enabled
+    if (showRecents) {
+        const recentApps = [];
+        windows.forEach(w => {
+            if (!dockApps.find(a => a.type === w.appType) && !utilApps.find(a => a.type === w.appType) && w.appType !== 'trash') {
+                const iconMap = { snake: MacIcons.Snake, tetris: MacIcons.Tetris, game2048: MacIcons.Game2048, vscode: MacIcons.VSCode, paint: MacIcons.Paint };
+                if (iconMap[w.appType] && !recentApps.find(r => r.type === w.appType)) {
+                    recentApps.push({ type: w.appType, name: w.title, Icon: iconMap[w.appType] });
+                }
+            }
+        });
+        if (recentApps.length > 0) {
+            allItems.push('sep');
+            allItems.push(...recentApps);
+        }
+    }
+
+    // Always add trash at end
+    allItems.push('sep', { type: 'trash', name: 'Trash', Icon: MacIcons.Trash });
+
     const appSizes = {
-        finder: { w: 900, h: 550 },
-        safari: { w: 1000, h: 650 },
-        calculator: { w: 250, h: 400 },
-        notes: { w: 800, h: 550 },
-        terminal: { w: 650, h: 420 },
-        settings: { w: 920, h: 600 },
-        messages: { w: 800, h: 550 },
-        mail: { w: 1000, h: 600 },
-        maps: { w: 850, h: 550 },
-        photos: { w: 900, h: 600 },
-        word: { w: 900, h: 700 },
-        calendar: { w: 800, h: 600 },
-        music: { w: 950, h: 600 },
-        appstore: { w: 950, h: 650 },
-        trash: { w: 700, h: 450 },
+        finder: { w: 900, h: 550 }, safari: { w: 1000, h: 650 }, calculator: { w: 250, h: 400 },
+        notes: { w: 800, h: 550 }, terminal: { w: 650, h: 420 }, settings: { w: 920, h: 600 },
+        messages: { w: 800, h: 550 }, mail: { w: 1000, h: 600 }, maps: { w: 850, h: 550 },
+        photos: { w: 900, h: 600 }, word: { w: 900, h: 700 }, calendar: { w: 800, h: 600 },
+        music: { w: 950, h: 600 }, appstore: { w: 950, h: 650 }, aboutdev: { w: 550, h: 580 }, trash: { w: 700, h: 450 },
     };
 
     const handleClick = (appType, appName) => {
@@ -7123,50 +7886,122 @@ const Dock = () => {
             MacStore.setState(s => ({ launchpadOpen: !s.launchpadOpen }));
             return;
         }
-
-        // Check minimized
         const minimized = windows.find(w => w.appType === appType && w.minimized);
         if (minimized) { MacStore.restoreWindow(minimized.id); return; }
-
-        // Check existing
         const existing = windows.find(w => w.appType === appType && !w.minimized);
         if (existing) { MacStore.focusWindow(existing.id); return; }
-
-        // Open new
+        // New app launch - trigger bounce
+        setBouncingApp(appType);
+        setTimeout(() => setBouncingApp(null), 800);
         const size = appSizes[appType] || { w: 800, h: 500 };
         MacStore.openWindow(appType, appName, size.w, size.h);
     };
 
+    const iconSize = dockSize;
+    const isVertical = dockPosition === 'left' || dockPosition === 'right';
+
+    // Position classes
+    const positionStyle = {};
+    const containerClass = 'fixed z-[9998]';
+    if (dockPosition === 'bottom') {
+        positionStyle.bottom = '6px';
+        positionStyle.left = '50%';
+        positionStyle.transform = `translateX(-50%) translateY(${visible ? '0' : '100%'})`;
+    } else if (dockPosition === 'left') {
+        positionStyle.left = '6px';
+        positionStyle.top = '50%';
+        positionStyle.transform = `translateY(-50%) translateX(${visible ? '0' : '-100%'})`;
+    } else if (dockPosition === 'right') {
+        positionStyle.right = '6px';
+        positionStyle.top = '50%';
+        positionStyle.transform = `translateY(-50%) translateX(${visible ? '0' : '100%'})`;
+    }
+    positionStyle.transition = 'transform 0.3s ease';
+
+    const flexDir = isVertical ? 'flex-col' : 'flex-row';
+    const sepStyle = isVertical
+        ? { width: iconSize + 'px', height: '1px', background: 'rgba(255,255,255,0.2)', margin: '4px 0' }
+        : { width: '1px', height: iconSize + 'px', background: 'rgba(255,255,255,0.2)', margin: '0 6px', alignSelf: 'center' };
+
+    // Proximity magnification: calculate scale for each icon based on mouse distance
+    const getIconScale = (itemIndex) => {
+        if (mousePos === null) return 1;
+        if (!dockMagnification) return 1;
+        // Count only non-separator items up to this index to get the icon position
+        let iconIdx = 0;
+        for (let i = 0; i < itemIndex; i++) {
+            if (allItems[i] !== 'sep') iconIdx++;
+        }
+        const gap = iconSize + 5; // icon size + padding
+        const iconCenter = iconIdx * gap + gap / 2;
+        const distance = Math.abs(mousePos - iconCenter);
+        const maxDistance = gap * 2.5;
+        if (distance > maxDistance) return 1;
+        const scale = 1 + 0.3 * Math.cos((distance / maxDistance) * Math.PI / 2);
+        return scale;
+    };
+
+    const handleDockMouseMove = (e) => {
+        if (!dockRef.current || !dockMagnification) return;
+        const rect = dockRef.current.getBoundingClientRect();
+        if (isVertical) {
+            setMousePos(e.clientY - rect.top);
+        } else {
+            setMousePos(e.clientX - rect.left);
+        }
+    };
+
+    const handleDockMouseLeave = () => {
+        setMousePos(null);
+        setHovered(false);
+    };
+
     return (
-        <div className="fixed bottom-1.5 left-1/2 -translate-x-1/2 z-[9998]">
-            <div className="glass-dock flex items-end px-2 py-1 rounded-2xl border border-white/20 shadow-2xl gap-0.5">
-                {dockApps.map((app, i) => {
-                    if (app === 'sep') return <div key={`sep-${i}`} className="w-px h-[48px] bg-white/20 mx-1.5 self-center"/>;
+        <div className={containerClass} style={positionStyle}
+            onMouseEnter={() => setHovered(true)} onMouseLeave={handleDockMouseLeave}>
+            <div ref={dockRef}
+                className={`glass-dock flex items-${isVertical ? 'center' : 'end'} ${isVertical ? 'px-1 py-2' : 'px-2 py-1'} rounded-2xl border border-white/20 shadow-2xl gap-0.5 ${flexDir}`}
+                onMouseMove={handleDockMouseMove}>
+                {allItems.map((app, i) => {
+                    if (app === 'sep') return <div key={`sep-${i}`} style={sepStyle}/>;
 
                     const isOpen = openApps.has(app.type) || app.type === 'finder';
                     const Icon = app.Icon;
+                    const scale = getIconScale(i);
+                    const isBouncing = bouncingApp === app.type;
+                    const liftPx = (scale - 1) * iconSize * 0.4;
+
+                    const iconTransform = isVertical
+                        ? `scale(${scale}) translateX(${liftPx}px)`
+                        : `scale(${scale}) translateY(${-liftPx}px)`;
 
                     return (
                         <div key={app.type}
                             className="dock-item-base flex flex-col items-center p-0.5 cursor-default relative group"
-                            onClick={() => handleClick(app.type, app.name)}
-                        >
+                            onClick={() => handleClick(app.type, app.name)}>
                             {/* Tooltip */}
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                            <div className={`absolute ${isVertical ? 'left-full ml-2 top-1/2 -translate-y-1/2' : 'left-1/2 -translate-x-1/2'} opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50`}
+                                style={!isVertical ? { bottom: iconSize + 28 + 'px' } : undefined}>
                                 <div className="glass-dark px-3 py-1 rounded-md text-white text-[12px] whitespace-nowrap border border-white/10 shadow-lg">
                                     {app.name}
                                 </div>
                             </div>
 
-                            <div className="group-hover:scale-[1.35] group-hover:-translate-y-2 group-active:scale-[1.2] transition-transform duration-150 ease-out"
-                                style={{ transformOrigin: 'bottom center', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>
-                                <div className="w-[48px] h-[48px] flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                    <Icon size={48}/>
+                            <div className={`${isBouncing ? 'animate-bounce-dock' : ''} transition-transform duration-100 ease-out`}
+                                style={{
+                                    transform: isBouncing ? undefined : iconTransform,
+                                    transformOrigin: isVertical ? 'center left' : 'bottom center',
+                                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+                                }}>
+                                <div className="flex items-center justify-center flex-shrink-0 overflow-hidden"
+                                    style={{ width: iconSize + 'px', height: iconSize + 'px' }}>
+                                    <Icon size={iconSize}/>
                                 </div>
                             </div>
 
                             {/* Active indicator */}
-                            <div className={`w-1 h-1 rounded-full mt-0.5 transition-opacity ${isOpen ? 'bg-white/80 opacity-100' : 'opacity-0'}`}/>
+                            {!isVertical && <div className={`w-1 h-1 rounded-full mt-0.5 transition-opacity ${isOpen ? 'bg-white/80 opacity-100' : 'opacity-0'}`}/>}
+                            {isVertical && <div className={`absolute ${dockPosition === 'left' ? '-left-1' : '-right-1'} top-1/2 -translate-y-1/2 w-1 h-1 rounded-full transition-opacity ${isOpen ? 'bg-white/80 opacity-100' : 'opacity-0'}`}/>}
                         </div>
                     );
                 })}
@@ -7195,11 +8030,13 @@ const SpotlightSearch = () => {
         { name: 'TextEdit', type: 'textedit' }, { name: 'Calendar', type: 'calendar' },
     ];
 
+    const { shouldRender, isClosing } = useAnimatedVisibility(isOpen, 150);
+
     React.useEffect(() => {
         if (isOpen) { setQuery(''); setTimeout(() => inputRef.current?.focus(), 50); }
     }, [isOpen]);
 
-    if (!isOpen) return null;
+    if (!shouldRender) return null;
 
     const q = query.toLowerCase();
     const matched = q ? apps.filter(a => a.name.toLowerCase().includes(q)) : [];
@@ -7220,10 +8057,10 @@ const SpotlightSearch = () => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/25 z-[10002] flex items-start justify-center pt-[160px]"
+        <div className={`fixed inset-0 bg-black/25 z-[10002] flex items-start justify-center pt-[160px] ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
             onClick={(e) => { if (e.target === e.currentTarget) close(); }}
         >
-            <div className="w-[680px] glass-menu rounded-xl shadow-2xl border border-black/10 overflow-hidden animate-spotlight-in">
+            <div className={`w-[680px] glass-menu rounded-xl shadow-2xl border border-black/10 overflow-hidden ${isClosing ? 'animate-spotlight-out' : 'animate-spotlight-in'}`}>
                 <div className="flex items-center gap-3 px-4 py-2.5 border-b border-black/5">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="#999"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                     <input ref={inputRef} type="text" value={query} onChange={e => setQuery(e.target.value)}
@@ -7291,23 +8128,30 @@ window.SpotlightSearch = SpotlightSearch;
 </script>
 
 <script type="text/babel">
-// Control Center
+// Control Center - synced with global store
 const ControlCenter = () => {
     const isOpen = useStore(s => s.controlCenterOpen);
-    const [wifi, setWifi] = React.useState(true);
-    const [bt, setBt] = React.useState(true);
-    const [airdrop, setAirdrop] = React.useState(false);
-    const [focus, setFocus] = React.useState(false);
-    const [darkMode, setDarkMode] = React.useState(false);
-    const [brightness, setBrightness] = React.useState(80);
-    const [volume, setVolume] = React.useState(60);
+    const wifiOn = useStore(s => s.wifiOn);
+    const bluetoothOn = useStore(s => s.bluetoothOn);
+    const focusOn = useStore(s => s.focusOn);
+    const darkMode = useStore(s => s.darkMode);
+    const brightness = useStore(s => s.brightness);
+    const volume = useStore(s => s.volume);
+    const accentColor = useStore(s => s.accentColor);
 
-    if (!isOpen) return null;
+    // Read airDrop from local settings
+    const [airdrop, setAirdrop] = React.useState(() => {
+        try { return JSON.parse(localStorage.getItem('macos_settings_local') || '{}').airDrop !== false; } catch(e) { return true; }
+    });
+
+    const { shouldRender, isClosing } = useAnimatedVisibility(isOpen, 150);
+    if (!shouldRender) return null;
 
     const Tile = ({ active, onClick, icon, label, sublabel }) => (
         <div onClick={onClick}
             className={`rounded-xl p-3 cursor-default text-center transition-colors
-                ${active ? 'bg-blue-500 text-white' : 'bg-white/60 hover:bg-white/80'}`}>
+                ${active ? 'text-white' : 'bg-white/60 hover:bg-white/80'}`}
+            style={active ? { background: accentColor } : undefined}>
             <div className="flex justify-center mb-1.5">{icon}</div>
             <div className="text-[11px] font-semibold">{label}</div>
             {sublabel && <div className="text-[10px] opacity-70">{sublabel}</div>}
@@ -7317,12 +8161,12 @@ const ControlCenter = () => {
     return (
         <div className="fixed z-[10001]" style={{ top: '31px', right: '12px' }}
             onClick={e => e.stopPropagation()}>
-            <div className="w-[320px] glass-menu rounded-2xl shadow-2xl border border-black/10 p-3.5 animate-spotlight-in">
+            <div className={`w-[320px] glass-menu rounded-2xl shadow-2xl border border-black/10 p-3.5 ${isClosing ? 'animate-spotlight-out' : 'animate-spotlight-in'}`}>
                 <div className="grid grid-cols-3 gap-2.5 mb-3">
-                    <Tile active={wifi} onClick={() => setWifi(!wifi)} label="Wi-Fi" sublabel={wifi ? 'Home' : 'Off'}
-                        icon={<svg viewBox="0 0 24 24" width="18" height="18" fill={wifi ? 'white' : '#333'}><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>}/>
-                    <Tile active={bt} onClick={() => setBt(!bt)} label="Bluetooth" sublabel={bt ? 'On' : 'Off'}
-                        icon={<svg viewBox="0 0 24 24" width="18" height="18" fill={bt ? 'white' : '#333'}><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29z"/></svg>}/>
+                    <Tile active={wifiOn} onClick={() => MacStore.setState(s => ({ wifiOn: !s.wifiOn }))} label="Wi-Fi" sublabel={wifiOn ? 'Home' : 'Off'}
+                        icon={<svg viewBox="0 0 24 24" width="18" height="18" fill={wifiOn ? 'white' : '#333'}><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>}/>
+                    <Tile active={bluetoothOn} onClick={() => MacStore.setState(s => ({ bluetoothOn: !s.bluetoothOn }))} label="Bluetooth" sublabel={bluetoothOn ? 'On' : 'Off'}
+                        icon={<svg viewBox="0 0 24 24" width="18" height="18" fill={bluetoothOn ? 'white' : '#333'}><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29z"/></svg>}/>
                     <Tile active={airdrop} onClick={() => setAirdrop(!airdrop)} label="AirDrop" sublabel={airdrop ? 'Everyone' : 'Off'}
                         icon={<svg viewBox="0 0 24 24" width="18" height="18" fill={airdrop ? 'white' : '#333'}><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93z"/></svg>}/>
                 </div>
@@ -7331,7 +8175,7 @@ const ControlCenter = () => {
                     <div className="text-[12px] font-semibold text-gray-400 mb-1.5">Display</div>
                     <div className="flex items-center gap-2 bg-white/60 rounded-xl px-3 py-2">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="#666"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69z"/></svg>
-                        <input type="range" min="10" max="100" value={brightness} onChange={e => setBrightness(+e.target.value)} className="flex-1 accent-blue-500 h-1.5"/>
+                        <input type="range" min="10" max="100" value={brightness} onChange={e => MacStore.setState({ brightness: +e.target.value })} className="flex-1 h-1.5" style={{ accentColor }}/>
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="#333"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
                     </div>
                 </div>
@@ -7340,23 +8184,25 @@ const ControlCenter = () => {
                     <div className="text-[12px] font-semibold text-gray-400 mb-1.5">Sound</div>
                     <div className="flex items-center gap-2 bg-white/60 rounded-xl px-3 py-2">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="#666"><path d="M3 9v6h4l5 5V4L7 9H3z"/></svg>
-                        <input type="range" min="0" max="100" value={volume} onChange={e => setVolume(+e.target.value)} className="flex-1 accent-blue-500 h-1.5"/>
+                        <input type="range" min="0" max="100" value={volume} onChange={e => MacStore.setState({ volume: +e.target.value })} className="flex-1 h-1.5" style={{ accentColor }}/>
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="#333"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
-                    <div onClick={() => setFocus(!focus)}
+                    <div onClick={() => MacStore.setState(s => ({ focusOn: !s.focusOn }))}
                         className={`flex flex-col items-center gap-1.5 rounded-xl py-3 cursor-default transition-colors
-                            ${focus ? 'bg-blue-500 text-white' : 'bg-white/60 hover:bg-white/80'}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${focus ? 'bg-white/20' : 'bg-black/5'}`}>
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill={focus ? 'white' : '#333'}><path d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-2.93 1.81-5.45 4.37-6.49z"/></svg>
+                            ${focusOn ? 'text-white' : 'bg-white/60 hover:bg-white/80'}`}
+                        style={focusOn ? { background: accentColor } : undefined}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${focusOn ? 'bg-white/20' : 'bg-black/5'}`}>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill={focusOn ? 'white' : '#333'}><path d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-2.93 1.81-5.45 4.37-6.49z"/></svg>
                         </div>
                         <span className="text-[11px] font-medium">Focus</span>
                     </div>
-                    <div onClick={() => setDarkMode(!darkMode)}
+                    <div onClick={() => MacStore.setState(s => ({ darkMode: !s.darkMode }))}
                         className={`flex flex-col items-center gap-1.5 rounded-xl py-3 cursor-default transition-colors
-                            ${darkMode ? 'bg-blue-500 text-white' : 'bg-white/60 hover:bg-white/80'}`}>
+                            ${darkMode ? 'text-white' : 'bg-white/60 hover:bg-white/80'}`}
+                        style={darkMode ? { background: accentColor } : undefined}>
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${darkMode ? 'bg-white/20' : 'bg-black/5'}`}>
                             <svg viewBox="0 0 24 24" width="16" height="16" fill={darkMode ? 'white' : '#333'}><path d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-2.93 1.81-5.45 4.37-6.49z"/></svg>
                         </div>
@@ -7378,7 +8224,8 @@ const NotificationCenter = () => {
     const isOpen = useStore(s => s.notificationCenterOpen);
     const [checkedReminders, setCheckedReminders] = React.useState(new Set());
 
-    if (!isOpen) return null;
+    const { shouldRender, isClosing } = useAnimatedVisibility(isOpen, 200);
+    if (!shouldRender) return null;
 
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -7406,7 +8253,7 @@ const NotificationCenter = () => {
 
     return (
         <div className="fixed z-[10001]" style={{ top: '31px', right: '12px' }} onClick={e => e.stopPropagation()}>
-            <div className="w-[340px] max-h-[calc(100vh-100px)] glass rounded-2xl shadow-2xl border border-black/10 p-3.5 overflow-y-auto animate-slide-in-right">
+            <div className={`w-[340px] max-h-[calc(100vh-100px)] glass rounded-2xl shadow-2xl border border-black/10 p-3.5 overflow-y-auto ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
 
                 {/* Calendar Widget */}
                 <div className="bg-white/70 rounded-xl p-3.5 mb-3 shadow-sm">
@@ -7468,6 +8315,7 @@ window.NotificationCenter = NotificationCenter;
 // Context Menu - context-aware with smart edge positioning
 const ContextMenuComponent = () => {
     const [menu, setMenu] = React.useState(null); // { x, y, type, data }
+    const [closing, setClosing] = React.useState(false);
     const menuRef = React.useRef(null);
 
     React.useEffect(() => {
@@ -7510,7 +8358,10 @@ const ContextMenuComponent = () => {
             }
         };
 
-        const close = () => setMenu(null);
+        const close = () => {
+            setClosing(true);
+            setTimeout(() => { setMenu(null); setClosing(false); }, 100);
+        };
         document.addEventListener('contextmenu', handler);
         document.addEventListener('click', close);
         return () => { document.removeEventListener('contextmenu', handler); document.removeEventListener('click', close); };
@@ -7537,6 +8388,7 @@ const ContextMenuComponent = () => {
         }
     });
 
+    if (!menu && !closing) return null;
     if (!menu) return null;
 
     const createNewFolder = () => {
@@ -7644,8 +8496,8 @@ const ContextMenuComponent = () => {
     };
 
     return (
-        <div ref={menuRef} className="fixed glass-menu rounded-lg min-w-[220px] py-1 shadow-xl border border-black/10 z-[10003]"
-            style={{ left: menu.x, top: menu.y }}>
+        <div ref={menuRef} className={`fixed glass-menu rounded-lg min-w-[220px] py-1 shadow-xl border border-black/10 z-[10003] ${closing ? 'animate-context-menu-out pointer-events-none' : 'animate-context-menu-in'}`}
+            style={{ left: menu.x, top: menu.y, transformOrigin: 'top left' }}>
             {renderItems()}
         </div>
     );
@@ -7750,6 +8602,14 @@ window.LockScreen = LockScreen;
 </script>
 
 <script type="text/babel">
+// Helper: hex to rgb string
+const hexToRgb = (hex) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return r + ',' + g + ',' + b;
+};
+
 // Desktop - main workspace with drag-and-drop desktop icons
 const Desktop = () => {
     const windows = useStore(s => s.windows);
@@ -7758,6 +8618,27 @@ const Desktop = () => {
     const notifications = useStore(s => s.notifications);
     const wallpaperIndex = useStore(s => s.wallpaperIndex);
     const vfsVersion = useStore(s => s.vfsVersion);
+    const darkMode = useStore(s => s.darkMode);
+    const brightness = useStore(s => s.brightness);
+    const nightShift = useStore(s => s.nightShift);
+    const accentColor = useStore(s => s.accentColor);
+    const reduceMotion = useStore(s => s.reduceMotion);
+    const increaseContrast = useStore(s => s.increaseContrast);
+    const reduceTransparency = useStore(s => s.reduceTransparency);
+    const largerText = useStore(s => s.largerText);
+    const dockPosition = useStore(s => s.dockPosition);
+
+    // Apply global CSS classes and variables to document
+    React.useEffect(() => {
+        const root = document.documentElement;
+        root.style.setProperty('--accent-color', accentColor);
+        root.style.setProperty('--accent-rgb', hexToRgb(accentColor));
+        root.classList.toggle('dark-mode', darkMode);
+        root.classList.toggle('reduce-motion', reduceMotion);
+        root.classList.toggle('increase-contrast', increaseContrast);
+        root.classList.toggle('reduce-transparency', reduceTransparency);
+        root.classList.toggle('larger-text', largerText);
+    }, [accentColor, darkMode, reduceMotion, increaseContrast, reduceTransparency, largerText]);
 
     const wallpaperStyle = {
         backgroundImage: 'url(' + WALLPAPERS[wallpaperIndex].path + ')',
@@ -7771,6 +8652,7 @@ const Desktop = () => {
         calendar: CalendarApp, photos: PhotosApp, word: WordApp, trash: TrashApp,
         maps: MapsApp, music: MusicApp, appstore: AppStoreApp, snake: SnakeGameApp,
         tetris: TetrisGameApp, game2048: Game2048App, vscode: VSCodeApp, paint: PaintApp,
+        aboutdev: AboutDeveloperApp,
     };
 
     const handleDesktopClick = (e) => {
@@ -7873,7 +8755,8 @@ const Desktop = () => {
         return {};
     });
     const [dragging, setDragging] = React.useState(null);
-    const dragRef = React.useRef({ startX: 0, startY: 0, origX: 0, origY: 0, key: null, moved: false });
+    const [dropTargetFolder, setDropTargetFolder] = React.useState(null); // desktop folder being hovered during drag
+    const dragRef = React.useRef({ startX: 0, startY: 0, origX: 0, origY: 0, key: null, moved: false, fileName: null, isFile: false });
 
     const allDesktopItems = [];
     desktopApps.forEach(app => {
@@ -7884,19 +8767,87 @@ const Desktop = () => {
         allDesktopItems.push({ key: 'file-' + file.name, type: 'file', file });
     });
 
+    // Clean up stale icon positions for files no longer on desktop
+    React.useEffect(() => {
+        const validKeys = new Set(allDesktopItems.map(item => item.key));
+        setIconPositions(prev => {
+            const keys = Object.keys(prev);
+            const stale = keys.filter(k => !validKeys.has(k));
+            if (stale.length === 0) return prev;
+            const next = { ...prev };
+            stale.forEach(k => delete next[k]);
+            localStorage.setItem('macos_desktop_icon_positions', JSON.stringify(next));
+            return next;
+        });
+    }, [vfsVersion]);
+
+    // Grid constants for icon snapping
+    const GRID_W = 90;
+    const GRID_H = 85;
+    const GRID_TOP = 35;
+    const GRID_RIGHT_MARGIN = 5; // from right edge
+
     const getDefaultPos = (index) => {
-        const colH = Math.floor((window.innerHeight - 120) / 85);
+        const colH = Math.floor((window.innerHeight - 120) / GRID_H);
         const col = Math.floor(index / colH);
         const row = index % colH;
-        return { x: window.innerWidth - 85 - col * 90, y: 35 + row * 85 };
+        return { x: window.innerWidth - GRID_W - GRID_RIGHT_MARGIN - col * GRID_W, y: GRID_TOP + row * GRID_H };
     };
 
     const getPos = (key, index) => iconPositions[key] || getDefaultPos(index);
 
-    const handleIconMouseDown = (e, key, index) => {
+    // Snap position to nearest unoccupied grid cell
+    const snapToGrid = (rawX, rawY, draggedKey) => {
+        // Calculate grid cell from raw position
+        const col = Math.round((rawX - GRID_RIGHT_MARGIN) / GRID_W);
+        const row = Math.round((rawY - GRID_TOP) / GRID_H);
+        const snappedX = Math.max(0, Math.min(window.innerWidth - GRID_W, col * GRID_W + GRID_RIGHT_MARGIN));
+        const snappedY = Math.max(GRID_TOP, Math.min(window.innerHeight - 100, row * GRID_H + GRID_TOP));
+
+        // Collect all occupied grid cells (except the one being dragged)
+        const occupied = new Set();
+        allDesktopItems.forEach((item, idx) => {
+            if (item.key === draggedKey) return;
+            const p = getPos(item.key, idx);
+            const cx = Math.round((p.x - GRID_RIGHT_MARGIN) / GRID_W);
+            const cy = Math.round((p.y - GRID_TOP) / GRID_H);
+            occupied.add(cx + ',' + cy);
+        });
+
+        const targetCol = Math.round((snappedX - GRID_RIGHT_MARGIN) / GRID_W);
+        const targetRow = Math.round((snappedY - GRID_TOP) / GRID_H);
+
+        // If target cell is free, use it
+        if (!occupied.has(targetCol + ',' + targetRow)) {
+            return { x: snappedX, y: snappedY };
+        }
+
+        // Find nearest free cell (spiral outward)
+        let bestDist = Infinity;
+        let bestPos = { x: snappedX, y: snappedY };
+        const maxCols = Math.floor(window.innerWidth / GRID_W);
+        const maxRows = Math.floor((window.innerHeight - 120) / GRID_H);
+        for (let r = 0; r <= maxRows; r++) {
+            for (let c = 0; c <= maxCols; c++) {
+                if (occupied.has(c + ',' + r)) continue;
+                const cx = c * GRID_W + GRID_RIGHT_MARGIN;
+                const cy = r * GRID_H + GRID_TOP;
+                const dist = Math.hypot(cx - rawX, cy - rawY);
+                if (dist < bestDist) {
+                    bestDist = dist;
+                    bestPos = { x: cx, y: cy };
+                }
+            }
+        }
+        return bestPos;
+    };
+
+    const handleIconMouseDown = (e, key, index, item) => {
         if (e.button !== 0) return;
         const pos = getPos(key, index);
-        dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y, key, moved: false };
+        const isFile = item.type === 'file';
+        const fileName = isFile ? item.file.name : null;
+        dragRef.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y, key, moved: false, fileName, isFile };
         setDragging(key);
 
         const onMove = (ev) => {
@@ -7911,12 +8862,70 @@ const Desktop = () => {
                 localStorage.setItem('macos_desktop_icon_positions', JSON.stringify(next));
                 return next;
             });
+
+            // Set global fileDrag for cross-component communication (only for actual files)
+            if (dragRef.current.isFile && dragRef.current.fileName) {
+                const state = MacStore.getState();
+                if (!state.fileDrag || state.fileDrag.name !== dragRef.current.fileName) {
+                    MacStore.setState({ fileDrag: { name: dragRef.current.fileName, sourcePath: '/Users/user/Desktop', type: 'desktop' } });
+                }
+            }
+
+            // Check if hovering over a folder on desktop
+            const el = document.elementFromPoint(ev.clientX, ev.clientY);
+            if (el) {
+                const folderEl = el.closest('[data-desktop-file][data-file-type="folder"]');
+                if (folderEl && folderEl.getAttribute('data-desktop-file') !== dragRef.current.fileName) {
+                    setDropTargetFolder(folderEl.getAttribute('data-desktop-file'));
+                } else {
+                    setDropTargetFolder(null);
+                }
+            }
         };
 
-        const onUp = () => {
-            setDragging(null);
+        const onUp = (ev) => {
             window.removeEventListener('mousemove', onMove);
             window.removeEventListener('mouseup', onUp);
+
+            if (dragRef.current.moved) {
+                let movedToFolder = false;
+
+                if (dragRef.current.isFile && dragRef.current.fileName) {
+                    // Check if dropped on a desktop folder
+                    if (dropTargetFolder) {
+                        const destPath = '/Users/user/Desktop/' + dropTargetFolder;
+                        if (VFS.isDir(destPath)) {
+                            VFS.move('/Users/user/Desktop', dragRef.current.fileName, destPath);
+                            MacStore.addNotification('Finder', 'Moved', dragRef.current.fileName + ' → ' + dropTargetFolder);
+                            movedToFolder = true;
+                            // Clean up icon position for moved file
+                            setIconPositions(prev => {
+                                const next = { ...prev };
+                                delete next['file-' + dragRef.current.fileName];
+                                localStorage.setItem('macos_desktop_icon_positions', JSON.stringify(next));
+                                return next;
+                            });
+                        }
+                    }
+                    // Check if dropped on a Finder window (handled by Finder's mouseup listener)
+                }
+
+                // Snap to grid if not moved into a folder
+                if (!movedToFolder) {
+                    const curPos = iconPositions[dragRef.current.key] || getDefaultPos(0);
+                    const snapped = snapToGrid(curPos.x, curPos.y, dragRef.current.key);
+                    setIconPositions(prev => {
+                        const next = { ...prev, [dragRef.current.key]: snapped };
+                        localStorage.setItem('macos_desktop_icon_positions', JSON.stringify(next));
+                        return next;
+                    });
+                }
+            }
+
+            setDragging(null);
+            setDropTargetFolder(null);
+            MacStore.setState({ fileDrag: null });
+            dragRef.current.moved = false;
         };
 
         window.addEventListener('mousemove', onMove);
@@ -7942,7 +8951,7 @@ const Desktop = () => {
                                 data-desktop-app={item.appType} data-app-name={item.name}
                                 className={`absolute flex flex-col items-center gap-0.5 p-1 rounded-lg cursor-default w-[80px] ${isSelected ? 'bg-white/25' : 'hover:bg-white/10'} ${isDrag ? 'z-50 opacity-80' : ''}`}
                                 style={{ left: pos.x, top: pos.y }}
-                                onMouseDown={(e) => { e.stopPropagation(); setSelectedDesktopItem(item.key); handleIconMouseDown(e, item.key, index); }}
+                                onMouseDown={(e) => { e.stopPropagation(); setSelectedDesktopItem(item.key); handleIconMouseDown(e, item.key, index, item); }}
                                 onDoubleClick={() => { if (!dragRef.current.moved) openApp(item.appType, item.name); }}>
                                 <div className="w-[48px] h-[48px] flex items-center justify-center flex-shrink-0"><Icon size={48}/></div>
                                 <span className="text-[10px] text-white text-center leading-tight drop-shadow-md truncate w-full">{item.name}</span>
@@ -7950,12 +8959,16 @@ const Desktop = () => {
                         );
                     } else {
                         const file = item.file;
+                        const isFolderDropTarget = dropTargetFolder === file.name && file.type === 'folder';
                         return (
                             <div key={item.key}
                                 data-desktop-file={file.name} data-file-type={file.type}
-                                className={`absolute flex flex-col items-center gap-0.5 p-1 rounded-lg cursor-default w-[80px] ${isSelected ? 'bg-white/25' : 'hover:bg-white/10'} ${isDrag ? 'z-50 opacity-80' : ''}`}
+                                className={`absolute flex flex-col items-center gap-0.5 p-1 rounded-lg cursor-default w-[80px] transition-all
+                                    ${isSelected ? 'bg-white/25' : 'hover:bg-white/10'}
+                                    ${isDrag ? 'z-50 opacity-80' : ''}
+                                    ${isFolderDropTarget ? 'bg-blue-400/30 ring-2 ring-blue-400/60 scale-110' : ''}`}
                                 style={{ left: pos.x, top: pos.y }}
-                                onMouseDown={(e) => { e.stopPropagation(); setSelectedDesktopItem(item.key); handleIconMouseDown(e, item.key, index); }}
+                                onMouseDown={(e) => { e.stopPropagation(); setSelectedDesktopItem(item.key); handleIconMouseDown(e, item.key, index, item); }}
                                 onDoubleClick={() => {
                                     if (dragRef.current.moved) return;
                                     if (file.type === 'folder') MacStore.openWindow('finder', 'Finder', 900, 550);
@@ -7997,79 +9010,110 @@ const Desktop = () => {
             </div>
 
             {/* Launchpad */}
-            {launchpadOpen && (
-                <div className="fixed inset-0 z-[9997] flex items-center justify-center animate-fade-in"
-                    onClick={() => MacStore.setState({ launchpadOpen: false })}
-                    style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)' }}>
-                    <div className="grid gap-6 p-12" style={{ gridTemplateColumns: 'repeat(7, 90px)' }}
-                        onClick={e => e.stopPropagation()}>
-                        {launchpadApps.map(app => {
-                            const Icon = app.Icon;
-                            return (
-                                <div key={app.type} className="flex flex-col items-center gap-2 cursor-default group"
-                                    onClick={() => openApp(app.type, app.name)}>
-                                    <div className="group-hover:scale-110 transition-transform">
-                                        <div className="w-[64px] h-[64px] flex items-center justify-center"><Icon size={64}/></div>
+            {(() => {
+                const { shouldRender: lpRender, isClosing: lpClosing } = useAnimatedVisibility(launchpadOpen, 200);
+                if (!lpRender) return null;
+                return (
+                    <div className={`fixed inset-0 z-[9997] flex items-center justify-center ${lpClosing ? 'animate-launchpad-out' : 'animate-launchpad-in'}`}
+                        onClick={() => MacStore.setState({ launchpadOpen: false })}
+                        style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)' }}>
+                        <div className="grid gap-6 p-12" style={{ gridTemplateColumns: 'repeat(7, 90px)' }}
+                            onClick={e => e.stopPropagation()}>
+                            {launchpadApps.map(app => {
+                                const Icon = app.Icon;
+                                return (
+                                    <div key={app.type} className="flex flex-col items-center gap-2 cursor-default group"
+                                        onClick={() => openApp(app.type, app.name)}>
+                                        <div className="group-hover:scale-110 transition-transform">
+                                            <div className="w-[64px] h-[64px] flex items-center justify-center"><Icon size={64}/></div>
+                                        </div>
+                                        <span className="text-white text-[11px] opacity-90 text-center leading-tight w-[90px] truncate">{app.name}</span>
                                     </div>
-                                    <span className="text-white text-[11px] opacity-90 text-center leading-tight w-[90px] truncate">{app.name}</span>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* About This Mac */}
-            {aboutMacOpen && (
-                <div className="fixed inset-0 z-[10004] flex items-center justify-center bg-black/30"
-                    onClick={() => MacStore.setState({ aboutMacOpen: false })}>
-                    <div className="glass-menu rounded-2xl shadow-2xl border border-black/10 w-[540px] overflow-hidden animate-window-open"
-                        onClick={e => e.stopPropagation()}>
-                        <div className="p-6 text-center">
-                            <svg viewBox="0 0 170 170" width="60" height="60" fill="#333" className="mx-auto mb-4">
-                                <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.2-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.93.21-9.84-1.96-14.75-6.52-3.13-2.73-7.04-7.41-11.73-14.04-5.03-7.08-9.17-15.29-12.41-24.65-3.47-10.11-5.21-19.9-5.21-29.38 0-10.86 2.35-20.22 7.04-28.07 3.69-6.3 8.61-11.27 14.76-14.92s12.79-5.51 19.95-5.63c3.91 0 9.05 1.21 15.43 3.59 6.36 2.39 10.45 3.6 12.26 3.6 1.35 0 5.94-1.42 13.72-4.24 7.36-2.62 13.57-3.71 18.66-3.27 13.79 1.11 24.13 6.54 31.01 16.32-12.32 7.47-18.41 17.94-18.28 31.37.12 10.46 3.91 19.17 11.35 26.08 3.38 3.21 7.15 5.68 11.34 7.44-.91 2.64-1.87 5.17-2.89 7.59zM119.11 7.24c0 8.2-3 15.86-8.96 22.95-7.19 8.4-15.89 13.25-25.32 12.49-.12-.97-.19-2-.19-3.07 0-7.87 3.43-16.31 9.51-23.19 3.04-3.49 6.9-6.4 11.58-8.72 4.67-2.29 9.09-3.55 13.24-3.8.12 1.13.14 2.25.14 3.34z"/>
-                            </svg>
-                            <h2 className="text-[22px] font-bold mb-1">macOS Sonoma</h2>
-                            <p className="text-[13px] text-gray-500 mb-4">Version 14.3.1</p>
-                            <div className="bg-gray-50 rounded-xl p-4 text-[12px] text-gray-600 text-left space-y-1.5">
-                                <div className="flex justify-between"><span className="text-gray-400">Chip</span><span className="font-medium">Apple M3 Pro</span></div>
-                                <div className="flex justify-between"><span className="text-gray-400">Memory</span><span className="font-medium">18 GB</span></div>
-                                <div className="flex justify-between"><span className="text-gray-400">Startup Disk</span><span className="font-medium">Macintosh HD</span></div>
-                                <div className="flex justify-between"><span className="text-gray-400">Serial Number</span><span className="font-medium">C02YX1ABCDEF</span></div>
-                                <div className="flex justify-between"><span className="text-gray-400">macOS Sonoma</span><span className="font-medium">14.3.1 (23D60)</span></div>
-                            </div>
-                            <div className="mt-4 flex justify-center gap-2">
-                                <button className="px-4 py-1.5 rounded-lg bg-gray-100 text-[12px] font-medium hover:bg-gray-200">System Report...</button>
-                                <button className="px-4 py-1.5 rounded-lg bg-blue-500 text-white text-[12px] font-medium hover:bg-blue-600"
-                                    onClick={() => MacStore.setState({ aboutMacOpen: false })}>OK</button>
+            {(() => {
+                const { shouldRender: amRender, isClosing: amClosing } = useAnimatedVisibility(aboutMacOpen, 200);
+                if (!amRender) return null;
+                return (
+                    <div className={`fixed inset-0 z-[10004] flex items-center justify-center bg-black/30 ${amClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
+                        onClick={() => MacStore.setState({ aboutMacOpen: false })}>
+                        <div className={`glass-menu rounded-2xl shadow-2xl border border-black/10 w-[540px] overflow-hidden ${amClosing ? 'animate-spotlight-out' : 'animate-window-open'}`}
+                            onClick={e => e.stopPropagation()}>
+                            <div className="p-6 text-center">
+                                <svg viewBox="0 0 170 170" width="60" height="60" fill="#333" className="mx-auto mb-4">
+                                    <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.2-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.93.21-9.84-1.96-14.75-6.52-3.13-2.73-7.04-7.41-11.73-14.04-5.03-7.08-9.17-15.29-12.41-24.65-3.47-10.11-5.21-19.9-5.21-29.38 0-10.86 2.35-20.22 7.04-28.07 3.69-6.3 8.61-11.27 14.76-14.92s12.79-5.51 19.95-5.63c3.91 0 9.05 1.21 15.43 3.59 6.36 2.39 10.45 3.6 12.26 3.6 1.35 0 5.94-1.42 13.72-4.24 7.36-2.62 13.57-3.71 18.66-3.27 13.79 1.11 24.13 6.54 31.01 16.32-12.32 7.47-18.41 17.94-18.28 31.37.12 10.46 3.91 19.17 11.35 26.08 3.38 3.21 7.15 5.68 11.34 7.44-.91 2.64-1.87 5.17-2.89 7.59zM119.11 7.24c0 8.2-3 15.86-8.96 22.95-7.19 8.4-15.89 13.25-25.32 12.49-.12-.97-.19-2-.19-3.07 0-7.87 3.43-16.31 9.51-23.19 3.04-3.49 6.9-6.4 11.58-8.72 4.67-2.29 9.09-3.55 13.24-3.8.12 1.13.14 2.25.14 3.34z"/>
+                                </svg>
+                                <h2 className="text-[22px] font-bold mb-1">macOS Sonoma</h2>
+                                <p className="text-[13px] text-gray-500 mb-4">Version 14.3.1</p>
+                                <div className="bg-gray-50 rounded-xl p-4 text-[12px] text-gray-600 text-left space-y-1.5">
+                                    <div className="flex justify-between"><span className="text-gray-400">Chip</span><span className="font-medium">Apple M3 Pro</span></div>
+                                    <div className="flex justify-between"><span className="text-gray-400">Memory</span><span className="font-medium">18 GB</span></div>
+                                    <div className="flex justify-between"><span className="text-gray-400">Startup Disk</span><span className="font-medium">Macintosh HD</span></div>
+                                    <div className="flex justify-between"><span className="text-gray-400">Serial Number</span><span className="font-medium">C02YX1ABCDEF</span></div>
+                                    <div className="flex justify-between"><span className="text-gray-400">macOS Sonoma</span><span className="font-medium">14.3.1 (23D60)</span></div>
+                                </div>
+                                <div className="mt-4 flex justify-center gap-2">
+                                    <button className="px-4 py-1.5 rounded-lg bg-gray-100 text-[12px] font-medium hover:bg-gray-200">System Report...</button>
+                                    <button className="px-4 py-1.5 rounded-lg bg-blue-500 text-white text-[12px] font-medium hover:bg-blue-600"
+                                        onClick={() => MacStore.setState({ aboutMacOpen: false })}>OK</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             <SpotlightSearch />
             <ControlCenter />
             <NotificationCenter />
             <ContextMenuComponent />
 
-            <div className="fixed top-[32px] right-3 z-[10005] flex flex-col gap-2">
-                {notifications.map(notif => (
-                    <div key={notif.id} className="glass-menu rounded-xl shadow-xl border border-black/10 p-3 w-[320px] animate-toast-in cursor-default"
-                        onClick={() => MacStore.setState(s => ({ notifications: s.notifications.filter(n => n.id !== notif.id) }))}>
-                        <div className="flex items-start gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">{notif.app[0]}</div>
-                            <div>
-                                <div className="text-[11px] text-gray-400 font-medium">{notif.app}</div>
-                                <div className="text-[13px] font-semibold">{notif.title}</div>
-                                <div className="text-[12px] text-gray-500">{notif.body}</div>
+            {(() => {
+                const [dismissing, setDismissing] = React.useState(new Set());
+                return (
+                    <div className="fixed top-[32px] right-3 z-[10005] flex flex-col gap-2">
+                        {notifications.map(notif => (
+                            <div key={notif.id} className={`glass-menu rounded-xl shadow-xl border border-black/10 p-3 w-[320px] cursor-default ${dismissing.has(notif.id) ? 'animate-toast-out' : 'animate-toast-in'}`}
+                                onClick={() => {
+                                    setDismissing(prev => new Set([...prev, notif.id]));
+                                    setTimeout(() => {
+                                        MacStore.setState(s => ({ notifications: s.notifications.filter(n => n.id !== notif.id) }));
+                                        setDismissing(prev => { const next = new Set(prev); next.delete(notif.id); return next; });
+                                    }, 250);
+                                }}>
+                                <div className="flex items-start gap-2.5">
+                                    <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">{notif.app[0]}</div>
+                                    <div>
+                                        <div className="text-[11px] text-gray-400 font-medium">{notif.app}</div>
+                                        <div className="text-[13px] font-semibold">{notif.title}</div>
+                                        <div className="text-[12px] text-gray-500">{notif.body}</div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        ))}
                     </div>
-                ))}
-            </div>
+                );
+            })()}
 
             <Dock />
+
+            {/* Brightness overlay */}
+            {brightness < 100 && (
+                <div className="fixed inset-0 pointer-events-none z-[99990]"
+                    style={{ background: 'black', opacity: (100 - brightness) / 100 * 0.7 }}/>
+            )}
+
+            {/* Night Shift warm overlay */}
+            {nightShift && (
+                <div className="fixed inset-0 pointer-events-none z-[99990]"
+                    style={{ background: 'rgba(255, 147, 41, 0.18)', mixBlendMode: 'multiply' }}/>
+            )}
         </div>
     );
 };
@@ -8085,24 +9129,104 @@ const App = () => {
     const [booting, setBooting] = React.useState(true);
     const [bootProgress, setBootProgress] = React.useState(0);
 
-    // Boot screen animation
+    // Real boot: preload wallpapers + app icons, track actual progress
     React.useEffect(() => {
         if (!booting) return;
-        const start = Date.now();
-        const duration = 3000; // 3 seconds boot
-        const tick = () => {
-            const elapsed = Date.now() - start;
-            const progress = Math.min(elapsed / duration, 1);
-            // Ease-out curve for realistic feel
+
+        // Collect all image URLs that need preloading
+        const imageUrls = [
+            // Local wallpapers only (skip online ones to avoid slow boot)
+            ...WALLPAPERS.filter(w => !w.path.startsWith('http')).map(w => w.path),
+            // App icon images (from MacIcons that use <img>)
+            'app icons/fidnericon.png',
+            'app icons/safariicon.png',
+            'app icons/messagesicon.png',
+            'app icons/mailicon.png',
+            'app icons/mapsicon.png',
+            'app icons/photosicon.png',
+            'app icons/calculatoricon.jfif',
+            'app icons/terminalicon.jfif',
+            'app icons/settingsicon.jpg',
+            'app icons/launchpadicon.png',
+            'app icons/calendericon.jfif',
+            'app icons/wordicon.png',
+            'app icons/musicicon.png',
+            'app icons/appstoreicon.png',
+            'app icons/vscodeicon.jfif',
+            'app icons/trashicon.jpg',
+        ];
+
+        const total = imageUrls.length;
+        let loaded = 0;
+        let allLoaded = false;
+        let minTimePassed = false;
+        let done = false;
+        const minDuration = 3000; // Minimum 3 seconds boot time
+        const startTime = Date.now();
+
+        const tryFinish = () => {
+            if (done || !allLoaded || !minTimePassed) return;
+            done = true;
+            setBootProgress(100);
+            setTimeout(() => setBooting(false), 500);
+        };
+
+        const updateProgress = () => {
+            loaded++;
+            // Scale real loading progress to 0-90%, reserve last 10% for min timer
+            const loadRatio = loaded / total;
+            const elapsed = Date.now() - startTime;
+            const timeRatio = Math.min(elapsed / minDuration, 1);
+            // Progress is the slower of the two (load vs time), eased
+            const progress = Math.min(loadRatio, timeRatio);
             const eased = 1 - Math.pow(1 - progress, 2);
             setBootProgress(eased * 100);
-            if (progress < 1) {
-                requestAnimationFrame(tick);
-            } else {
-                setTimeout(() => setBooting(false), 400);
+
+            if (loaded >= total) {
+                allLoaded = true;
+                tryFinish();
             }
         };
-        requestAnimationFrame(tick);
+
+        imageUrls.forEach(url => {
+            const img = new Image();
+            img.onload = updateProgress;
+            img.onerror = updateProgress;
+            img.src = url;
+        });
+
+        // Animate progress smoothly during the minimum wait period
+        const progressInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const timeRatio = Math.min(elapsed / minDuration, 1);
+            const loadRatio = loaded / total;
+            const progress = Math.min(loadRatio, timeRatio);
+            const eased = 1 - Math.pow(1 - progress, 2);
+            setBootProgress(eased * 100);
+        }, 50);
+
+        // Minimum 3s timer
+        const minTimer = setTimeout(() => {
+            minTimePassed = true;
+            clearInterval(progressInterval);
+            tryFinish();
+        }, minDuration);
+
+        // Safety timeout: if loading takes more than 10s, finish anyway
+        const safetyTimer = setTimeout(() => {
+            if (!done) {
+                done = true;
+                clearInterval(progressInterval);
+                setBootProgress(100);
+                setTimeout(() => setBooting(false), 500);
+            }
+        }, 10000);
+
+        return () => {
+            clearTimeout(minTimer);
+            clearTimeout(safetyTimer);
+            clearInterval(progressInterval);
+        };
     }, []);
 
     // Send a welcome notification after unlock

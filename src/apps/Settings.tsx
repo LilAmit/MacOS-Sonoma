@@ -8,24 +8,46 @@ const SettingsApp = () => {
     const focusOn = useStore(s => s.focusOn);
     const darkMode = useStore(s => s.darkMode);
     const wallpaperIndex = useStore(s => s.wallpaperIndex);
+    const accentColor = useStore(s => s.accentColor);
+
+    // Keys that sync to global store (affect other components)
+    const globalKeys = {
+        dockSize: 'dockSize', dockMagnification: 'dockMagnification',
+        dockAutoHide: 'dockAutoHide', dockPosition: 'dockPosition',
+        showRecents: 'showRecents', accentColor: 'accentColor',
+        nightShift: 'nightShift', reduceMotion: 'reduceMotion',
+        increaseContrast: 'increaseContrast', reduceTransparency: 'reduceTransparency',
+        largerText: 'largerText', showPercentage: 'showBatteryPercentage',
+        notifSounds: 'notifSounds', notifLockScreen: 'notifLockScreen',
+    };
 
     // Local toggles persisted to localStorage
     const [local, setLocal] = React.useState(() => {
         const saved = localStorage.getItem('macos_settings_local');
-        if (saved) try { return JSON.parse(saved); } catch(e) {}
-        return {
+        const state = MacStore.getState();
+        const defaults = {
             airDrop: true, handoff: true, autoUpdates: true, locationServices: true,
-            analytics: false, siri: true, trueTone: true, nightShift: false,
-            notifSounds: true, notifBadges: true, notifBanners: true, notifLockScreen: true,
+            analytics: false, siri: true, trueTone: true, nightShift: state.nightShift || false,
+            notifSounds: state.notifSounds !== undefined ? state.notifSounds : true,
+            notifBadges: true, notifBanners: true,
+            notifLockScreen: state.notifLockScreen !== undefined ? state.notifLockScreen : true,
             alertSound: 'Glass', outputDevice: 'MacBook Pro Speakers', inputDevice: 'MacBook Pro Microphone',
-            inputVolume: 70, reduceMotion: false, increaseContrast: false, reduceTransparency: false,
-            largerText: false, dockSize: 48, dockMagnification: true, dockAutoHide: false, dockPosition: 'bottom',
-            showRecents: true, minimizeEffect: 'Genie', resolution: 'Default', nightShiftSchedule: false,
-            lowPowerMode: false, optimizedCharging: true, showPercentage: true,
+            inputVolume: 70, reduceMotion: state.reduceMotion || false,
+            increaseContrast: state.increaseContrast || false,
+            reduceTransparency: state.reduceTransparency || false,
+            largerText: state.largerText || false,
+            dockSize: state.dockSize || 48, dockMagnification: state.dockMagnification !== false,
+            dockAutoHide: state.dockAutoHide || false, dockPosition: state.dockPosition || 'bottom',
+            showRecents: state.showRecents !== false, minimizeEffect: 'Genie',
+            resolution: 'Default', nightShiftSchedule: false,
+            lowPowerMode: false, optimizedCharging: true,
+            showPercentage: state.showBatteryPercentage !== false,
             keyRepeatSpeed: 6, delayUntilRepeat: 3, capsLockAction: 'Caps Lock',
             trackingSpeed: 5, tapToClick: true, naturalScrolling: true, forceClick: true,
-            accentColor: '#007AFF', highlightColor: '#007AFF',
+            accentColor: state.accentColor || '#007AFF', highlightColor: state.accentColor || '#007AFF',
         };
+        if (saved) try { return { ...defaults, ...JSON.parse(saved) }; } catch(e) {}
+        return defaults;
     });
 
     const setLocalKey = (key, value) => {
@@ -34,13 +56,18 @@ const SettingsApp = () => {
             localStorage.setItem('macos_settings_local', JSON.stringify(next));
             return next;
         });
+        // Sync to global store if this key affects other components
+        if (globalKeys[key]) {
+            MacStore.setState({ [globalKeys[key]]: value });
+        }
     };
 
     const toggleLocal = (key) => setLocalKey(key, !local[key]);
 
     const Toggle = ({ checked, onChange }) => (
         <div
-            className={`w-[38px] h-[22px] rounded-full relative cursor-default transition-colors ${checked ? 'bg-green-500' : 'bg-gray-300'}`}
+            className={`w-[38px] h-[22px] rounded-full relative cursor-default transition-colors ${checked ? '' : 'bg-gray-300'}`}
+            style={checked ? { background: '#34C759' } : undefined}
             onClick={onChange}
         >
             <div className={`w-[18px] h-[18px] rounded-full bg-white absolute top-[2px] shadow-md transition-all ${checked ? 'left-[18px]' : 'left-[2px]'}`}/>
@@ -50,8 +77,8 @@ const SettingsApp = () => {
     const Slider = ({ value, onChange, min = 0, max = 100 }) => (
         <div className="flex items-center gap-3 flex-1">
             <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))}
-                className="flex-1 h-1 bg-gray-200 rounded-full appearance-none cursor-pointer accent-blue-500"
-                style={{ accentColor: '#007AFF' }}/>
+                className="flex-1 h-1 bg-gray-200 rounded-full appearance-none cursor-pointer"
+                style={{ accentColor: accentColor }}/>
             <span className="text-[12px] text-gray-400 w-8 text-right">{value}%</span>
         </div>
     );
@@ -218,7 +245,8 @@ const SettingsApp = () => {
                                 <div className="text-[13px] mb-2">Alert sound</div>
                                 <div className="grid grid-cols-3 gap-1">
                                     {['Boop','Breeze','Bubble','Crystal','Funky','Glass','Hero','Jump','Mezzo','Pebble','Pluck','Sonar'].map(s => (
-                                        <div key={s} className={`px-2 py-1 rounded text-[12px] cursor-default ${local.alertSound === s ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}`}
+                                        <div key={s} className={`px-2 py-1 rounded text-[12px] cursor-default ${local.alertSound === s ? 'text-white' : 'hover:bg-gray-100'}`}
+                                            style={local.alertSound === s ? { background: accentColor } : undefined}
                                             onClick={() => setLocalKey('alertSound', s)}>{s}</div>
                                     ))}
                                 </div>
@@ -290,19 +318,21 @@ const SettingsApp = () => {
                     <div>
                         <h2 className="text-[22px] font-bold mb-5">Appearance</h2>
                         <div className="flex gap-4 mb-6">
-                            {['Light', 'Dark', 'Auto'].map(mode => (
+                            {['Light', 'Dark', 'Auto'].map(mode => {
+                                const isSelected = (mode === 'Light' && !darkMode) || (mode === 'Dark' && darkMode);
+                                return (
                                 <div key={mode} className="flex flex-col items-center gap-2 cursor-default"
                                     onClick={() => {
                                         if (mode === 'Dark' && !darkMode) MacStore.setState({ darkMode: true });
                                         else if (mode === 'Light' && darkMode) MacStore.setState({ darkMode: false });
                                     }}>
-                                    <div className={`w-20 h-14 rounded-lg border-2 ${
-                                        (mode === 'Light' && !darkMode) ? 'border-blue-500' :
-                                        (mode === 'Dark' && darkMode) ? 'border-blue-500' : 'border-gray-300'
-                                    }`} style={{ background: mode === 'Dark' ? '#1c1c1e' : mode === 'Auto' ? 'linear-gradient(90deg, white 50%, #1c1c1e 50%)' : 'white' }}/>
+                                    <div className={`w-20 h-14 rounded-lg border-2 ${isSelected ? '' : 'border-gray-300'}`}
+                                        style={{ background: mode === 'Dark' ? '#1c1c1e' : mode === 'Auto' ? 'linear-gradient(90deg, white 50%, #1c1c1e 50%)' : 'white',
+                                            borderColor: isSelected ? accentColor : undefined }}/>
                                     <span className="text-[12px]">{mode}</span>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                         <SettingsGroup title="Accent Color">
                             <div className="flex gap-3 px-4 py-3">
@@ -312,7 +342,7 @@ const SettingsApp = () => {
                                     { c: '#8E8E93', n: 'Graphite' }, { c: '#FF3B30', n: 'Red' },
                                 ].map(item => (
                                     <div key={item.c} className="flex flex-col items-center gap-1 cursor-default" onClick={() => setLocalKey('accentColor', item.c)}>
-                                        <div className={`w-6 h-6 rounded-full border-2 ${local.accentColor === item.c ? 'border-gray-800 scale-110' : 'border-black/10'}`}
+                                        <div className={`w-6 h-6 rounded-full border-2 ${accentColor === item.c ? 'border-gray-800 scale-110' : 'border-black/10'}`}
                                             style={{ background: item.c }}/>
                                         <span className="text-[9px] text-gray-400">{item.n}</span>
                                     </div>
@@ -323,7 +353,7 @@ const SettingsApp = () => {
                             <div className="flex gap-4 px-4 py-3">
                                 {['Small', 'Medium', 'Large'].map(s => (
                                     <label key={s} className="flex items-center gap-2 cursor-default text-[13px]">
-                                        <input type="radio" name="sidebarSize" defaultChecked={s === 'Medium'} className="accent-blue-500"/>
+                                        <input type="radio" name="sidebarSize" defaultChecked={s === 'Medium'} className="accent-current"/>
                                         {s}
                                     </label>
                                 ))}
@@ -398,7 +428,7 @@ const SettingsApp = () => {
                                     <span className="text-[11px] text-gray-400">Small</span>
                                     <input type="range" min="32" max="80" value={local.dockSize}
                                         onChange={e => setLocalKey('dockSize', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer accent-blue-500"/>
+                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
                                     <span className="text-[11px] text-gray-400">Large</span>
                                 </div>
                             </div>
@@ -409,7 +439,8 @@ const SettingsApp = () => {
                                     <div className="flex gap-1">
                                         {['Left', 'Bottom', 'Right'].map(pos => (
                                             <button key={pos}
-                                                className={`px-3 py-1 rounded text-[12px] ${local.dockPosition === pos.toLowerCase() ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                                className={`px-3 py-1 rounded text-[12px] ${local.dockPosition === pos.toLowerCase() ? 'text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                                style={local.dockPosition === pos.toLowerCase() ? { background: accentColor } : undefined}
                                                 onClick={() => setLocalKey('dockPosition', pos.toLowerCase())}>{pos}</button>
                                         ))}
                                     </div>
@@ -457,7 +488,8 @@ const SettingsApp = () => {
                         <SettingsGroup title="Resolution">
                             <div className="flex gap-2 px-4 py-3">
                                 {['Larger Text', 'Default', 'More Space'].map(r => (
-                                    <div key={r} className={`flex-1 py-2 rounded-lg text-center text-[12px] cursor-default ${local.resolution === r ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                    <div key={r} className={`flex-1 py-2 rounded-lg text-center text-[12px] cursor-default ${local.resolution === r ? 'text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                        style={local.resolution === r ? { background: accentColor } : undefined}
                                         onClick={() => setLocalKey('resolution', r)}>{r}</div>
                                 ))}
                             </div>
@@ -470,28 +502,42 @@ const SettingsApp = () => {
                 );
 
             case 'wallpaper':
+                const WallpaperCard = ({ wp, i }) => {
+                    const [loaded, setLoaded] = React.useState(!wp.path.startsWith('http'));
+                    return (
+                        <div key={i}
+                            className={`cursor-default rounded-xl overflow-hidden border-2 transition-all ${wallpaperIndex === i ? 'shadow-lg' : 'border-transparent hover:border-gray-300'}`}
+                            style={wallpaperIndex === i ? { borderColor: accentColor, boxShadow: '0 0 0 2px ' + accentColor + '40' } : undefined}
+                            onClick={() => MacStore.setWallpaper(i)}>
+                            <div className="relative bg-gray-200" style={{ minHeight: '90px' }}>
+                                {!loaded && <div className="absolute inset-0 flex items-center justify-center"><div className="w-5 h-5 border-2 border-gray-300 border-t-gray-500 rounded-full" style={{ animation: 'spin 0.8s linear infinite' }}/></div>}
+                                <img src={wp.path} alt={wp.name} className={`w-full h-[90px] object-cover transition-opacity ${loaded ? 'opacity-100' : 'opacity-0'}`} draggable="false"
+                                    loading="lazy" onLoad={() => setLoaded(true)} onError={e => { e.target.style.display = 'none'; setLoaded(true); }}/>
+                                {wallpaperIndex === i && (
+                                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: accentColor }}>
+                                        <svg viewBox="0 0 24 24" width="12" height="12" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="py-1.5 px-1 bg-gray-50 text-center">
+                                <span className="text-[11px] font-medium">{wp.name}</span>
+                            </div>
+                        </div>
+                    );
+                };
+                const localWPs = WALLPAPERS.filter(w => !w.path.startsWith('http'));
+                const onlineWPs = WALLPAPERS.filter(w => w.path.startsWith('http'));
                 return (
                     <div>
                         <h2 className="text-[22px] font-bold mb-5">Wallpaper</h2>
                         <p className="text-[13px] text-gray-500 mb-4">Choose a wallpaper for your desktop and lock screen.</p>
-                        <div className="grid grid-cols-3 gap-4">
-                            {WALLPAPERS.map((wp, i) => (
-                                <div key={i}
-                                    className={`cursor-default rounded-xl overflow-hidden border-2 transition-all ${wallpaperIndex === i ? 'border-blue-500 shadow-lg ring-2 ring-blue-500/30' : 'border-transparent hover:border-gray-300'}`}
-                                    onClick={() => MacStore.setWallpaper(i)}>
-                                    <div className="relative">
-                                        <img src={wp.path} alt={wp.name} className="w-full h-[100px] object-cover" draggable="false"/>
-                                        {wallpaperIndex === i && (
-                                            <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
-                                                <svg viewBox="0 0 24 24" width="12" height="12" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="p-2 bg-gray-50 text-center">
-                                        <span className="text-[12px] font-medium">{wp.name}</span>
-                                    </div>
-                                </div>
-                            ))}
+                        <div className="text-[12px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Included</div>
+                        <div className="grid grid-cols-4 gap-3 mb-5">
+                            {localWPs.map((wp, i) => <WallpaperCard key={i} wp={wp} i={WALLPAPERS.indexOf(wp)}/>)}
+                        </div>
+                        <div className="text-[12px] font-semibold text-gray-400 uppercase tracking-wide mb-2">macOS Collection</div>
+                        <div className="grid grid-cols-4 gap-3">
+                            {onlineWPs.map((wp, i) => <WallpaperCard key={i} wp={wp} i={WALLPAPERS.indexOf(wp)}/>)}
                         </div>
                     </div>
                 );
@@ -557,7 +603,7 @@ const SettingsApp = () => {
                                     <span className="text-[11px] text-gray-400">Slow</span>
                                     <input type="range" min="1" max="10" value={local.keyRepeatSpeed}
                                         onChange={e => setLocalKey('keyRepeatSpeed', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer accent-blue-500"/>
+                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
                                     <span className="text-[11px] text-gray-400">Fast</span>
                                 </div>
                             </div>
@@ -569,7 +615,7 @@ const SettingsApp = () => {
                                     <span className="text-[11px] text-gray-400">Long</span>
                                     <input type="range" min="1" max="6" value={local.delayUntilRepeat}
                                         onChange={e => setLocalKey('delayUntilRepeat', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer accent-blue-500"/>
+                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
                                     <span className="text-[11px] text-gray-400">Short</span>
                                 </div>
                             </div>
@@ -601,7 +647,7 @@ const SettingsApp = () => {
                                     <span className="text-[11px] text-gray-400">Slow</span>
                                     <input type="range" min="1" max="10" value={local.trackingSpeed}
                                         onChange={e => setLocalKey('trackingSpeed', Number(e.target.value))}
-                                        className="flex-1 h-1 appearance-none cursor-pointer accent-blue-500"/>
+                                        className="flex-1 h-1 appearance-none cursor-pointer"/>
                                     <span className="text-[11px] text-gray-400">Fast</span>
                                 </div>
                             </div>
@@ -644,7 +690,8 @@ const SettingsApp = () => {
                     if (s.sep) return <div key={i} className="h-px bg-black/5 my-2 mx-4"/>;
                     if (s.isProfile) return (
                         <div key={s.id}
-                            className={`flex items-center gap-3 p-3 mx-1 rounded-xl cursor-default ${activeSection === s.id ? 'bg-blue-500 text-white' : 'hover:bg-black/[0.03]'}`}
+                            className={`flex items-center gap-3 p-3 mx-1 rounded-xl cursor-default ${activeSection === s.id ? 'text-white' : 'hover:bg-black/[0.03]'}`}
+                            style={activeSection === s.id ? { background: accentColor } : undefined}
                             onClick={() => setActiveSection(s.id)}>
                             <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
                                 <svg viewBox="0 0 100 100" width="48" height="48"><circle cx="50" cy="50" r="50" fill="#c7c7cc"/><circle cx="50" cy="38" r="18" fill="#e5e5ea"/><ellipse cx="50" cy="80" rx="30" ry="22" fill="#e5e5ea"/></svg>
@@ -657,7 +704,8 @@ const SettingsApp = () => {
                     );
                     return (
                         <div key={s.id}
-                            className={`flex items-center gap-2.5 px-3 py-[5px] mx-1 rounded-lg cursor-default text-[13px] ${activeSection === s.id ? 'bg-blue-500 text-white' : 'hover:bg-black/[0.03]'}`}
+                            className={`flex items-center gap-2.5 px-3 py-[5px] mx-1 rounded-lg cursor-default text-[13px] ${activeSection === s.id ? 'text-white' : 'hover:bg-black/[0.03]'}`}
+                            style={activeSection === s.id ? { background: accentColor } : undefined}
                             onClick={() => setActiveSection(s.id)}>
                             <span className="text-sm">{s.icon}</span>
                             <span>{s.label}</span>

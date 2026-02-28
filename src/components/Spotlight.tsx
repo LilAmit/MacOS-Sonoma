@@ -13,11 +13,13 @@ const SpotlightSearch = () => {
         { name: 'TextEdit', type: 'textedit' }, { name: 'Calendar', type: 'calendar' },
     ];
 
+    const { shouldRender, isClosing } = useAnimatedVisibility(isOpen, 150);
+
     React.useEffect(() => {
         if (isOpen) { setQuery(''); setTimeout(() => inputRef.current?.focus(), 50); }
     }, [isOpen]);
 
-    if (!isOpen) return null;
+    if (!shouldRender) return null;
 
     const q = query.toLowerCase();
     const matched = q ? apps.filter(a => a.name.toLowerCase().includes(q)) : [];
@@ -38,10 +40,10 @@ const SpotlightSearch = () => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/25 z-[10002] flex items-start justify-center pt-[160px]"
+        <div className={`fixed inset-0 bg-black/25 z-[10002] flex items-start justify-center pt-[160px] ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
             onClick={(e) => { if (e.target === e.currentTarget) close(); }}
         >
-            <div className="w-[680px] glass-menu rounded-xl shadow-2xl border border-black/10 overflow-hidden animate-spotlight-in">
+            <div className={`w-[680px] glass-menu rounded-xl shadow-2xl border border-black/10 overflow-hidden ${isClosing ? 'animate-spotlight-out' : 'animate-spotlight-in'}`}>
                 <div className="flex items-center gap-3 px-4 py-2.5 border-b border-black/5">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="#999"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                     <input ref={inputRef} type="text" value={query} onChange={e => setQuery(e.target.value)}

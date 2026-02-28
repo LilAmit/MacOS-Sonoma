@@ -3,7 +3,8 @@ const NotificationCenter = () => {
     const isOpen = useStore(s => s.notificationCenterOpen);
     const [checkedReminders, setCheckedReminders] = React.useState(new Set());
 
-    if (!isOpen) return null;
+    const { shouldRender, isClosing } = useAnimatedVisibility(isOpen, 200);
+    if (!shouldRender) return null;
 
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -31,7 +32,7 @@ const NotificationCenter = () => {
 
     return (
         <div className="fixed z-[10001]" style={{ top: '31px', right: '12px' }} onClick={e => e.stopPropagation()}>
-            <div className="w-[340px] max-h-[calc(100vh-100px)] glass rounded-2xl shadow-2xl border border-black/10 p-3.5 overflow-y-auto animate-slide-in-right">
+            <div className={`w-[340px] max-h-[calc(100vh-100px)] glass rounded-2xl shadow-2xl border border-black/10 p-3.5 overflow-y-auto ${isClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'}`}>
 
                 {/* Calendar Widget */}
                 <div className="bg-white/70 rounded-xl p-3.5 mb-3 shadow-sm">

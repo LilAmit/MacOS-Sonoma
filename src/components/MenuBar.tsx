@@ -5,6 +5,8 @@ const MenuBar = () => {
     const activeWin = useStore(s => s.windows.find(w => w.focused));
     const wifiOn = useStore(s => s.wifiOn);
     const volume = useStore(s => s.volume);
+    const showBatteryPercentage = useStore(s => s.showBatteryPercentage);
+    const focusOn = useStore(s => s.focusOn);
     const batteryLevel = React.useRef(Math.floor(Math.random() * 30) + 65);
 
     React.useEffect(() => {
@@ -138,7 +140,7 @@ const MenuBar = () => {
                         </svg>
                     </button>
                     {dropdown === 'apple' && (
-                        <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg min-w-[240px] py-1 shadow-xl border border-black/10 z-[10001]">
+                        <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[240px] py-1 shadow-xl border border-black/10 z-[10001]">
                             <DropItem label="About This Mac" onClick={() => { closeDropdown(); MacStore.setState({ aboutMacOpen: true }); }}/>
                             <DropSep/>
                             <DropItem label="System Settings..." onClick={() => { closeDropdown(); MacStore.openWindow('settings', 'System Settings', 920, 600); }}/>
@@ -167,7 +169,7 @@ const MenuBar = () => {
                         onMouseEnter={() => dropdown && setDropdown('app')}
                         className="text-white text-[13px] font-semibold px-2.5 h-full flex items-center hover:bg-white/10 rounded">{appName}</button>
                     {dropdown === 'app' && (
-                        <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg min-w-[220px] py-1 shadow-xl border border-black/10 z-[10001]">
+                        <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[220px] py-1 shadow-xl border border-black/10 z-[10001]">
                             {getAppMenuItems()}
                         </div>
                     )}
@@ -181,7 +183,7 @@ const MenuBar = () => {
                             className="text-white text-[13px] px-2.5 h-full flex items-center hover:bg-white/10 rounded"
                         >{menu}</button>
                         {dropdown === menu && (
-                            <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg min-w-[220px] py-1 shadow-xl border border-black/10 z-[10001]">
+                            <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[220px] py-1 shadow-xl border border-black/10 z-[10001]">
                                 {menu === 'File' && <>
                                     <DropItem label="New Window" shortcut="⌘N" onClick={() => { closeDropdown(); MacStore.openWindow('finder','Finder',900,550); }}/>
                                     <DropItem label="New Folder" shortcut="⇧⌘N" onClick={() => { closeDropdown(); VFS.mkdir('/Users/user/Desktop', 'untitled folder'); }}/>
@@ -226,6 +228,13 @@ const MenuBar = () => {
             </div>
 
             <div className="flex items-center h-full gap-0.5">
+                {/* Focus indicator */}
+                {focusOn && (
+                    <MenuIcon title="Focus On">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="white"><path d="M9.37 5.51c-.18.64-.27 1.31-.27 1.99 0 4.08 3.32 7.4 7.4 7.4.68 0 1.35-.09 1.99-.27C17.45 17.19 14.93 19 12 19c-3.86 0-7-3.14-7-7 0-2.93 1.81-5.45 4.37-6.49z"/></svg>
+                    </MenuIcon>
+                )}
+
                 {/* Control Center */}
                 <MenuIcon title="Control Center" onClick={() => MacStore.setState(s => ({ controlCenterOpen: !s.controlCenterOpen, notificationCenterOpen: false }))}>
                     <svg viewBox="0 0 24 24" width="15" height="15" fill="white"><path d="M7 10h2v4H7zM11 7h2v10h-2zM15 12h2v2h-2zM3 13h2v1H3zM19 9h2v6h-2z"/></svg>
@@ -240,7 +249,7 @@ const MenuBar = () => {
                         </svg>
                     </button>
                     {dropdown === 'wifi' && (
-                        <div className="absolute top-[25px] right-0 glass-menu rounded-b-lg min-w-[260px] py-1 shadow-xl border border-black/10 z-[10001]">
+                        <div className="absolute top-[25px] right-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[260px] py-1 shadow-xl border border-black/10 z-[10001]">
                             <div className="flex items-center justify-between px-4 py-2">
                                 <span className="text-[13px] font-semibold">Wi-Fi</span>
                                 <div className={`w-8 h-[18px] rounded-full cursor-default flex items-center transition-colors ${wifiOn ? 'bg-green-500 justify-end' : 'bg-gray-300 justify-start'}`}
@@ -275,10 +284,10 @@ const MenuBar = () => {
                             <rect x="2" y="2.5" width={Math.floor(batteryLevel.current * 0.18)} height="9" rx="1" fill="white" opacity="0.9"/>
                             <path d="M24 5.5 v3" strokeWidth="1.5" strokeLinecap="round"/>
                         </svg>
-                        <span className="text-white text-[11px]">{batteryLevel.current}%</span>
+                        {showBatteryPercentage && <span className="text-white text-[11px]">{batteryLevel.current}%</span>}
                     </button>
                     {dropdown === 'battery' && (
-                        <div className="absolute top-[25px] right-0 glass-menu rounded-b-lg min-w-[240px] py-1 shadow-xl border border-black/10 z-[10001]">
+                        <div className="absolute top-[25px] right-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[240px] py-1 shadow-xl border border-black/10 z-[10001]">
                             <div className="px-4 py-2">
                                 <div className="text-[13px] font-semibold">Battery</div>
                                 <div className="text-[12px] text-gray-500 mt-0.5">{batteryLevel.current}% — Charging</div>

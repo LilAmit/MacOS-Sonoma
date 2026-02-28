@@ -1,6 +1,7 @@
 // Context Menu - context-aware with smart edge positioning
 const ContextMenuComponent = () => {
     const [menu, setMenu] = React.useState(null); // { x, y, type, data }
+    const [closing, setClosing] = React.useState(false);
     const menuRef = React.useRef(null);
 
     React.useEffect(() => {
@@ -43,7 +44,10 @@ const ContextMenuComponent = () => {
             }
         };
 
-        const close = () => setMenu(null);
+        const close = () => {
+            setClosing(true);
+            setTimeout(() => { setMenu(null); setClosing(false); }, 100);
+        };
         document.addEventListener('contextmenu', handler);
         document.addEventListener('click', close);
         return () => { document.removeEventListener('contextmenu', handler); document.removeEventListener('click', close); };
@@ -70,6 +74,7 @@ const ContextMenuComponent = () => {
         }
     });
 
+    if (!menu && !closing) return null;
     if (!menu) return null;
 
     const createNewFolder = () => {
@@ -177,8 +182,8 @@ const ContextMenuComponent = () => {
     };
 
     return (
-        <div ref={menuRef} className="fixed glass-menu rounded-lg min-w-[220px] py-1 shadow-xl border border-black/10 z-[10003]"
-            style={{ left: menu.x, top: menu.y }}>
+        <div ref={menuRef} className={`fixed glass-menu rounded-lg min-w-[220px] py-1 shadow-xl border border-black/10 z-[10003] ${closing ? 'animate-context-menu-out pointer-events-none' : 'animate-context-menu-in'}`}
+            style={{ left: menu.x, top: menu.y, transformOrigin: 'top left' }}>
             {renderItems()}
         </div>
     );

@@ -4,24 +4,104 @@ const App = () => {
     const [booting, setBooting] = React.useState(true);
     const [bootProgress, setBootProgress] = React.useState(0);
 
-    // Boot screen animation
+    // Real boot: preload wallpapers + app icons, track actual progress
     React.useEffect(() => {
         if (!booting) return;
-        const start = Date.now();
-        const duration = 3000; // 3 seconds boot
-        const tick = () => {
-            const elapsed = Date.now() - start;
-            const progress = Math.min(elapsed / duration, 1);
-            // Ease-out curve for realistic feel
+
+        // Collect all image URLs that need preloading
+        const imageUrls = [
+            // Local wallpapers only (skip online ones to avoid slow boot)
+            ...WALLPAPERS.filter(w => !w.path.startsWith('http')).map(w => w.path),
+            // App icon images (from MacIcons that use <img>)
+            'app icons/fidnericon.png',
+            'app icons/safariicon.png',
+            'app icons/messagesicon.png',
+            'app icons/mailicon.png',
+            'app icons/mapsicon.png',
+            'app icons/photosicon.png',
+            'app icons/calculatoricon.jfif',
+            'app icons/terminalicon.jfif',
+            'app icons/settingsicon.jpg',
+            'app icons/launchpadicon.png',
+            'app icons/calendericon.jfif',
+            'app icons/wordicon.png',
+            'app icons/musicicon.png',
+            'app icons/appstoreicon.png',
+            'app icons/vscodeicon.jfif',
+            'app icons/trashicon.jpg',
+        ];
+
+        const total = imageUrls.length;
+        let loaded = 0;
+        let allLoaded = false;
+        let minTimePassed = false;
+        let done = false;
+        const minDuration = 3000; // Minimum 3 seconds boot time
+        const startTime = Date.now();
+
+        const tryFinish = () => {
+            if (done || !allLoaded || !minTimePassed) return;
+            done = true;
+            setBootProgress(100);
+            setTimeout(() => setBooting(false), 500);
+        };
+
+        const updateProgress = () => {
+            loaded++;
+            // Scale real loading progress to 0-90%, reserve last 10% for min timer
+            const loadRatio = loaded / total;
+            const elapsed = Date.now() - startTime;
+            const timeRatio = Math.min(elapsed / minDuration, 1);
+            // Progress is the slower of the two (load vs time), eased
+            const progress = Math.min(loadRatio, timeRatio);
             const eased = 1 - Math.pow(1 - progress, 2);
             setBootProgress(eased * 100);
-            if (progress < 1) {
-                requestAnimationFrame(tick);
-            } else {
-                setTimeout(() => setBooting(false), 400);
+
+            if (loaded >= total) {
+                allLoaded = true;
+                tryFinish();
             }
         };
-        requestAnimationFrame(tick);
+
+        imageUrls.forEach(url => {
+            const img = new Image();
+            img.onload = updateProgress;
+            img.onerror = updateProgress;
+            img.src = url;
+        });
+
+        // Animate progress smoothly during the minimum wait period
+        const progressInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            const timeRatio = Math.min(elapsed / minDuration, 1);
+            const loadRatio = loaded / total;
+            const progress = Math.min(loadRatio, timeRatio);
+            const eased = 1 - Math.pow(1 - progress, 2);
+            setBootProgress(eased * 100);
+        }, 50);
+
+        // Minimum 3s timer
+        const minTimer = setTimeout(() => {
+            minTimePassed = true;
+            clearInterval(progressInterval);
+            tryFinish();
+        }, minDuration);
+
+        // Safety timeout: if loading takes more than 10s, finish anyway
+        const safetyTimer = setTimeout(() => {
+            if (!done) {
+                done = true;
+                clearInterval(progressInterval);
+                setBootProgress(100);
+                setTimeout(() => setBooting(false), 500);
+            }
+        }, 10000);
+
+        return () => {
+            clearTimeout(minTimer);
+            clearTimeout(safetyTimer);
+            clearInterval(progressInterval);
+        };
     }, []);
 
     // Send a welcome notification after unlock

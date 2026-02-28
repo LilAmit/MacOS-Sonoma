@@ -6,7 +6,7 @@
 }
 
 ::selection {
-    background: rgba(0, 122, 255, 0.3);
+    background: rgba(var(--accent-rgb, 0,122,255), 0.3);
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -91,12 +91,29 @@
     box-shadow:
         0 22px 70px 4px rgba(0,0,0,0.35),
         0 0 0 0.5px rgba(0,0,0,0.18);
+    transition: box-shadow 0.3s ease;
 }
 
 .window-shadow-unfocused {
     box-shadow:
         0 10px 40px rgba(0,0,0,0.12),
         0 0 0 0.5px rgba(0,0,0,0.06);
+    transition: box-shadow 0.3s ease;
+}
+
+.window-shadow-dragging {
+    box-shadow:
+        0 35px 90px 8px rgba(0,0,0,0.4),
+        0 0 0 0.5px rgba(0,0,0,0.15);
+}
+
+/* Smooth window maximize/unmaximize transition */
+.window-transition {
+    transition: top 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                left 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                width 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                border-radius 0.3s ease;
 }
 
 /* Dock item hover magnification */
@@ -136,10 +153,249 @@ input, textarea {
     50% { opacity: 0; }
 }
 
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 /* Smooth transitions for toggle */
 .toggle-switch {
     transition: background-color 0.25s ease;
 }
 .toggle-knob {
     transition: left 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ===== Accent Color Variable ===== */
+:root {
+    --accent-color: #007AFF;
+    --accent-rgb: 0,122,255;
+}
+
+/* Custom range input styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: #d1d5db;
+    outline: none;
+    cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.15);
+    cursor: pointer;
+    border: 0.5px solid rgba(0,0,0,0.08);
+}
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.15);
+    cursor: pointer;
+    border: 0.5px solid rgba(0,0,0,0.08);
+}
+input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+}
+.dark-mode input[type="range"] {
+    background: #4a4a4a;
+}
+.dark-mode input[type="range"]::-webkit-slider-thumb {
+    background: #e5e5e7;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
+    border-color: rgba(255,255,255,0.1);
+}
+.dark-mode input[type="range"]::-moz-range-thumb {
+    background: #e5e5e7;
+    box-shadow: 0 0.5px 1px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
+    border-color: rgba(255,255,255,0.1);
+}
+
+/* ===== Dark Mode - Comprehensive ===== */
+
+/* --- Glass effects --- */
+.dark-mode .glass {
+    background: rgba(40, 40, 40, 0.82);
+    color: #e5e5e7;
+}
+.dark-mode .glass-menu {
+    background: rgba(45, 45, 45, 0.92);
+    color: #e5e5e7;
+}
+.dark-mode .glass-dock {
+    background: rgba(30, 30, 30, 0.5);
+}
+.dark-mode .window-shadow-focused {
+    box-shadow: 0 22px 70px 4px rgba(0,0,0,0.55), 0 0 0 0.5px rgba(255,255,255,0.08);
+}
+.dark-mode .window-shadow-unfocused {
+    box-shadow: 0 10px 40px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(255,255,255,0.04);
+}
+
+/* --- Background color overrides --- */
+.dark-mode .bg-white { background-color: #1e1e1e !important; }
+.dark-mode .bg-\[\#f5f5f5\] { background-color: #252525 !important; }
+.dark-mode .bg-gray-50 { background-color: #252525 !important; }
+.dark-mode .bg-gray-100 { background-color: #2d2d2d !important; }
+.dark-mode .bg-gray-200 { background-color: #383838 !important; }
+.dark-mode .bg-gray-300 { background-color: #4a4a4a !important; }
+.dark-mode .bg-gray-50\/95 { background-color: rgba(37, 37, 37, 0.95) !important; }
+.dark-mode .bg-gray-100\/50 { background-color: rgba(42, 42, 42, 0.5) !important; }
+.dark-mode .bg-gray-100\/70 { background-color: rgba(42, 42, 42, 0.7) !important; }
+.dark-mode .bg-white\/60 { background-color: rgba(55, 55, 55, 0.6) !important; }
+.dark-mode .bg-white\/70 { background-color: rgba(55, 55, 55, 0.7) !important; }
+.dark-mode .bg-white\/80 { background-color: rgba(60, 60, 60, 0.8) !important; }
+.dark-mode .bg-black\/5 { background-color: rgba(255, 255, 255, 0.05) !important; }
+.dark-mode .bg-black\/10 { background-color: rgba(255, 255, 255, 0.1) !important; }
+.dark-mode .bg-black\/\[0\.04\] { background-color: rgba(255, 255, 255, 0.04) !important; }
+.dark-mode .bg-black\/\[0\.05\] { background-color: rgba(255, 255, 255, 0.05) !important; }
+
+/* --- Text color overrides --- */
+.dark-mode .text-gray-900 { color: #f5f5f7 !important; }
+.dark-mode .text-gray-800 { color: #e5e5e7 !important; }
+.dark-mode .text-gray-700 { color: #d1d1d6 !important; }
+.dark-mode .text-gray-600 { color: #aeaeb2 !important; }
+.dark-mode .text-gray-500 { color: #98989d !important; }
+.dark-mode .text-gray-400 { color: #8e8e93 !important; }
+.dark-mode .text-gray-300 { color: #58585c !important; }
+
+/* --- Border color overrides --- */
+.dark-mode .border-black\/5 { border-color: rgba(255, 255, 255, 0.08) !important; }
+.dark-mode .border-black\/10 { border-color: rgba(255, 255, 255, 0.12) !important; }
+.dark-mode .border-black\/\[0\.04\] { border-color: rgba(255, 255, 255, 0.06) !important; }
+.dark-mode .border-gray-300 { border-color: rgba(255, 255, 255, 0.15) !important; }
+
+/* --- Hover state overrides --- */
+.dark-mode .hover\:bg-black\/5:hover { background-color: rgba(255, 255, 255, 0.08) !important; }
+.dark-mode .hover\:bg-black\/\[0\.03\]:hover,
+.dark-mode .hover\:bg-black\/\[0\.02\]:hover { background-color: rgba(255, 255, 255, 0.06) !important; }
+.dark-mode .hover\:bg-gray-200:hover { background-color: #3a3a3a !important; }
+.dark-mode .hover\:bg-white\/80:hover { background-color: rgba(60, 60, 60, 0.8) !important; }
+.dark-mode .hover\:bg-red-100:hover { background-color: rgba(239, 68, 68, 0.15) !important; }
+
+/* --- Form elements --- */
+.dark-mode input:not([type="range"]):not([type="checkbox"]),
+.dark-mode textarea,
+.dark-mode select {
+    color: #e5e5e7 !important;
+}
+.dark-mode input::placeholder,
+.dark-mode textarea::placeholder {
+    color: #636366 !important;
+}
+
+/* --- Scrollbars --- */
+.dark-mode ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+/* --- SVG icon fill overrides --- */
+.dark-mode svg[fill="#333"],
+.dark-mode path[fill="#333"] { fill: #d1d1d6 !important; }
+.dark-mode svg[fill="#666"],
+.dark-mode path[fill="#666"] { fill: #aaa !important; }
+.dark-mode svg[fill="#999"],
+.dark-mode path[fill="#999"] { fill: #8e8e93 !important; }
+.dark-mode svg[fill="#c7c7cc"],
+.dark-mode path[fill="#c7c7cc"] { fill: #636366 !important; }
+
+/* --- Additional border overrides --- */
+.dark-mode .border-gray-800 { border-color: #e5e5e7 !important; }
+.dark-mode .border-white\/5 { border-color: rgba(255, 255, 255, 0.05) !important; }
+
+/* --- Safari iframe loading bg --- */
+.dark-mode .safari-iframe { background: #1e1e1e; }
+
+/* --- Selection color in dark mode --- */
+.dark-mode ::selection { background: rgba(var(--accent-rgb, 0,122,255), 0.4); }
+
+/* ===== Reduce Motion ===== */
+.reduce-motion * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+}
+
+/* ===== Increase Contrast ===== */
+.increase-contrast .glass {
+    background: rgba(246, 246, 246, 0.95);
+    border: 1px solid rgba(0,0,0,0.3) !important;
+}
+.increase-contrast .glass-dark {
+    background: rgba(20, 20, 20, 0.85);
+    border: 1px solid rgba(255,255,255,0.2) !important;
+}
+.increase-contrast .glass-menu {
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(0,0,0,0.3) !important;
+}
+
+/* ===== Reduce Transparency ===== */
+.reduce-transparency .glass {
+    background: rgb(246, 246, 246);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.reduce-transparency .glass-dark {
+    background: rgb(40, 40, 40);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.reduce-transparency .glass-menu {
+    background: rgb(250, 250, 250);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.reduce-transparency .glass-dock {
+    background: rgb(200, 200, 200);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+/* ===== Larger Text ===== */
+.larger-text {
+    font-size: 115%;
+}
+.larger-text .text-\[11px\] { font-size: 13px; }
+.larger-text .text-\[12px\] { font-size: 14px; }
+.larger-text .text-\[13px\] { font-size: 15px; }
+
+/* ===== Dark Mode + Reduce Transparency ===== */
+.dark-mode.reduce-transparency .glass {
+    background: rgb(50, 50, 50);
+    color: #e5e5e7;
+}
+.dark-mode.reduce-transparency .glass-menu {
+    background: rgb(55, 55, 55);
+    color: #e5e5e7;
+}
+.dark-mode.reduce-transparency .glass-dock {
+    background: rgb(40, 40, 40);
+}
+
+/* ===== Dark Mode + Increase Contrast ===== */
+.dark-mode.increase-contrast .glass {
+    background: rgba(50, 50, 50, 0.98);
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    color: #e5e5e7;
+}
+.dark-mode.increase-contrast .glass-menu {
+    background: rgba(55, 55, 55, 0.98);
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    color: #e5e5e7;
 }

@@ -102,8 +102,12 @@ const AppStoreApp = () => {
 
     const GetButton = ({ app }) => {
         if (downloads[app.name]) return (
-            <button onClick={(e) => { e.stopPropagation(); openApp(app); }}
-                className="px-3.5 py-1 rounded-full bg-gray-100 text-blue-600 text-[11px] font-semibold hover:bg-blue-100 transition-colors">OPEN</button>
+            <div className="flex items-center gap-1.5">
+                <button onClick={(e) => { e.stopPropagation(); openApp(app); }}
+                    className="px-3.5 py-1 rounded-full bg-gray-100 text-blue-600 text-[11px] font-semibold hover:bg-blue-100 transition-colors">OPEN</button>
+                <button onClick={(e) => { e.stopPropagation(); uninstallApp(app.name); }}
+                    className="px-3 py-1 rounded-full bg-red-500 text-white text-[11px] font-semibold hover:bg-red-600 transition-colors">UNINSTALL</button>
+            </div>
         );
         if (installing[app.name] !== undefined) return (
             <div className="w-[60px] h-[24px] relative">

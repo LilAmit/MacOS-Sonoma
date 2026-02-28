@@ -26,30 +26,57 @@ const head = `<!DOCTYPE html>
                         'macos': { 'bg': 'rgba(246,246,246,0.92)', 'dark': 'rgba(30,30,30,0.35)', 'accent': '#007AFF', 'red': '#FF5F57', 'yellow': '#FFBD2E', 'green': '#28C840', 'text': '#1d1d1f', 'secondary': '#86868b', 'border': 'rgba(0,0,0,0.12)', 'sidebar': 'rgba(236,236,236,0.5)' }
                     },
                     animation: {
-                        'wallpaper': 'wallpaper 120s ease infinite', 'spotlight-in': 'spotlight-in 0.15s ease-out',
-                        'window-open': 'window-open 0.25s cubic-bezier(0.25,0.46,0.45,0.94)', 'window-close': 'window-close 0.2s cubic-bezier(0.55,0.06,0.68,0.19)',
-                        'slide-in-right': 'slide-in-right 0.2s ease-out', 'fade-in': 'fade-in 0.3s ease-out',
-                        'bounce-dock': 'bounce-dock 0.8s ease-in-out', 'cursor-blink': 'blink 1s step-end infinite',
-                        'toast-in': 'toast-in 0.3s ease-out', 'unlock': 'unlock 0.6s cubic-bezier(0.25,0.46,0.45,0.94) forwards',
+                        'wallpaper': 'wallpaper 120s ease infinite',
+                        'spotlight-in': 'spotlight-in 0.15s ease-out',
+                        'spotlight-out': 'spotlight-out 0.15s ease-in forwards',
+                        'window-open': 'window-open 0.25s cubic-bezier(0.25,0.46,0.45,0.94)',
+                        'window-close': 'window-close 0.2s cubic-bezier(0.55,0.06,0.68,0.19) forwards',
+                        'slide-in-right': 'slide-in-right 0.2s ease-out',
+                        'slide-out-right': 'slide-out-right 0.2s ease-in forwards',
+                        'fade-in': 'fade-in 0.3s ease-out',
+                        'fade-out': 'fade-out 0.2s ease-in forwards',
+                        'launchpad-in': 'launchpad-in 0.25s ease-out',
+                        'launchpad-out': 'launchpad-out 0.2s ease-in forwards',
+                        'bounce-dock': 'bounce-dock 0.8s ease-in-out',
+                        'cursor-blink': 'blink 1s step-end infinite',
+                        'toast-in': 'toast-in 0.3s ease-out',
+                        'toast-out': 'toast-out 0.25s ease-in forwards',
+                        'unlock': 'unlock 0.6s cubic-bezier(0.25,0.46,0.45,0.94) forwards',
+                        'context-menu-in': 'context-menu-in 0.12s ease-out',
+                        'context-menu-out': 'context-menu-out 0.1s ease-in forwards',
+                        'menu-dropdown-in': 'menu-dropdown-in 0.12s ease-out',
+                        'minimize': 'minimize 0.4s cubic-bezier(0.2,0,0.6,1) forwards',
+                        'restore': 'restore 0.3s cubic-bezier(0.25,0.46,0.45,0.94)',
                     },
                     keyframes: {
                         'wallpaper': { '0%': { backgroundPosition: '0% 50%' }, '25%': { backgroundPosition: '50% 0%' }, '50%': { backgroundPosition: '100% 50%' }, '75%': { backgroundPosition: '50% 100%' }, '100%': { backgroundPosition: '0% 50%' } },
                         'spotlight-in': { '0%': { transform: 'scale(0.96)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+                        'spotlight-out': { '0%': { transform: 'scale(1)', opacity: 1 }, '100%': { transform: 'scale(0.96)', opacity: 0 } },
                         'window-open': { '0%': { transform: 'scale(0.88)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
                         'window-close': { '0%': { transform: 'scale(1)', opacity: 1 }, '100%': { transform: 'scale(0.88)', opacity: 0 } },
                         'slide-in-right': { '0%': { transform: 'translateX(20px)', opacity: 0 }, '100%': { transform: 'translateX(0)', opacity: 1 } },
+                        'slide-out-right': { '0%': { transform: 'translateX(0)', opacity: 1 }, '100%': { transform: 'translateX(20px)', opacity: 0 } },
                         'fade-in': { '0%': { opacity: 0 }, '100%': { opacity: 1 } },
+                        'fade-out': { '0%': { opacity: 1 }, '100%': { opacity: 0 } },
+                        'launchpad-in': { '0%': { transform: 'scale(1.1)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+                        'launchpad-out': { '0%': { transform: 'scale(1)', opacity: 1 }, '100%': { transform: 'scale(1.1)', opacity: 0 } },
                         'bounce-dock': { '0%, 100%': { transform: 'translateY(0)' }, '25%': { transform: 'translateY(-20px)' }, '50%': { transform: 'translateY(-5px)' }, '75%': { transform: 'translateY(-12px)' } },
                         'blink': { '50%': { opacity: 0 } },
                         'toast-in': { '0%': { transform: 'translateX(100%)', opacity: 0 }, '100%': { transform: 'translateX(0)', opacity: 1 } },
+                        'toast-out': { '0%': { transform: 'translateX(0)', opacity: 1 }, '100%': { transform: 'translateX(100%)', opacity: 0 } },
                         'unlock': { '0%': { opacity: 1, transform: 'scale(1)' }, '100%': { opacity: 0, transform: 'scale(1.1)' } },
+                        'context-menu-in': { '0%': { transform: 'scale(0.92)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
+                        'context-menu-out': { '0%': { transform: 'scale(1)', opacity: 0.8 }, '100%': { transform: 'scale(0.92)', opacity: 0 } },
+                        'menu-dropdown-in': { '0%': { transform: 'translateY(-4px)', opacity: 0 }, '100%': { transform: 'translateY(0)', opacity: 1 } },
+                        'minimize': { '0%': { transform: 'scale(1)', opacity: 1 }, '100%': { transform: 'scale(0.4) translateY(50vh)', opacity: 0 } },
+                        'restore': { '0%': { transform: 'scale(0.4) translateY(50vh)', opacity: 0 }, '100%': { transform: 'scale(1)', opacity: 1 } },
                     }
                 }
             }
         }
     <\/script>
     <style>
-` + fs.readFileSync('D:/MacOS/src/styles.css', 'utf8') + `
+` + fs.readFileSync('D:/Mac OS/src/styles.css', 'utf8') + `
     </style>
 </head>
 <body class="overflow-hidden w-screen h-screen font-sf">
@@ -82,6 +109,7 @@ const files = [
     { path: 'src/apps/VSCodeApp.tsx', globals: ['VSCodeApp'] },
     { path: 'src/apps/PaintApp.tsx', globals: ['PaintApp'] },
     { path: 'src/apps/AppStore.tsx', globals: ['AppStoreApp'] },
+    { path: 'src/apps/AboutDeveloper.tsx', globals: ['AboutDeveloperApp'] },
     { path: 'src/components/MenuBar.tsx', globals: ['MenuBar'] },
     { path: 'src/components/Dock.tsx', globals: ['Dock'] },
     { path: 'src/components/Spotlight.tsx', globals: ['SpotlightSearch'] },
@@ -96,7 +124,7 @@ const files = [
 let output = head;
 
 for (const file of files) {
-    let content = fs.readFileSync('D:/MacOS/' + file.path, 'utf8');
+    let content = fs.readFileSync('D:/Mac OS/' + file.path, 'utf8');
     // Remove existing window.X lines
     content = content.replace(/^window\.\w+\s*=\s*\w+;?\s*$/gm, '');
 
@@ -111,12 +139,12 @@ for (const file of files) {
 
 output += '\n</body>\n</html>\n';
 
-fs.writeFileSync('D:/MacOS/index.html', output);
+fs.writeFileSync('D:/Mac OS/index.html', output);
 console.log('Build complete!');
-console.log('File size:', (fs.statSync('D:/MacOS/index.html').size / 1024).toFixed(1), 'KB');
+console.log('File size:', (fs.statSync('D:/Mac OS/index.html').size / 1024).toFixed(1), 'KB');
 
 // Verify
-const html = fs.readFileSync('D:/MacOS/index.html', 'utf8');
+const html = fs.readFileSync('D:/Mac OS/index.html', 'utf8');
 console.log('DOCTYPE first:', html.startsWith('<!DOCTYPE'));
 const openScripts = (html.match(/<script/g) || []).length;
 const closeScripts = (html.match(/<\/script>/g) || []).length;

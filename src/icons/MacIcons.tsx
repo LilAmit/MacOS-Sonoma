@@ -108,6 +108,20 @@ const MacIcons = {
             <rect x="53" y="70" width="14" height="10" rx="2" fill="#8B5E3C"/>
         </svg>
     ),
+    AboutDev: ({ size = 54 }) => (
+        <svg viewBox="0 0 120 120" width={size} height={size}>
+            <defs>
+                <linearGradient id="abd1" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#6366F1"/>
+                    <stop offset="100%" stopColor="#8B5CF6"/>
+                </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="116" height="116" rx="26" fill="url(#abd1)"/>
+            <circle cx="60" cy="42" r="16" fill="white" opacity="0.9"/>
+            <ellipse cx="60" cy="82" rx="26" ry="18" fill="white" opacity="0.9"/>
+            <text x="60" y="108" textAnchor="middle" fontSize="9" fill="white" opacity="0.7" fontFamily="Inter" fontWeight="600">DEV</text>
+        </svg>
+    ),
     Trash: ({ size = 54 }) => (
         <img src="app icons/trashicon.jpg" width={size} height={size} style={{ borderRadius: size * 0.22, objectFit: 'cover' }} draggable="false" alt="Trash"/>
     ),

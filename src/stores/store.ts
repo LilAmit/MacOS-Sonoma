@@ -3,11 +3,21 @@ const { useState: _useState, useCallback: _useCallback, useEffect: _useEffect, u
 
 // Wallpaper definitions
 const WALLPAPERS = [
+    // Local wallpapers
     { name: 'Sonoma', path: 'wallpapers/wallpaper1.jpg' },
     { name: 'Sequoia', path: 'wallpapers/wallpaper2.jpg' },
     { name: 'Ventura', path: 'wallpapers/wallpaper3.jpg' },
     { name: 'Monterey', path: 'wallpapers/wallpaper4.jpg' },
     { name: 'Big Sur', path: 'wallpapers/wallpaper5.jpg' },
+    // Online wallpapers (standard resolution ~5K - loads much faster than 6K)
+    { name: 'Sequoia', path: 'https://512pixels.net/downloads/macos-wallpapers/15-Sequoia-Light.jpg' },
+    { name: 'Catalina Day', path: 'https://512pixels.net/downloads/macos-wallpapers/10-15-Day.jpg' },
+    { name: 'Catalina Night', path: 'https://512pixels.net/downloads/macos-wallpapers/10-15-Night.jpg' },
+    { name: 'Mojave Day', path: 'https://512pixels.net/downloads/macos-wallpapers/10-14-Day.jpg' },
+    { name: 'Mojave Night', path: 'https://512pixels.net/downloads/macos-wallpapers/10-14-Night.jpg' },
+    { name: 'High Sierra', path: 'https://512pixels.net/downloads/macos-wallpapers/10-13.jpg' },
+    { name: 'Sierra', path: 'https://512pixels.net/downloads/macos-wallpapers/10-12.jpg' },
+    { name: 'El Capitan', path: 'https://512pixels.net/downloads/macos-wallpapers/10-11.jpg' },
 ];
 
 // Virtual File System
@@ -22,39 +32,22 @@ const VFS = {
         // Default filesystem
         this._fs = {
             '/Users/user': { type: 'dir', children: ['Applications','Desktop','Documents','Downloads','Movies','Music','Pictures','Public'] },
-            '/Users/user/Applications': { type: 'dir', children: ['Safari.app','Xcode.app','VSCode.app','Spotify.app','Discord.app','Figma.app'] },
-            '/Users/user/Desktop': { type: 'dir', children: ['Projects','todo.txt','vacation-photo.jpg'] },
+            '/Users/user/Applications': { type: 'dir', children: [] },
+            '/Users/user/Desktop': { type: 'dir', children: ['Projects','todo.txt'] },
             '/Users/user/Desktop/Projects': { type: 'dir', children: [] },
-            '/Users/user/Documents': { type: 'dir', children: ['Work','Personal','resume.pdf','notes.md','budget.xlsx','project-plan.docx'] },
+            '/Users/user/Documents': { type: 'dir', children: ['Work','Personal'] },
             '/Users/user/Documents/Work': { type: 'dir', children: [] },
             '/Users/user/Documents/Personal': { type: 'dir', children: [] },
-            '/Users/user/Downloads': { type: 'dir', children: ['macOS-sonoma.dmg','screenshot-2024.png','presentation.key','archive.zip','installer.pkg'] },
+            '/Users/user/Downloads': { type: 'dir', children: ['macOS-sonoma.dmg'] },
             '/Users/user/Movies': { type: 'dir', children: [] },
             '/Users/user/Music': { type: 'dir', children: [] },
-            '/Users/user/Pictures': { type: 'dir', children: ['Photos Library','Screenshots','wallpaper.heic','avatar.png'] },
+            '/Users/user/Pictures': { type: 'dir', children: ['Photos Library','Screenshots'] },
             '/Users/user/Pictures/Photos Library': { type: 'dir', children: [] },
             '/Users/user/Pictures/Screenshots': { type: 'dir', children: [] },
             '/Users/user/Public': { type: 'dir', children: [] },
             // File metadata
             '/Users/user/Desktop/todo.txt': { type: 'file', icon: '📝', size: '1 KB', content: 'My todo list:\n- Review pull requests\n- Update documentation\n- Ship v2.0\n- Set up CI/CD\n- Write tests' },
-            '/Users/user/Desktop/vacation-photo.jpg': { type: 'file', icon: '🖼️', size: '4.5 MB', content: '' },
-            '/Users/user/Documents/resume.pdf': { type: 'file', icon: '📄', size: '245 KB', content: '' },
-            '/Users/user/Documents/notes.md': { type: 'file', icon: '📝', size: '12 KB', content: '# Notes\n\nSome important notes here.' },
-            '/Users/user/Documents/budget.xlsx': { type: 'file', icon: '📊', size: '89 KB', content: '' },
-            '/Users/user/Documents/project-plan.docx': { type: 'file', icon: '📄', size: '156 KB', content: '' },
             '/Users/user/Downloads/macOS-sonoma.dmg': { type: 'file', icon: '💿', size: '12.3 GB', content: '' },
-            '/Users/user/Downloads/screenshot-2024.png': { type: 'file', icon: '🖼️', size: '2.1 MB', content: '' },
-            '/Users/user/Downloads/presentation.key': { type: 'file', icon: '📊', size: '45 MB', content: '' },
-            '/Users/user/Downloads/archive.zip': { type: 'file', icon: '📦', size: '890 MB', content: '' },
-            '/Users/user/Downloads/installer.pkg': { type: 'file', icon: '📦', size: '234 MB', content: '' },
-            '/Users/user/Pictures/wallpaper.heic': { type: 'file', icon: '🖼️', size: '18 MB', content: '' },
-            '/Users/user/Pictures/avatar.png': { type: 'file', icon: '🖼️', size: '2.3 MB', content: '' },
-            '/Users/user/Applications/Safari.app': { type: 'app', icon: '🌐', size: '120 MB', appType: 'safari' },
-            '/Users/user/Applications/Xcode.app': { type: 'app', icon: '🔨', size: '35 GB' },
-            '/Users/user/Applications/VSCode.app': { type: 'app', icon: '💻', size: '350 MB' },
-            '/Users/user/Applications/Spotify.app': { type: 'app', icon: '🎵', size: '200 MB' },
-            '/Users/user/Applications/Discord.app': { type: 'app', icon: '💬', size: '180 MB' },
-            '/Users/user/Applications/Figma.app': { type: 'app', icon: '🎨', size: '150 MB' },
         };
         this.save();
     },
@@ -241,6 +234,61 @@ const VFS = {
         MacStore.setState(s => ({ vfsVersion: (s.vfsVersion || 0) + 1 }));
     },
 
+    // Move file/folder from one directory to another
+    move(srcParent, name, destParent) {
+        const srcPath = srcParent + '/' + name;
+        const destPath = destParent + '/' + name;
+        if (!this._fs[srcPath]) return false;
+        if (destPath === srcPath) return false;
+        // Don't move a folder into itself
+        if (destPath.startsWith(srcPath + '/')) return false;
+        // Check dest is a directory
+        if (!this._fs[destParent] || this._fs[destParent].type !== 'dir') return false;
+        // Handle name collision - append number
+        let finalName = name;
+        let finalDest = destPath;
+        let counter = 1;
+        while (this._fs[finalDest]) {
+            const dot = name.lastIndexOf('.');
+            if (dot > 0) {
+                finalName = name.slice(0, dot) + ' ' + counter + name.slice(dot);
+            } else {
+                finalName = name + ' ' + counter;
+            }
+            finalDest = destParent + '/' + finalName;
+            counter++;
+        }
+        // Move the entry
+        this._fs[finalDest] = this._fs[srcPath];
+        delete this._fs[srcPath];
+        // Update source parent children
+        const srcDir = this._fs[srcParent];
+        if (srcDir && srcDir.type === 'dir') {
+            srcDir.children = srcDir.children.filter(c => c !== name);
+        }
+        // Update dest parent children
+        const destDir = this._fs[destParent];
+        if (destDir && destDir.type === 'dir' && !destDir.children.includes(finalName)) {
+            destDir.children.push(finalName);
+        }
+        // If directory, recursively update child paths
+        if (this._fs[finalDest].type === 'dir') {
+            const updatePaths = (oldBase, newBase) => {
+                Object.keys(this._fs).forEach(key => {
+                    if (key.startsWith(oldBase + '/')) {
+                        const newKey = newBase + key.slice(oldBase.length);
+                        this._fs[newKey] = this._fs[key];
+                        delete this._fs[key];
+                    }
+                });
+            };
+            updatePaths(srcPath, finalDest);
+        }
+        this.save();
+        MacStore.setState(s => ({ vfsVersion: (s.vfsVersion || 0) + 1 }));
+        return true;
+    },
+
     // Desktop shortcuts (app aliases on desktop)
     getDesktopApps() {
         const saved = localStorage.getItem('macos_desktop_apps');
@@ -293,6 +341,28 @@ const MacStore = {
         bluetoothOn: true,
         focusOn: false,
         vfsVersion: 0,
+        // Dock settings
+        dockSize: 48,
+        dockMagnification: true,
+        dockAutoHide: false,
+        dockPosition: 'bottom',
+        showRecents: true,
+        // Appearance
+        accentColor: '#007AFF',
+        // Display
+        nightShift: false,
+        // Accessibility
+        reduceMotion: false,
+        increaseContrast: false,
+        reduceTransparency: false,
+        largerText: false,
+        // Battery
+        showBatteryPercentage: true,
+        // Notifications
+        notifSounds: true,
+        notifLockScreen: true,
+        // Global drag state for cross-component file drag-and-drop
+        fileDrag: null, // { name, sourcePath, type, sourceComponent }
     },
 
     getState() {
@@ -319,6 +389,21 @@ const MacStore = {
             brightness: s.brightness,
             wifiOn: s.wifiOn,
             bluetoothOn: s.bluetoothOn,
+            focusOn: s.focusOn,
+            dockSize: s.dockSize,
+            dockMagnification: s.dockMagnification,
+            dockAutoHide: s.dockAutoHide,
+            dockPosition: s.dockPosition,
+            showRecents: s.showRecents,
+            accentColor: s.accentColor,
+            nightShift: s.nightShift,
+            reduceMotion: s.reduceMotion,
+            increaseContrast: s.increaseContrast,
+            reduceTransparency: s.reduceTransparency,
+            largerText: s.largerText,
+            showBatteryPercentage: s.showBatteryPercentage,
+            notifSounds: s.notifSounds,
+            notifLockScreen: s.notifLockScreen,
         }));
     },
 
@@ -437,17 +522,26 @@ const MacStore = {
     },
 
     minimizeWindow(windowId) {
-        this.setState(s => {
-            const windows = s.windows.map(w =>
-                w.id === windowId ? {...w, minimized: true, focused: false} : w
-            );
-            const remaining = windows.filter(w => !w.minimized);
-            const newActive = remaining.length > 0 ? remaining[remaining.length - 1].id : null;
-            return {
-                windows: windows.map(w => w.id === newActive ? {...w, focused: true} : w),
-                activeWindowId: newActive,
-            };
-        });
+        // Start minimize animation
+        this.setState(s => ({
+            windows: s.windows.map(w =>
+                w.id === windowId ? {...w, minimizing: true, focused: false} : w
+            )
+        }));
+        // After animation, actually minimize
+        setTimeout(() => {
+            this.setState(s => {
+                const windows = s.windows.map(w =>
+                    w.id === windowId ? {...w, minimized: true, minimizing: false} : w
+                );
+                const remaining = windows.filter(w => !w.minimized);
+                const newActive = remaining.length > 0 ? remaining[remaining.length - 1].id : null;
+                return {
+                    windows: windows.map(w => w.id === newActive ? {...w, focused: true} : w),
+                    activeWindowId: newActive,
+                };
+            });
+        }, 400);
     },
 
     restoreWindow(windowId) {
@@ -457,6 +551,7 @@ const MacStore = {
                 windows: s.windows.map(w => ({
                     ...w,
                     minimized: w.id === windowId ? false : w.minimized,
+                    restoring: w.id === windowId ? true : false,
                     focused: w.id === windowId,
                     zIndex: w.id === windowId ? newZ : w.zIndex,
                 })),
@@ -464,6 +559,11 @@ const MacStore = {
                 activeWindowId: windowId,
             };
         });
+        setTimeout(() => {
+            this.setState(s => ({
+                windows: s.windows.map(w => w.id === windowId ? {...w, restoring: false} : w)
+            }));
+        }, 300);
     },
 
     toggleMaximize(windowId) {
@@ -520,7 +620,30 @@ function useStore(selector) {
     return state;
 }
 
+// Hook for animated mount/unmount of overlays
+function useAnimatedVisibility(isOpen, duration = 200) {
+    const [visible, setVisible] = _useState(isOpen);
+    const [closing, setClosing] = _useState(false);
+
+    _useEffect(() => {
+        if (isOpen) {
+            setVisible(true);
+            setClosing(false);
+        } else if (visible) {
+            setClosing(true);
+            const timer = setTimeout(() => {
+                setVisible(false);
+                setClosing(false);
+            }, duration);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
+
+    return { shouldRender: visible, isClosing: closing };
+}
+
 window.MacStore = MacStore;
 window.useStore = useStore;
+window.useAnimatedVisibility = useAnimatedVisibility;
 window.WALLPAPERS = WALLPAPERS;
 window.VFS = VFS;
