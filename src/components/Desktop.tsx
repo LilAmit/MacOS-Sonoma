@@ -6,7 +6,7 @@ const hexToRgb = (hex) => {
     return r + ',' + g + ',' + b;
 };
 
-// Desktop - main workspace with drag-and-drop desktop icons
+// Desktop - main workspace with all overlays
 const Desktop = () => {
     const windows = useStore(s => s.windows);
     const launchpadOpen = useStore(s => s.launchpadOpen);
@@ -23,6 +23,12 @@ const Desktop = () => {
     const reduceTransparency = useStore(s => s.reduceTransparency);
     const largerText = useStore(s => s.largerText);
     const dockPosition = useStore(s => s.dockPosition);
+    const missionControlOpen = useStore(s => s.missionControlOpen);
+    const stageManagerOn = useStore(s => s.stageManagerOn);
+    const appSwitcherOpen = useStore(s => s.appSwitcherOpen);
+    const appSwitcherIndex = useStore(s => s.appSwitcherIndex);
+    const quickLookFile = useStore(s => s.quickLookFile);
+    const windowSnapPreview = useStore(s => s.windowSnapPreview);
 
     // Apply global CSS classes and variables to document
     React.useEffect(() => {
@@ -36,10 +42,29 @@ const Desktop = () => {
         root.classList.toggle('larger-text', largerText);
     }, [accentColor, darkMode, reduceMotion, increaseContrast, reduceTransparency, largerText]);
 
+    // Dynamic wallpaper: shift hue based on time of day
+    const [wallpaperFilter, setWallpaperFilter] = React.useState('');
+    React.useEffect(() => {
+        const update = () => {
+            const h = new Date().getHours();
+            // Morning (6-10): warm golden, Day (10-16): neutral, Evening (16-20): warm orange, Night (20-6): cool blue
+            let filter = '';
+            if (h >= 6 && h < 10) filter = 'sepia(0.15) saturate(1.2) hue-rotate(-10deg) brightness(1.05)';
+            else if (h >= 16 && h < 20) filter = 'sepia(0.2) saturate(1.3) hue-rotate(-15deg) brightness(0.95)';
+            else if (h >= 20 || h < 6) filter = 'saturate(0.8) hue-rotate(10deg) brightness(0.85)';
+            else filter = '';
+            setWallpaperFilter(filter);
+        };
+        update();
+        const t = setInterval(update, 60000);
+        return () => clearInterval(t);
+    }, []);
+
     const wallpaperStyle = {
         backgroundImage: 'url(' + WALLPAPERS[wallpaperIndex].path + ')',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
+        filter: wallpaperFilter,
     };
 
     const appComponents = {
@@ -63,7 +88,7 @@ const Desktop = () => {
 
     const [selectedDesktopItem, setSelectedDesktopItem] = React.useState(null);
 
-    // Keyboard shortcuts
+    // === ENHANCED KEYBOARD SHORTCUTS ===
     React.useEffect(() => {
         const handler = (e) => {
             const meta = e.metaKey || e.ctrlKey;
@@ -73,9 +98,36 @@ const Desktop = () => {
             const activeWin = state.windows.find(w => w.focused);
 
             if (e.key === 'Escape') {
-                MacStore.setState({ spotlightOpen: false, controlCenterOpen: false, notificationCenterOpen: false, launchpadOpen: false, aboutMacOpen: false });
+                MacStore.setState({ spotlightOpen: false, controlCenterOpen: false, notificationCenterOpen: false, launchpadOpen: false, aboutMacOpen: false, missionControlOpen: false, quickLookFile: null, });
                 return;
             }
+
+            // Cmd+Tab - App Switcher
+            if (meta && e.key === 'Tab') {
+                e.preventDefault();
+                const openWins = state.windows.filter(w => !w.minimized);
+                if (openWins.length === 0) return;
+                if (!state.appSwitcherOpen) {
+                    MacStore.setState({ appSwitcherOpen: true, appSwitcherIndex: 0 });
+                } else {
+                    MacStore.setState(s => ({ appSwitcherIndex: (s.appSwitcherIndex + 1) % openWins.length }));
+                }
+                return;
+            }
+
+            // Space - QuickLook for selected desktop item
+            if (e.key === ' ' && !meta && !e.target.closest('input') && !e.target.closest('textarea') && !e.target.closest('[contenteditable]')) {
+                if (selectedDesktopItem && selectedDesktopItem.startsWith('file-')) {
+                    e.preventDefault();
+                    const fileName = selectedDesktopItem.replace('file-', '');
+                    const fileData = VFS.get('/Users/user/Desktop/' + fileName);
+                    if (fileData && fileData.type !== 'dir') {
+                        MacStore.setState({ quickLookFile: { name: fileName, icon: fileData.icon, content: fileData.content || '', type: fileData.type, size: fileData.size } });
+                    }
+                    return;
+                }
+            }
+
             if (!meta) return;
             if (e.code === 'Space' && !shift) { e.preventDefault(); MacStore.setState(s => ({ spotlightOpen: !s.spotlightOpen })); return; }
             if (e.key === 'w' && !shift) { e.preventDefault(); if (activeWin) MacStore.closeWindow(activeWin.id); return; }
@@ -93,10 +145,26 @@ const Desktop = () => {
             if (e.key === ',') { e.preventDefault(); MacStore.openWindow('settings', 'System Settings', 920, 600); return; }
             if (e.key === 'f' && !shift) { e.preventDefault(); MacStore.setState(s => ({ spotlightOpen: !s.spotlightOpen })); return; }
             if (e.key === 'q' && shift) { e.preventDefault(); MacStore.setState({ locked: true }); return; }
+            // F3 or Ctrl+Up for Mission Control
+            if (e.key === 'ArrowUp' && meta) { e.preventDefault(); MacStore.setState(s => ({ missionControlOpen: !s.missionControlOpen })); return; }
         };
+
+        // Cmd+Tab release handler
+        const keyUp = (e) => {
+            const state = MacStore.getState();
+            if (state.appSwitcherOpen && (e.key === 'Meta' || e.key === 'Control')) {
+                const openWins = state.windows.filter(w => !w.minimized);
+                if (openWins.length > 0 && openWins[state.appSwitcherIndex]) {
+                    MacStore.focusWindow(openWins[state.appSwitcherIndex].id);
+                }
+                MacStore.setState({ appSwitcherOpen: false, appSwitcherIndex: 0 });
+            }
+        };
+
         window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, []);
+        window.addEventListener('keyup', keyUp);
+        return () => { window.removeEventListener('keydown', handler); window.removeEventListener('keyup', keyUp); };
+    }, [selectedDesktopItem]);
 
     const desktopFiles = VFS.ls('/Users/user/Desktop');
     const desktopApps = VFS.getDesktopApps();
@@ -108,7 +176,7 @@ const Desktop = () => {
         terminal: MacIcons.Terminal, word: MacIcons.Word, trash: MacIcons.Trash, settings: MacIcons.Settings,
         music: MacIcons.Music, appstore: MacIcons.AppStore,
         snake: MacIcons.Snake, tetris: MacIcons.Tetris, game2048: MacIcons.Game2048,
-        vscode: MacIcons.VSCode, paint: MacIcons.Paint,
+        vscode: MacIcons.VSCode, paint: MacIcons.Paint, aboutdev: MacIcons.AboutDev,
     };
 
     const launchpadApps = [
@@ -126,7 +194,19 @@ const Desktop = () => {
         { type: 'settings', name: 'Settings', Icon: MacIcons.Settings },
         { type: 'music', name: 'Music', Icon: MacIcons.Music },
         { type: 'appstore', name: 'App Store', Icon: MacIcons.AppStore },
+        { type: 'aboutdev', name: 'About Dev', Icon: MacIcons.AboutDev },
     ];
+
+    // Add downloaded apps to launchpad
+    try {
+        const downloaded = JSON.parse(localStorage.getItem('macos_appstore_downloads') || '{}');
+        const downloadedIconMap = { snake: MacIcons.Snake, tetris: MacIcons.Tetris, game2048: MacIcons.Game2048, vscode: MacIcons.VSCode, paint: MacIcons.Paint };
+        Object.entries(downloaded).forEach(([name, appType]) => {
+            if (downloadedIconMap[appType] && !launchpadApps.find(a => a.type === appType)) {
+                launchpadApps.push({ type: appType, name, Icon: downloadedIconMap[appType] });
+            }
+        });
+    } catch(e) {}
 
     const appSizes = {
         finder: { w: 900, h: 550 }, safari: { w: 1000, h: 650 }, calculator: { w: 250, h: 400 },
@@ -135,13 +215,13 @@ const Desktop = () => {
         photos: { w: 900, h: 600 }, word: { w: 900, h: 700 }, trash: { w: 700, h: 450 },
         calendar: { w: 800, h: 600 }, music: { w: 950, h: 600 }, appstore: { w: 950, h: 650 },
         snake: { w: 530, h: 500 }, tetris: { w: 480, h: 560 }, game2048: { w: 430, h: 550 },
-        vscode: { w: 950, h: 650 }, paint: { w: 1000, h: 700 },
+        vscode: { w: 950, h: 650 }, paint: { w: 1000, h: 700 }, aboutdev: { w: 550, h: 580 },
     };
 
     const openApp = (type, name) => {
         const size = appSizes[type] || { w: 800, h: 500 };
         MacStore.openWindow(type, name, size.w, size.h);
-        MacStore.setState({ launchpadOpen: false });
+        MacStore.setState({ launchpadOpen: false, missionControlOpen: false });
     };
 
     // --- Drag and drop for desktop icons ---
@@ -151,7 +231,7 @@ const Desktop = () => {
         return {};
     });
     const [dragging, setDragging] = React.useState(null);
-    const [dropTargetFolder, setDropTargetFolder] = React.useState(null); // desktop folder being hovered during drag
+    const [dropTargetFolder, setDropTargetFolder] = React.useState(null);
     const dragRef = React.useRef({ startX: 0, startY: 0, origX: 0, origY: 0, key: null, moved: false, fileName: null, isFile: false });
 
     const allDesktopItems = [];
@@ -181,7 +261,7 @@ const Desktop = () => {
     const GRID_W = 90;
     const GRID_H = 85;
     const GRID_TOP = 35;
-    const GRID_RIGHT_MARGIN = 5; // from right edge
+    const GRID_RIGHT_MARGIN = 5;
 
     const getDefaultPos = (index) => {
         const colH = Math.floor((window.innerHeight - 120) / GRID_H);
@@ -194,13 +274,11 @@ const Desktop = () => {
 
     // Snap position to nearest unoccupied grid cell
     const snapToGrid = (rawX, rawY, draggedKey) => {
-        // Calculate grid cell from raw position
         const col = Math.round((rawX - GRID_RIGHT_MARGIN) / GRID_W);
         const row = Math.round((rawY - GRID_TOP) / GRID_H);
         const snappedX = Math.max(0, Math.min(window.innerWidth - GRID_W, col * GRID_W + GRID_RIGHT_MARGIN));
         const snappedY = Math.max(GRID_TOP, Math.min(window.innerHeight - 100, row * GRID_H + GRID_TOP));
 
-        // Collect all occupied grid cells (except the one being dragged)
         const occupied = new Set();
         allDesktopItems.forEach((item, idx) => {
             if (item.key === draggedKey) return;
@@ -213,12 +291,10 @@ const Desktop = () => {
         const targetCol = Math.round((snappedX - GRID_RIGHT_MARGIN) / GRID_W);
         const targetRow = Math.round((snappedY - GRID_TOP) / GRID_H);
 
-        // If target cell is free, use it
         if (!occupied.has(targetCol + ',' + targetRow)) {
             return { x: snappedX, y: snappedY };
         }
 
-        // Find nearest free cell (spiral outward)
         let bestDist = Infinity;
         let bestPos = { x: snappedX, y: snappedY };
         const maxCols = Math.floor(window.innerWidth / GRID_W);
@@ -259,7 +335,6 @@ const Desktop = () => {
                 return next;
             });
 
-            // Set global fileDrag for cross-component communication (only for actual files)
             if (dragRef.current.isFile && dragRef.current.fileName) {
                 const state = MacStore.getState();
                 if (!state.fileDrag || state.fileDrag.name !== dragRef.current.fileName) {
@@ -267,7 +342,6 @@ const Desktop = () => {
                 }
             }
 
-            // Check if hovering over a folder on desktop
             const el = document.elementFromPoint(ev.clientX, ev.clientY);
             if (el) {
                 const folderEl = el.closest('[data-desktop-file][data-file-type="folder"]');
@@ -287,14 +361,12 @@ const Desktop = () => {
                 let movedToFolder = false;
 
                 if (dragRef.current.isFile && dragRef.current.fileName) {
-                    // Check if dropped on a desktop folder
                     if (dropTargetFolder) {
                         const destPath = '/Users/user/Desktop/' + dropTargetFolder;
                         if (VFS.isDir(destPath)) {
                             VFS.move('/Users/user/Desktop', dragRef.current.fileName, destPath);
                             MacStore.addNotification('Finder', 'Moved', dragRef.current.fileName + ' → ' + dropTargetFolder);
                             movedToFolder = true;
-                            // Clean up icon position for moved file
                             setIconPositions(prev => {
                                 const next = { ...prev };
                                 delete next['file-' + dragRef.current.fileName];
@@ -303,10 +375,8 @@ const Desktop = () => {
                             });
                         }
                     }
-                    // Check if dropped on a Finder window (handled by Finder's mouseup listener)
                 }
 
-                // Snap to grid if not moved into a folder
                 if (!movedToFolder) {
                     const curPos = iconPositions[dragRef.current.key] || getDefaultPos(0);
                     const snapped = snapToGrid(curPos.x, curPos.y, dragRef.current.key);
@@ -328,11 +398,25 @@ const Desktop = () => {
         window.addEventListener('mouseup', onUp);
     };
 
+    // Launchpad search
+    const [lpSearch, setLpSearch] = React.useState('');
+    const filteredLpApps = lpSearch
+        ? launchpadApps.filter(a => a.name.toLowerCase().includes(lpSearch.toLowerCase()))
+        : launchpadApps;
+    // Launchpad pages
+    const LP_PER_PAGE = 21;
+    const [lpPage, setLpPage] = React.useState(0);
+    const lpPages = [];
+    for (let i = 0; i < filteredLpApps.length; i += LP_PER_PAGE) {
+        lpPages.push(filteredLpApps.slice(i, i + LP_PER_PAGE));
+    }
+    React.useEffect(() => { if (!launchpadOpen) { setLpSearch(''); setLpPage(0); } }, [launchpadOpen]);
+
     return (
         <div id="desktop-bg" className="fixed inset-0 overflow-hidden" style={wallpaperStyle} onMouseDown={handleDesktopClick}>
             <MenuBar />
 
-            {/* Desktop Icons - absolutely positioned, draggable */}
+            {/* Desktop Icons */}
             <div className="desktop-icons absolute inset-0 top-[28px] bottom-[80px]"
                 onClick={(e) => { if (e.target === e.currentTarget) setSelectedDesktopItem(null); }}>
                 {allDesktopItems.map((item, index) => {
@@ -392,6 +476,19 @@ const Desktop = () => {
                 })}
             </div>
 
+            {/* Stage Manager - side thumbnails */}
+            {stageManagerOn && windows.filter(w => !w.minimized && !w.focused).length > 0 && (
+                <div className="fixed left-2 top-[30px] bottom-[80px] w-[120px] z-[9996] flex flex-col gap-2 py-2 animate-stage-slide-in overflow-y-auto">
+                    {windows.filter(w => !w.minimized && !w.focused).map(win => (
+                        <div key={win.id}
+                            className="w-[110px] h-[70px] rounded-lg overflow-hidden cursor-pointer shadow-lg border border-white/20 hover:border-white/50 transition-all hover:scale-105 bg-gray-800/50 backdrop-blur-sm flex items-center justify-center"
+                            onClick={() => MacStore.focusWindow(win.id)}>
+                            <div className="text-white text-[10px] text-center px-1 truncate">{win.title}</div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Windows */}
             <div className="absolute inset-0 pt-[25px] pb-[80px]" style={{ pointerEvents: 'none' }}>
                 {windows.map(win => {
@@ -405,25 +502,175 @@ const Desktop = () => {
                 })}
             </div>
 
-            {/* Launchpad */}
+            {/* Window Snap Preview */}
+            {windowSnapPreview && (
+                <div className={`fixed z-[9995] pointer-events-none animate-snap-preview ${windowSnapPreview === 'left' ? 'left-1 top-[26px]' : 'right-1 top-[26px]'}`}
+                    style={{ width: 'calc(50vw - 8px)', height: 'calc(100vh - 34px)', borderRadius: '12px', background: 'rgba(var(--accent-rgb), 0.2)', border: '2px solid rgba(var(--accent-rgb), 0.5)' }}/>
+            )}
+
+            {/* === MISSION CONTROL === */}
+            {(() => {
+                const { shouldRender: mcRender, isClosing: mcClosing } = useAnimatedVisibility(missionControlOpen, 300);
+                if (!mcRender) return null;
+                const visibleWindows = windows.filter(w => !w.minimized);
+                const cols = Math.ceil(Math.sqrt(visibleWindows.length));
+                const rows = Math.ceil(visibleWindows.length / cols);
+                return (
+                    <div className={`fixed inset-0 z-[9997] ${mcClosing ? '' : ''}`}
+                        onClick={() => MacStore.setState({ missionControlOpen: false })}>
+                        {/* Dark overlay */}
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" style={{
+                            transition: 'opacity 0.3s',
+                            opacity: mcClosing ? 0 : 1
+                        }}/>
+
+                        {/* Top bar: Spaces */}
+                        <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-2 z-10" onClick={e => e.stopPropagation()}>
+                            <div className="px-4 py-1.5 rounded-lg bg-white/20 backdrop-blur-xl text-white text-[12px] font-medium border border-white/20 shadow-lg">
+                                Desktop 1
+                            </div>
+                            <div className="px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-xl text-white/60 text-[12px] border border-white/10 hover:bg-white/20 cursor-pointer">
+                                +
+                            </div>
+                        </div>
+
+                        {/* Window spread */}
+                        <div className="absolute inset-0 top-[50px] bottom-[80px] flex items-center justify-center p-12"
+                            onClick={e => e.stopPropagation()}>
+                            <div className="grid gap-6" style={{
+                                gridTemplateColumns: `repeat(${cols}, minmax(200px, 350px))`,
+                                maxWidth: '90vw',
+                            }}>
+                                {visibleWindows.map((win) => (
+                                    <div key={win.id}
+                                        className="relative rounded-xl overflow-hidden shadow-2xl border-2 border-transparent hover:border-blue-400/60 cursor-pointer transition-all hover:scale-[1.03] group"
+                                        style={{ aspectRatio: '16/10', background: darkMode ? '#2d2d2d' : '#f0f0f0' }}
+                                        onClick={() => { MacStore.focusWindow(win.id); MacStore.setState({ missionControlOpen: false }); }}>
+                                        <div className={`h-[24px] flex items-center px-2 text-[11px] font-medium ${darkMode ? 'bg-[#383838] text-gray-300' : 'bg-[#e8e8e8] text-gray-500'}`}>
+                                            <div className="flex gap-1 mr-2">
+                                                <div className="w-2 h-2 rounded-full bg-[#FF5F57]"/>
+                                                <div className="w-2 h-2 rounded-full bg-[#FFBD2E]"/>
+                                                <div className="w-2 h-2 rounded-full bg-[#28C840]"/>
+                                            </div>
+                                            <span className="truncate">{win.title}</span>
+                                        </div>
+                                        <div className={`flex-1 flex items-center justify-center text-[24px] opacity-30 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                            {win.title.charAt(0)}
+                                        </div>
+                                        {/* Close button on hover */}
+                                        <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={(e) => { e.stopPropagation(); MacStore.closeWindow(win.id); }}>
+                                            <div className="w-5 h-5 rounded-full bg-gray-800/60 hover:bg-red-500 flex items-center justify-center text-white text-[10px]">x</div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {visibleWindows.length === 0 && (
+                                    <div className="text-white/50 text-[16px] text-center col-span-full">No open windows</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* === LAUNCHPAD (upgraded with search and pages) === */}
             {(() => {
                 const { shouldRender: lpRender, isClosing: lpClosing } = useAnimatedVisibility(launchpadOpen, 200);
                 if (!lpRender) return null;
                 return (
-                    <div className={`fixed inset-0 z-[9997] flex items-center justify-center ${lpClosing ? 'animate-launchpad-out' : 'animate-launchpad-in'}`}
+                    <div className={`fixed inset-0 z-[9997] flex flex-col items-center ${lpClosing ? 'animate-launchpad-out' : 'animate-launchpad-in'}`}
                         onClick={() => MacStore.setState({ launchpadOpen: false })}
                         style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)' }}>
-                        <div className="grid gap-6 p-12" style={{ gridTemplateColumns: 'repeat(7, 90px)' }}
-                            onClick={e => e.stopPropagation()}>
-                            {launchpadApps.map(app => {
-                                const Icon = app.Icon;
-                                return (
-                                    <div key={app.type} className="flex flex-col items-center gap-2 cursor-default group"
-                                        onClick={() => openApp(app.type, app.name)}>
-                                        <div className="group-hover:scale-110 transition-transform">
-                                            <div className="w-[64px] h-[64px] flex items-center justify-center"><Icon size={64}/></div>
+
+                        {/* Search bar */}
+                        <div className="mt-8 mb-6" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/15 backdrop-blur-xl border border-white/20 w-[280px]">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="white" opacity="0.6"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                                <input type="text" placeholder="Search" value={lpSearch} onChange={e => { setLpSearch(e.target.value); setLpPage(0); }}
+                                    className="bg-transparent text-white text-[14px] outline-none placeholder-white/50 w-full"/>
+                            </div>
+                        </div>
+
+                        {/* App grid */}
+                        <div className="flex-1 flex items-center justify-center" onClick={e => e.stopPropagation()}>
+                            <div className="grid gap-6 p-12" style={{ gridTemplateColumns: 'repeat(7, 90px)' }}>
+                                {(lpPages[lpPage] || []).map(app => {
+                                    const Icon = app.Icon;
+                                    return (
+                                        <div key={app.type} className="flex flex-col items-center gap-2 cursor-default group"
+                                            onClick={() => openApp(app.type, app.name)}>
+                                            <div className="group-hover:scale-110 transition-transform">
+                                                <div className="w-[64px] h-[64px] flex items-center justify-center"><Icon size={64}/></div>
+                                            </div>
+                                            <span className="text-white text-[11px] opacity-90 text-center leading-tight w-[90px] truncate">{app.name}</span>
                                         </div>
-                                        <span className="text-white text-[11px] opacity-90 text-center leading-tight w-[90px] truncate">{app.name}</span>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Page dots */}
+                        {lpPages.length > 1 && (
+                            <div className="flex gap-2 mb-6" onClick={e => e.stopPropagation()}>
+                                {lpPages.map((_, i) => (
+                                    <div key={i} className={`w-2 h-2 rounded-full cursor-pointer transition-all ${i === lpPage ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/60'}`}
+                                        onClick={() => setLpPage(i)}/>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
+
+            {/* === QUICKLOOK === */}
+            {(() => {
+                const { shouldRender: qlRender, isClosing: qlClosing } = useAnimatedVisibility(!!quickLookFile, 150);
+                if (!qlRender || !quickLookFile) return null;
+                return (
+                    <div className={`fixed inset-0 z-[10004] flex items-center justify-center bg-black/30 ${qlClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
+                        onClick={() => MacStore.setState({ quickLookFile: null })}>
+                        <div className={`glass-menu rounded-2xl shadow-2xl border border-black/10 w-[500px] overflow-hidden ${qlClosing ? 'animate-quicklook-out' : 'animate-quicklook-in'}`}
+                            onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between px-4 py-3 border-b border-black/5">
+                                <span className="text-[14px] font-medium">{quickLookFile.name}</span>
+                                <span className="text-[12px] text-gray-400">{quickLookFile.size}</span>
+                            </div>
+                            <div className="p-6 min-h-[200px] max-h-[400px] overflow-y-auto">
+                                {quickLookFile.content ? (
+                                    <pre className="text-[13px] whitespace-pre-wrap font-mono text-gray-700">{quickLookFile.content}</pre>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-12">
+                                        <span className="text-[64px] mb-4">{quickLookFile.icon || '📄'}</span>
+                                        <div className="text-[16px] font-medium text-gray-600">{quickLookFile.name}</div>
+                                        <div className="text-[13px] text-gray-400 mt-1">{quickLookFile.size}</div>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex justify-center gap-3 px-4 py-3 border-t border-black/5">
+                                <button onClick={() => MacStore.setState({ quickLookFile: null })}
+                                    className="px-4 py-1.5 rounded-lg bg-gray-100 text-[12px] font-medium hover:bg-gray-200">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* === APP SWITCHER (Cmd+Tab) === */}
+            {appSwitcherOpen && (() => {
+                const openWins = windows.filter(w => !w.minimized);
+                if (openWins.length === 0) return null;
+                return (
+                    <div className="fixed inset-0 z-[10006] flex items-center justify-center pointer-events-none">
+                        <div className="glass-dark rounded-2xl px-4 py-3 flex gap-3 animate-app-switcher-in border border-white/10 shadow-2xl pointer-events-auto">
+                            {openWins.map((win, i) => {
+                                const Icon = appIconMap[win.appType];
+                                const isActive = i === appSwitcherIndex;
+                                return (
+                                    <div key={win.id} className={`flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all ${isActive ? 'bg-white/20 ring-2 ring-white/40' : ''}`}>
+                                        <div className="w-[48px] h-[48px] flex items-center justify-center">
+                                            {Icon ? <Icon size={48}/> : <div className="w-12 h-12 rounded-xl bg-gray-600 flex items-center justify-center text-white text-[20px]">{win.title[0]}</div>}
+                                        </div>
+                                        <span className="text-white text-[10px] text-center truncate w-[60px]">{win.title}</span>
                                     </div>
                                 );
                             })}

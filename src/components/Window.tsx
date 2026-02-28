@@ -1,4 +1,4 @@
-// macOS Window Component with full drag, resize, and focus management
+// macOS Window Component with full drag, resize, snap, and genie effect
 const Window = ({ windowData, children }) => {
     const [isDragging, setIsDragging] = React.useState(false);
     const [isResizing, setIsResizing] = React.useState(false);
@@ -20,6 +20,10 @@ const Window = ({ windowData, children }) => {
                     x: ds.winX + dx,
                     y: Math.max(0, ds.winY + dy),
                 });
+                // Window snap zones
+                if (e.clientX <= 3) MacStore.setState({ windowSnapPreview: 'left' });
+                else if (e.clientX >= window.innerWidth - 3) MacStore.setState({ windowSnapPreview: 'right' });
+                else MacStore.setState({ windowSnapPreview: null });
             }
             if (ds.resizing) {
                 let newW = ds.winW, newH = ds.winH, newX = ds.winX, newY = ds.winY;
@@ -32,6 +36,16 @@ const Window = ({ windowData, children }) => {
         };
         const onMouseUp = () => {
             if (!dragState.current.dragging && !dragState.current.resizing) return;
+            // Apply snap if preview is active
+            if (dragState.current.dragging) {
+                const snap = MacStore.getState().windowSnapPreview;
+                if (snap === 'left') {
+                    MacStore.updateWindow(dragState.current.winId, { x: 0, y: 25, width: Math.floor(window.innerWidth / 2), height: window.innerHeight - 25, maximized: false });
+                } else if (snap === 'right') {
+                    MacStore.updateWindow(dragState.current.winId, { x: Math.floor(window.innerWidth / 2), y: 25, width: Math.floor(window.innerWidth / 2), height: window.innerHeight - 25, maximized: false });
+                }
+                MacStore.setState({ windowSnapPreview: null });
+            }
             dragState.current.dragging = false;
             dragState.current.resizing = false;
             setIsDragging(false);
@@ -51,7 +65,14 @@ const Window = ({ windowData, children }) => {
     const onDragStart = (e) => {
         if (e.target.closest('button')) return;
         e.preventDefault();
-        dragState.current = { dragging: true, resizing: false, dir: '', startX: e.clientX, startY: e.clientY, winX: x, winY: y, winW: width, winH: height, winId: id };
+        // Un-snap: if window was snapped to half, restore original size on drag
+        if (width === Math.floor(window.innerWidth / 2) && height === window.innerHeight - 25) {
+            const origW = 800, origH = 500;
+            dragState.current = { dragging: true, resizing: false, dir: '', startX: e.clientX, startY: e.clientY, winX: e.clientX - origW / 2, winY: y, winW: origW, winH: origH, winId: id };
+            MacStore.updateWindow(id, { width: origW, height: origH, x: e.clientX - origW / 2 });
+        } else {
+            dragState.current = { dragging: true, resizing: false, dir: '', startX: e.clientX, startY: e.clientY, winX: x, winY: y, winW: width, winH: height, winId: id };
+        }
         setIsDragging(true);
         document.body.style.cursor = 'move';
         document.body.style.userSelect = 'none';
@@ -74,8 +95,8 @@ const Window = ({ windowData, children }) => {
 
     const animClass = opening ? 'animate-window-open'
         : closing ? 'animate-window-close pointer-events-none'
-        : minimizing ? 'animate-minimize pointer-events-none'
-        : restoring ? 'animate-restore'
+        : minimizing ? 'animate-genie-minimize pointer-events-none'
+        : restoring ? 'animate-genie-restore'
         : '';
     const shadowClass = isDragging ? 'window-shadow-dragging' : focused ? 'window-shadow-focused' : 'window-shadow-unfocused';
     const transitionClass = (!isDragging && !isResizing && !opening && !closing && !minimizing && !restoring) ? 'window-transition' : '';
@@ -83,7 +104,7 @@ const Window = ({ windowData, children }) => {
     return (
         <div
             className={`absolute flex flex-col rounded-xl overflow-hidden border border-black/10 ${shadowClass} ${animClass} ${transitionClass}`}
-            style={{ ...windowStyle, opacity: isDragging ? 0.88 : 1, transition: isDragging ? 'none' : undefined }}
+            style={{ ...windowStyle, opacity: isDragging ? 0.88 : 1, transition: isDragging ? 'none' : undefined, transformOrigin: 'bottom center' }}
             onMouseDown={() => { if (!focused) MacStore.focusWindow(id); }}
         >
             {/* Translucent background */}

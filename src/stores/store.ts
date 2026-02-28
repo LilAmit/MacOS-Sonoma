@@ -363,6 +363,14 @@ const MacStore = {
         notifLockScreen: true,
         // Global drag state for cross-component file drag-and-drop
         fileDrag: null, // { name, sourcePath, type, sourceComponent }
+        // Mission Control / Stage Manager / Widgets / Spaces
+        missionControlOpen: false,
+        stageManagerOn: false,
+        widgetsOpen: false,
+        appSwitcherOpen: false,
+        appSwitcherIndex: 0,
+        quickLookFile: null, // { name, icon, content, type, size }
+        windowSnapPreview: null, // 'left' | 'right' | null
     },
 
     getState() {
@@ -522,7 +530,7 @@ const MacStore = {
     },
 
     minimizeWindow(windowId) {
-        // Start minimize animation
+        // Start genie minimize animation
         this.setState(s => ({
             windows: s.windows.map(w =>
                 w.id === windowId ? {...w, minimizing: true, focused: false} : w
@@ -541,7 +549,7 @@ const MacStore = {
                     activeWindowId: newActive,
                 };
             });
-        }, 400);
+        }, 500);
     },
 
     restoreWindow(windowId) {

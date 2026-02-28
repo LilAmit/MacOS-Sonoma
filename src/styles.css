@@ -399,3 +399,19 @@ input[type="range"]::-webkit-slider-runnable-track {
     border: 1px solid rgba(255,255,255,0.2) !important;
     color: #e5e5e7;
 }
+
+/* ===== Cursor Context Changes ===== */
+button, [role="button"], .cursor-default { cursor: default; }
+input, textarea, [contenteditable] { cursor: text !important; }
+a, [href] { cursor: pointer; }
+input[type="range"] { cursor: grab; }
+input[type="range"]:active { cursor: grabbing; }
+
+/* ===== Stage Manager ===== */
+.animate-stage-slide-in {
+    animation: stage-slide-in 0.3s ease-out;
+}
+@keyframes stage-slide-in {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}

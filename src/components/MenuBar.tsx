@@ -1,4 +1,4 @@
-// macOS Menu Bar - Fully functional with all dropdowns
+// macOS Menu Bar - Fully functional with app-specific menus and interactive status icons
 const MenuBar = () => {
     const [clock, setClock] = React.useState('');
     const [dropdown, setDropdown] = React.useState(null);
@@ -7,6 +7,7 @@ const MenuBar = () => {
     const volume = useStore(s => s.volume);
     const showBatteryPercentage = useStore(s => s.showBatteryPercentage);
     const focusOn = useStore(s => s.focusOn);
+    const stageManagerOn = useStore(s => s.stageManagerOn);
     const batteryLevel = React.useRef(Math.floor(Math.random() * 30) + 65);
 
     React.useEffect(() => {
@@ -33,8 +34,9 @@ const MenuBar = () => {
     }, []);
 
     const appName = activeWin ? activeWin.title.split(' - ')[0].split(' ')[0] : 'Finder';
+    const appType = activeWin ? activeWin.appType : 'finder';
 
-    // App-specific menu items
+    // App-specific menu items - vary by focused app
     const getAppMenuItems = () => {
         return (
             <>
@@ -49,6 +51,103 @@ const MenuBar = () => {
                 <DropItem label={`Quit ${appName}`} shortcut="⌘Q" onClick={() => { closeDropdown(); if (activeWin) MacStore.closeWindow(activeWin.id); }}/>
             </>
         );
+    };
+
+    // App-specific File menu
+    const getFileMenuItems = () => {
+        const base = (
+            <>
+                <DropItem label="New Window" shortcut="⌘N" onClick={() => { closeDropdown(); MacStore.openWindow('finder','Finder',900,550); }}/>
+                <DropItem label="New Folder" shortcut="⇧⌘N" onClick={() => { closeDropdown(); VFS.mkdir('/Users/user/Desktop', 'untitled folder'); }}/>
+                <DropSep/>
+                <DropItem label="Open" shortcut="⌘O" onClick={closeDropdown}/>
+                <DropItem label="Open With" hasArrow/>
+                <DropItem label="Close Window" shortcut="⌘W" onClick={() => { closeDropdown(); if(activeWin) MacStore.closeWindow(activeWin.id); }}/>
+            </>
+        );
+        // Add app-specific items
+        if (appType === 'word' || appType === 'vscode' || appType === 'notes') {
+            return (<>
+                {base}
+                <DropSep/>
+                <DropItem label="Save" shortcut="⌘S" onClick={closeDropdown}/>
+                <DropItem label="Save As..." shortcut="⇧⌘S" onClick={closeDropdown}/>
+                <DropItem label="Export as PDF..." onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Print..." shortcut="⌘P" onClick={closeDropdown}/>
+            </>);
+        }
+        if (appType === 'safari') {
+            return (<>
+                <DropItem label="New Tab" shortcut="⌘T" onClick={closeDropdown}/>
+                <DropItem label="New Window" shortcut="⌘N" onClick={closeDropdown}/>
+                <DropItem label="New Private Window" shortcut="⇧⌘N" onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Open File..." shortcut="⌘O" onClick={closeDropdown}/>
+                <DropItem label="Close Tab" shortcut="⌘W" onClick={() => { closeDropdown(); if(activeWin) MacStore.closeWindow(activeWin.id); }}/>
+                <DropSep/>
+                <DropItem label="Print..." shortcut="⌘P" onClick={closeDropdown}/>
+            </>);
+        }
+        if (appType === 'paint') {
+            return (<>
+                {base}
+                <DropSep/>
+                <DropItem label="Save" shortcut="⌘S" onClick={closeDropdown}/>
+                <DropItem label="Export as PNG..." shortcut="⇧⌘E" onClick={closeDropdown}/>
+            </>);
+        }
+        return (<>
+            {base}
+            <DropSep/>
+            <DropItem label="Get Info" shortcut="⌘I" onClick={closeDropdown}/>
+            <DropItem label="Rename" onClick={closeDropdown}/>
+            <DropItem label="Compress" onClick={closeDropdown}/>
+            <DropItem label="Duplicate" shortcut="⌘D" onClick={closeDropdown}/>
+            <DropSep/>
+            <DropItem label="Move to Trash" shortcut="⌘⌫" onClick={closeDropdown}/>
+        </>);
+    };
+
+    // App-specific Edit menu
+    const getEditMenuItems = () => {
+        const base = (
+            <>
+                <DropItem label="Undo" shortcut="⌘Z" onClick={closeDropdown}/>
+                <DropItem label="Redo" shortcut="⇧⌘Z" onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Cut" shortcut="⌘X" onClick={closeDropdown}/>
+                <DropItem label="Copy" shortcut="⌘C" onClick={closeDropdown}/>
+                <DropItem label="Paste" shortcut="⌘V" onClick={closeDropdown}/>
+                <DropItem label="Select All" shortcut="⌘A" onClick={closeDropdown}/>
+            </>
+        );
+        if (appType === 'vscode') {
+            return (<>
+                {base}
+                <DropSep/>
+                <DropItem label="Find" shortcut="⌘F" onClick={closeDropdown}/>
+                <DropItem label="Find and Replace" shortcut="⌥⌘F" onClick={closeDropdown}/>
+                <DropItem label="Toggle Comment" shortcut="⌘/" onClick={closeDropdown}/>
+                <DropItem label="Format Document" shortcut="⇧⌥F" onClick={closeDropdown}/>
+            </>);
+        }
+        if (appType === 'terminal') {
+            return (<>
+                {base}
+                <DropSep/>
+                <DropItem label="Clear Buffer" shortcut="⌘K" onClick={closeDropdown}/>
+                <DropItem label="Select Output" onClick={closeDropdown}/>
+            </>);
+        }
+        return (<>
+            {base}
+            <DropSep/>
+            <DropItem label="Find" shortcut="⌘F" onClick={() => { closeDropdown(); MacStore.setState(s => ({ spotlightOpen: !s.spotlightOpen })); }}/>
+            <DropItem label="Find and Replace" shortcut="⌥⌘F" onClick={closeDropdown}/>
+            <DropSep/>
+            <DropItem label="Emoji & Symbols" shortcut="⌃⌘Space" onClick={closeDropdown}/>
+        </>);
     };
 
     const getViewMenuItems = () => (
@@ -98,8 +197,11 @@ const MenuBar = () => {
             <>
                 <DropItem label="Minimize" shortcut="⌘M" onClick={() => { closeDropdown(); if (activeWin) MacStore.minimizeWindow(activeWin.id); }}/>
                 <DropItem label="Zoom" onClick={() => { closeDropdown(); if (activeWin) MacStore.toggleMaximize(activeWin.id); }}/>
-                <DropItem label="Move Window to Left Side" onClick={closeDropdown}/>
-                <DropItem label="Move Window to Right Side" onClick={closeDropdown}/>
+                <DropItem label="Move Window to Left Side" onClick={() => { closeDropdown(); if (activeWin) MacStore.updateWindow(activeWin.id, { x: 0, y: 25, width: Math.floor(window.innerWidth / 2), height: window.innerHeight - 25 }); }}/>
+                <DropItem label="Move Window to Right Side" onClick={() => { closeDropdown(); if (activeWin) MacStore.updateWindow(activeWin.id, { x: Math.floor(window.innerWidth / 2), y: 25, width: Math.floor(window.innerWidth / 2), height: window.innerHeight - 25 }); }}/>
+                <DropSep/>
+                <DropItem label="Mission Control" shortcut="⌃↑" onClick={() => { closeDropdown(); MacStore.setState(s => ({ missionControlOpen: !s.missionControlOpen })); }}/>
+                <DropItem label={stageManagerOn ? '✓ Stage Manager' : '  Stage Manager'} onClick={() => { closeDropdown(); MacStore.setState(s => ({ stageManagerOn: !s.stageManagerOn })); }}/>
                 <DropSep/>
                 <DropItem label="Bring All to Front" onClick={() => { closeDropdown(); }}/>
                 {state.windows.length > 0 && <DropSep/>}
@@ -127,6 +229,86 @@ const MenuBar = () => {
             <DropItem label="What's New in macOS" onClick={closeDropdown}/>
         </>
     );
+
+    // Dynamic menu items based on app type
+    const getMenus = () => {
+        if (appType === 'safari') return ['File','Edit','View','History','Bookmarks','Window','Help'];
+        if (appType === 'vscode') return ['File','Edit','Selection','View','Go','Terminal','Help'];
+        if (appType === 'terminal') return ['Shell','Edit','View','Window','Help'];
+        if (appType === 'music') return ['File','Edit','Controls','View','Window','Help'];
+        if (appType === 'paint') return ['File','Edit','Canvas','View','Window','Help'];
+        return ['File','Edit','View','Go','Window','Help'];
+    };
+
+    const getMenuContent = (menu) => {
+        switch(menu) {
+            case 'File': return getFileMenuItems();
+            case 'Edit': return getEditMenuItems();
+            case 'View': return getViewMenuItems();
+            case 'Go': return getGoMenuItems();
+            case 'Window': return getWindowMenuItems();
+            case 'Help': return getHelpMenuItems();
+            // App-specific menus
+            case 'History': return (<>
+                <DropItem label="Show All History" shortcut="⌘Y" onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Back" shortcut="⌘[" onClick={closeDropdown}/>
+                <DropItem label="Forward" shortcut="⌘]" onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Clear History..." onClick={closeDropdown}/>
+            </>);
+            case 'Bookmarks': return (<>
+                <DropItem label="Show Bookmarks" shortcut="⌘B" onClick={closeDropdown}/>
+                <DropItem label="Add Bookmark..." shortcut="⌘D" onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Favorites" hasArrow/>
+            </>);
+            case 'Selection': return (<>
+                <DropItem label="Select All" shortcut="⌘A" onClick={closeDropdown}/>
+                <DropItem label="Expand Selection" shortcut="⇧⌥→" onClick={closeDropdown}/>
+                <DropItem label="Shrink Selection" shortcut="⇧⌥←" onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Add Cursor Above" shortcut="⌥⌘↑" onClick={closeDropdown}/>
+                <DropItem label="Add Cursor Below" shortcut="⌥⌘↓" onClick={closeDropdown}/>
+            </>);
+            case 'Terminal': return (<>
+                <DropItem label="New Terminal" shortcut="⌃`" onClick={closeDropdown}/>
+                <DropItem label="Split Terminal" onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Run Active File" onClick={closeDropdown}/>
+                <DropItem label="Run Selected Text" onClick={closeDropdown}/>
+            </>);
+            case 'Shell': return (<>
+                <DropItem label="New Window" shortcut="⌘N" onClick={closeDropdown}/>
+                <DropItem label="New Tab" shortcut="⌘T" onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Close" shortcut="⌘W" onClick={() => { closeDropdown(); if(activeWin) MacStore.closeWindow(activeWin.id); }}/>
+            </>);
+            case 'Controls': return (<>
+                <DropItem label="Play / Pause" shortcut="Space" onClick={closeDropdown}/>
+                <DropItem label="Next" shortcut="⌘→" onClick={closeDropdown}/>
+                <DropItem label="Previous" shortcut="⌘←" onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Increase Volume" shortcut="⌘↑" onClick={closeDropdown}/>
+                <DropItem label="Decrease Volume" shortcut="⌘↓" onClick={closeDropdown}/>
+                <DropItem label="Mute" shortcut="⌥⌘↓" onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Shuffle" onClick={closeDropdown}/>
+                <DropItem label="Repeat" onClick={closeDropdown}/>
+            </>);
+            case 'Canvas': return (<>
+                <DropItem label="Clear Canvas" onClick={closeDropdown}/>
+                <DropItem label="Resize Canvas..." onClick={closeDropdown}/>
+                <DropSep/>
+                <DropItem label="Zoom In" shortcut="⌘+" onClick={closeDropdown}/>
+                <DropItem label="Zoom Out" shortcut="⌘-" onClick={closeDropdown}/>
+                <DropItem label="Fit to Window" shortcut="⌘0" onClick={closeDropdown}/>
+            </>);
+            default: return null;
+        }
+    };
+
+    const menus = getMenus();
 
     return (
         <div className="fixed top-0 left-0 right-0 h-[25px] glass-dark flex items-center justify-between px-2 z-[9999] border-b border-white/5">
@@ -175,7 +357,8 @@ const MenuBar = () => {
                     )}
                 </div>
 
-                {['File','Edit','View','Go','Window','Help'].map(menu => (
+                {/* Dynamic menus based on active app */}
+                {menus.map(menu => (
                     <div key={menu} className="dropdown-container relative">
                         <button
                             onClick={(e) => { e.stopPropagation(); setDropdown(dropdown === menu ? null : menu); }}
@@ -184,43 +367,7 @@ const MenuBar = () => {
                         >{menu}</button>
                         {dropdown === menu && (
                             <div className="absolute top-[25px] left-0 glass-menu rounded-b-lg animate-menu-dropdown-in min-w-[220px] py-1 shadow-xl border border-black/10 z-[10001]">
-                                {menu === 'File' && <>
-                                    <DropItem label="New Window" shortcut="⌘N" onClick={() => { closeDropdown(); MacStore.openWindow('finder','Finder',900,550); }}/>
-                                    <DropItem label="New Folder" shortcut="⇧⌘N" onClick={() => { closeDropdown(); VFS.mkdir('/Users/user/Desktop', 'untitled folder'); }}/>
-                                    <DropSep/>
-                                    <DropItem label="Open" shortcut="⌘O" onClick={closeDropdown}/>
-                                    <DropItem label="Open With" hasArrow/>
-                                    <DropItem label="Close Window" shortcut="⌘W" onClick={() => { closeDropdown(); if(activeWin) MacStore.closeWindow(activeWin.id); }}/>
-                                    <DropSep/>
-                                    <DropItem label="Get Info" shortcut="⌘I" onClick={closeDropdown}/>
-                                    <DropItem label="Rename" onClick={closeDropdown}/>
-                                    <DropItem label="Compress" onClick={closeDropdown}/>
-                                    <DropItem label="Duplicate" shortcut="⌘D" onClick={closeDropdown}/>
-                                    <DropSep/>
-                                    <DropItem label="Move to Trash" shortcut="⌘⌫" onClick={closeDropdown}/>
-                                </>}
-                                {menu === 'Edit' && <>
-                                    <DropItem label="Undo" shortcut="⌘Z" onClick={closeDropdown}/>
-                                    <DropItem label="Redo" shortcut="⇧⌘Z" onClick={closeDropdown}/>
-                                    <DropSep/>
-                                    <DropItem label="Cut" shortcut="⌘X" onClick={closeDropdown}/>
-                                    <DropItem label="Copy" shortcut="⌘C" onClick={closeDropdown}/>
-                                    <DropItem label="Paste" shortcut="⌘V" onClick={closeDropdown}/>
-                                    <DropItem label="Paste and Match Style" shortcut="⌥⇧⌘V" onClick={closeDropdown}/>
-                                    <DropItem label="Select All" shortcut="⌘A" onClick={closeDropdown}/>
-                                    <DropSep/>
-                                    <DropItem label="Find" shortcut="⌘F" onClick={() => {
-                                        closeDropdown();
-                                        MacStore.setState(s => ({ spotlightOpen: !s.spotlightOpen }));
-                                    }}/>
-                                    <DropItem label="Find and Replace" shortcut="⌥⌘F" onClick={closeDropdown}/>
-                                    <DropSep/>
-                                    <DropItem label="Emoji & Symbols" shortcut="⌃⌘Space" onClick={closeDropdown}/>
-                                </>}
-                                {menu === 'View' && getViewMenuItems()}
-                                {menu === 'Go' && getGoMenuItems()}
-                                {menu === 'Window' && getWindowMenuItems()}
-                                {menu === 'Help' && getHelpMenuItems()}
+                                {getMenuContent(menu)}
                             </div>
                         )}
                     </div>
@@ -228,6 +375,13 @@ const MenuBar = () => {
             </div>
 
             <div className="flex items-center h-full gap-0.5">
+                {/* Stage Manager indicator */}
+                {stageManagerOn && (
+                    <MenuIcon title="Stage Manager On" onClick={() => MacStore.setState(s => ({ stageManagerOn: !s.stageManagerOn }))}>
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="white" opacity="0.8"><rect x="2" y="4" width="8" height="16" rx="1.5"/><rect x="13" y="7" width="4" height="4" rx="1" opacity="0.5"/><rect x="13" y="13" width="4" height="4" rx="1" opacity="0.5"/><rect x="19" y="9" width="3" height="6" rx="1" opacity="0.3"/></svg>
+                    </MenuIcon>
+                )}
+
                 {/* Focus indicator */}
                 {focusOn && (
                     <MenuIcon title="Focus On">
@@ -240,7 +394,7 @@ const MenuBar = () => {
                     <svg viewBox="0 0 24 24" width="15" height="15" fill="white"><path d="M7 10h2v4H7zM11 7h2v10h-2zM15 12h2v2h-2zM3 13h2v1H3zM19 9h2v6h-2z"/></svg>
                 </MenuIcon>
 
-                {/* Wi-Fi dropdown */}
+                {/* Wi-Fi - clickable toggle */}
                 <div className="dropdown-container relative flex items-center h-full">
                     <button onClick={(e) => { e.stopPropagation(); setDropdown(dropdown === 'wifi' ? null : 'wifi'); }}
                         className="flex items-center px-1.5 h-full hover:bg-white/10 rounded cursor-default" title="Wi-Fi">
@@ -274,6 +428,14 @@ const MenuBar = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Volume indicator - click to toggle mute */}
+                <MenuIcon title={`Volume: ${volume}%`} onClick={() => MacStore.setState(s => ({ volume: s.volume > 0 ? 0 : 60 }))}>
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="white" opacity={volume > 0 ? 1 : 0.4}>
+                        {volume > 0 ? <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>
+                            : <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>}
+                    </svg>
+                </MenuIcon>
 
                 {/* Battery dropdown */}
                 <div className="dropdown-container relative flex items-center h-full">
@@ -324,8 +486,13 @@ const MenuBar = () => {
                     </svg>
                 </MenuIcon>
 
-                {/* Date/Time -> Notification Center */}
-                <MenuIcon title="Notifications" onClick={() => MacStore.setState(s => ({ notificationCenterOpen: !s.notificationCenterOpen, controlCenterOpen: false }))}>
+                {/* Date/Time -> Notification Center (includes widgets) */}
+                <MenuIcon title="Notifications" onClick={() => {
+                    MacStore.setState(s => ({
+                        notificationCenterOpen: !s.notificationCenterOpen,
+                        controlCenterOpen: false
+                    }));
+                }}>
                     <span className="text-white text-[13px] font-medium whitespace-nowrap">{clock}</span>
                 </MenuIcon>
             </div>

@@ -1,8 +1,9 @@
-// macOS Lock Screen
+// macOS Lock Screen with wake animation
 const LockScreen = () => {
     const locked = useStore(s => s.locked);
     const wallpaperIndex = useStore(s => s.wallpaperIndex);
     const [unlocking, setUnlocking] = React.useState(false);
+    const [waking, setWaking] = React.useState(true);
     const [time, setTime] = React.useState('');
     const [date, setDate] = React.useState('');
     const inputRef = React.useRef(null);
@@ -26,7 +27,13 @@ const LockScreen = () => {
     }, []);
 
     React.useEffect(() => {
-        if (locked) { setUnlocking(false); setTimeout(() => inputRef.current?.focus(), 100); }
+        if (locked) {
+            setUnlocking(false);
+            setWaking(true);
+            // Wake animation: screen "turns on" like a real display
+            setTimeout(() => setWaking(false), 800);
+            setTimeout(() => inputRef.current?.focus(), 900);
+        }
     }, [locked]);
 
     const unlock = () => {
@@ -40,11 +47,16 @@ const LockScreen = () => {
     if (!locked) return null;
 
     return (
-        <div className={`fixed inset-0 z-[99999] flex items-center justify-center cursor-default ${unlocking ? 'animate-unlock pointer-events-none' : ''}`}>
+        <div className={`fixed inset-0 z-[99999] flex items-center justify-center cursor-default ${unlocking ? 'animate-unlock pointer-events-none' : ''} ${waking ? 'animate-lock-wake' : ''}`}
+            style={{ transformOrigin: 'center center' }}>
             {/* Wallpaper background */}
             <div className="absolute inset-0" style={wallpaperStyle}/>
 
-            <div className="relative z-10 text-center text-white">
+            {/* Sleep overlay that fades away */}
+            {waking && <div className="absolute inset-0 bg-black z-20 pointer-events-none" style={{ animation: 'fade-out 0.6s ease-out 0.2s forwards' }}/>}
+
+            <div className={`relative z-10 text-center text-white transition-opacity duration-500 ${waking ? 'opacity-0' : 'opacity-100'}`}
+                style={{ transitionDelay: '0.4s' }}>
                 <div className="text-[82px] font-bold tracking-tight leading-none mb-1"
                     style={{ textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
                     {time}
@@ -56,14 +68,11 @@ const LockScreen = () => {
 
                 {/* User avatar */}
                 <div className="flex flex-col items-center gap-3">
-                    <div className="w-20 h-20 rounded-full overflow-hidden shadow-xl bg-gray-500">
-                        <svg viewBox="0 0 100 100" width="80" height="80">
-                            <circle cx="50" cy="50" r="50" fill="#7d7d7d"/>
-                            <circle cx="50" cy="38" r="18" fill="#a0a0a0"/>
-                            <ellipse cx="50" cy="80" rx="30" ry="22" fill="#a0a0a0"/>
-                        </svg>
+                    <div className="w-20 h-20 rounded-full overflow-hidden shadow-xl bg-gray-500 ring-2 ring-white/20">
+                        <img src="AboutPhoto/MePhoto.jpeg" alt="User" className="w-full h-full object-cover" draggable="false"
+                            onError={(e) => { e.target.style.display='none'; e.target.parentElement.innerHTML='<svg viewBox="0 0 100 100" width="80" height="80"><circle cx="50" cy="50" r="50" fill="#7d7d7d"/><circle cx="50" cy="38" r="18" fill="#a0a0a0"/><ellipse cx="50" cy="80" rx="30" ry="22" fill="#a0a0a0"/></svg>'; }}/>
                     </div>
-                    <div className="text-[17px] font-semibold">User</div>
+                    <div className="text-[17px] font-semibold">Amit</div>
                     <input
                         ref={inputRef}
                         type="password"

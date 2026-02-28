@@ -1,8 +1,40 @@
-// Main App - root component with boot screen
+// Main App - root component with boot screen and startup chime
 const App = () => {
     const locked = useStore(s => s.locked);
     const [booting, setBooting] = React.useState(true);
     const [bootProgress, setBootProgress] = React.useState(0);
+
+    // Play startup chime
+    React.useEffect(() => {
+        if (!booting) return;
+        // Create a simple startup chime using Web Audio API
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const playChime = () => {
+                const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.08);
+                    gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + i * 0.08 + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.08 + 1.5);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + i * 0.08);
+                    osc.stop(ctx.currentTime + i * 0.08 + 1.5);
+                });
+            };
+            // Try to play immediately, or on first user interaction
+            if (ctx.state === 'running') playChime();
+            else {
+                const resume = () => { ctx.resume().then(playChime); document.removeEventListener('click', resume); document.removeEventListener('keydown', resume); };
+                document.addEventListener('click', resume, { once: true });
+                document.addEventListener('keydown', resume, { once: true });
+            }
+        } catch(e) {}
+    }, []);
 
     // Real boot: preload wallpapers + app icons, track actual progress
     React.useEffect(() => {
@@ -48,11 +80,9 @@ const App = () => {
 
         const updateProgress = () => {
             loaded++;
-            // Scale real loading progress to 0-90%, reserve last 10% for min timer
             const loadRatio = loaded / total;
             const elapsed = Date.now() - startTime;
             const timeRatio = Math.min(elapsed / minDuration, 1);
-            // Progress is the slower of the two (load vs time), eased
             const progress = Math.min(loadRatio, timeRatio);
             const eased = 1 - Math.pow(1 - progress, 2);
             setBootProgress(eased * 100);
