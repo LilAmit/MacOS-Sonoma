@@ -4,7 +4,7 @@ const MacOS = {
     build: '23D60',
     windows: [],
     activeWindow: null,
-    zIndex: 100,
+    zIndex: 600,
     isLocked: true,
     isDarkMode: false,
     openApps: new Set(['finder']),
@@ -14,7 +14,7 @@ const MacOS = {
         this.setupLockScreen();
         this.setupClock();
         this.setupDesktopClick();
-        this.setupKeyboardShortcuts();
+        // Keyboard shortcuts are handled exclusively by the React Desktop component
     },
 
     setupLockScreen() {
@@ -85,47 +85,6 @@ const MacOS = {
                 e.target.id === 'desktop-icons' || e.target.classList.contains('desktop-icons')) {
                 this.unfocusAllWindows();
                 document.getElementById('active-app-name').innerHTML = '<strong>Finder</strong>';
-            }
-        });
-    },
-
-    setupKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
-            // Cmd+Space - Spotlight
-            if ((e.metaKey || e.ctrlKey) && e.code === 'Space') {
-                e.preventDefault();
-                Spotlight.toggle();
-            }
-            // Cmd+Q - Close active window
-            if ((e.metaKey || e.ctrlKey) && e.code === 'KeyQ') {
-                e.preventDefault();
-                if (this.activeWindow) {
-                    this.closeWindow(this.activeWindow.id);
-                }
-            }
-            // Cmd+W - Close active window
-            if ((e.metaKey || e.ctrlKey) && e.code === 'KeyW') {
-                e.preventDefault();
-                if (this.activeWindow) {
-                    this.closeWindow(this.activeWindow.id);
-                }
-            }
-            // Cmd+M - Minimize
-            if ((e.metaKey || e.ctrlKey) && e.code === 'KeyM') {
-                e.preventDefault();
-                if (this.activeWindow) {
-                    this.minimizeWindow(this.activeWindow.id);
-                }
-            }
-            // Escape - Close spotlight, control center, etc.
-            if (e.key === 'Escape') {
-                Spotlight.hide();
-                document.getElementById('control-center').style.display = 'none';
-                document.getElementById('notification-center').style.display = 'none';
-                ContextMenu.hide();
-                // Close launchpad
-                const lp = document.querySelector('.launchpad-overlay');
-                if (lp) lp.remove();
             }
         });
     },

@@ -8,6 +8,8 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -533,6 +535,133 @@ input[type="range"]:active { cursor: grabbing !important; }
 <body class="overflow-hidden w-screen h-screen font-sf">
     <div id="root"></div>
 
+<script>
+// Pyodide - real Python runtime (lazy-loaded when VS Code first runs)
+let _pyodideInstance = null;
+let _pyodidePromise = null;
+function getPyodide() {
+    if (_pyodideInstance) return Promise.resolve(_pyodideInstance);
+    if (_pyodidePromise) return _pyodidePromise;
+    _pyodidePromise = loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/' })
+        .then(py => {
+            py.runPython(`
+import builtins, sys
+from io import StringIO
+def _web_input(prompt=''):
+    import js
+    result = js.prompt(str(prompt))
+    return result if result is not None else ''
+builtins.input = _web_input
+`);
+            _pyodideInstance = py;
+            return py;
+        });
+    return _pyodidePromise;
+}
+</script>
+
+<script>
+// SoundManager - procedural sounds via Web Audio API
+const SoundManager = {
+    _ctx: null,
+    _muted: false,
+
+    getCtx() {
+        if (!this._ctx) {
+            try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+        }
+        if (this._ctx && this._ctx.state === 'suspended') {
+            this._ctx.resume();
+        }
+        return this._ctx;
+    },
+
+    setMuted(val) { this._muted = val; },
+
+    play(type) {
+        if (this._muted) return;
+        const ctx = this.getCtx();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+
+        if (type === 'screenshot') {
+            // Camera shutter click: sharp click + short noise burst
+            const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.012));
+            }
+            const src = ctx.createBufferSource();
+            const gain = ctx.createGain();
+            src.buffer = buf;
+            gain.gain.setValueAtTime(0.6, t);
+            src.connect(gain); gain.connect(ctx.destination);
+            src.start(t);
+        }
+
+        if (type === 'trash') {
+            // Crumple descending sweep
+            [440, 330, 220, 160].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(freq, t + i * 0.06);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.5, t + i * 0.06 + 0.1);
+                gain.gain.setValueAtTime(0.18, t + i * 0.06);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.06 + 0.12);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(t + i * 0.06);
+                osc.stop(t + i * 0.06 + 0.15);
+            });
+        }
+
+        if (type === 'error') {
+            // Low double thud
+            [180, 160].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.22, t + i * 0.14);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.14 + 0.18);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(t + i * 0.14);
+                osc.stop(t + i * 0.14 + 0.2);
+            });
+        }
+
+        if (type === 'notification') {
+            // Soft ping: high sine bell
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, t);
+            osc.frequency.exponentialRampToValueAtTime(660, t + 0.3);
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.2, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(t); osc.stop(t + 0.65);
+        }
+
+        if (type === 'empty_trash') {
+            // Emptying whoosh
+            const buf = ctx.createBuffer(1, ctx.sampleRate * 0.4, ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.08)) * Math.sin(i * 0.01);
+            }
+            const src = ctx.createBufferSource();
+            const gain = ctx.createGain();
+            src.buffer = buf;
+            gain.gain.setValueAtTime(0.5, t);
+            src.connect(gain); gain.connect(ctx.destination);
+            src.start(t);
+        }
+    }
+};
+</script>
+
 <script type="text/babel">
 // Global state store for macOS Sonoma
 const { useState: _useState, useCallback: _useCallback, useEffect: _useEffect, useRef: _useRef, createContext: _createContext, useContext: _useContext, useMemo: _useMemo } = React;
@@ -858,7 +987,7 @@ const MacStore = {
     _state: {
         locked: true,
         windows: [],
-        zIndexCounter: 100,
+        zIndexCounter: 600,
         activeWindowId: null,
         openApps: new Set(['finder']),
         spotlightOpen: false,
@@ -907,6 +1036,32 @@ const MacStore = {
         appSwitcherIndex: 0,
         quickLookFile: null, // { name, icon, content, type, size }
         windowSnapPreview: null, // 'left' | 'right' | null
+        // OSD (on-screen display for volume/brightness)
+        osd: null, // { type: 'volume'|'brightness', value: 0-100 }
+        // Caps Lock indicator
+        capsLock: false,
+        // Screensaver
+        screensaverActive: false,
+        // Screenshot thumbnail
+        screenshotThumb: null, // { dataUrl, timestamp }
+        // Sound muted
+        muted: false,
+        // Desktop widgets
+        desktopWidgets: (() => {
+            try { const s = localStorage.getItem('macos_desktop_widgets'); if (s) return JSON.parse(s); } catch(e) {}
+            return [
+                { id: 'clock', type: 'clock', x: 20, y: 60, visible: true },
+                { id: 'weather', type: 'weather', x: 20, y: 210, visible: true },
+            ];
+        })(),
+        // Hot corners: tl/tr/bl/br → action string or null
+        hotCorners: (() => {
+            try { const s = localStorage.getItem('macos_hot_corners'); if (s) return JSON.parse(s); } catch(e) {}
+            return { tl: 'mission-control', tr: null, bl: 'launchpad', br: null };
+        })(),
+        // Navigation helpers
+        settingsOpenTab: null,
+        pendingFinderAction: null,
     },
 
     getState() {
@@ -989,8 +1144,14 @@ const MacStore = {
 
         const id = 'win-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
         const newZ = state.zIndexCounter + 1;
-        const x = Math.max(50, (window.innerWidth - width) / 2 + Math.random() * 40 - 20);
-        const y = Math.max(30, (window.innerHeight - height) / 3 + Math.random() * 30 - 15);
+        const MENU_H = 25, DOCK_H = 85;
+        const availW = window.innerWidth - 20;
+        const availH = window.innerHeight - MENU_H - DOCK_H - 20;
+        const w = Math.min(width, availW);
+        const h = Math.min(height, availH);
+        const x = Math.max(10, (window.innerWidth - w) / 2 + Math.random() * 40 - 20);
+        const y = Math.max(MENU_H + 5, Math.min(MENU_H + (availH - h) / 3 + Math.random() * 30 - 15, window.innerHeight - DOCK_H - h - 10));
+        width = w; height = h;
 
         const win = {
             id, title, appType,
@@ -1138,11 +1299,24 @@ const MacStore = {
         this.setState(s => ({
             notifications: [...s.notifications, notif]
         }));
+        if (this._state.notifSounds) SoundManager.play('notification');
         setTimeout(() => {
             this.setState(s => ({
                 notifications: s.notifications.filter(n => n.id !== notif.id)
             }));
         }, 5000);
+    },
+
+    // OSD timer handle
+    _osdTimer: null,
+
+    showOSD(type, value) {
+        if (this._osdTimer) clearTimeout(this._osdTimer);
+        this.setState({ osd: { type, value } });
+        this._osdTimer = setTimeout(() => {
+            this.setState({ osd: null });
+            this._osdTimer = null;
+        }, 1800);
     },
 };
 
@@ -1335,9 +1509,18 @@ window.MacIcons = MacIcons;
 // macOS Traffic Light Buttons (Close, Minimize, Maximize)
 const TrafficLights = ({ windowId, focused = true }) => {
     const [hovered, setHovered] = React.useState(false);
+    const [greenHovered, setGreenHovered] = React.useState(false);
+
+    const tileWindow = (side) => {
+        const half = Math.floor(window.innerWidth / 2);
+        const h = window.innerHeight - 25 - 85;
+        if (side === 'left') MacStore.updateWindow(windowId, { x: 4, y: 25, width: half - 6, height: h, maximized: false });
+        else MacStore.updateWindow(windowId, { x: half + 2, y: 25, width: half - 6, height: h, maximized: false });
+        setGreenHovered(false);
+    };
 
     return (
-        <div className="flex gap-2 z-10" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+        <div className="flex gap-2 z-10" onMouseEnter={() => setHovered(true)} onMouseLeave={() => { setHovered(false); setGreenHovered(false); }}>
             {/* Close */}
             <button
                 onClick={(e) => { e.stopPropagation(); MacStore.closeWindow(windowId); }}
@@ -1362,18 +1545,43 @@ const TrafficLights = ({ windowId, focused = true }) => {
                     </svg>
                 )}
             </button>
-            {/* Maximize */}
-            <button
-                onClick={(e) => { e.stopPropagation(); MacStore.toggleMaximize(windowId); }}
-                className="w-3 h-3 rounded-full flex items-center justify-center transition-all"
-                style={{ background: focused ? '#28C840' : '#ccc', border: `0.5px solid ${focused ? '#1DAD2B' : '#bbb'}` }}
-            >
-                {hovered && (
-                    <svg viewBox="0 0 12 12" width="8" height="8">
-                        <path d="M2 2l3.5 0 0-2M10 10l-3.5 0 0 2M2 10l3.5 0 0 2M10 2l-3.5 0 0-2" stroke="#006500" strokeWidth="1" fill="none" transform="scale(0.75) translate(2,2)"/>
-                    </svg>
+            {/* Maximize — hover shows tile popover */}
+            <div className="relative" onMouseEnter={() => setGreenHovered(true)} onMouseLeave={() => setGreenHovered(false)}>
+                <button
+                    onClick={(e) => { e.stopPropagation(); MacStore.toggleMaximize(windowId); }}
+                    className="w-3 h-3 rounded-full flex items-center justify-center transition-all"
+                    style={{ background: focused ? '#28C840' : '#ccc', border: `0.5px solid ${focused ? '#1DAD2B' : '#bbb'}` }}
+                >
+                    {hovered && (
+                        <svg viewBox="0 0 12 12" width="8" height="8">
+                            <path d="M2 2l3.5 0 0-2M10 10l-3.5 0 0 2M2 10l3.5 0 0 2M10 2l-3.5 0 0-2" stroke="#006500" strokeWidth="1" fill="none" transform="scale(0.75) translate(2,2)"/>
+                        </svg>
+                    )}
+                </button>
+                {/* Tile popover */}
+                {greenHovered && (
+                    <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 animate-context-menu-in"
+                        style={{ background: 'rgba(240,240,240,0.98)', backdropFilter: 'blur(20px)', borderRadius: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.2)', border: '0.5px solid rgba(0,0,0,0.12)', minWidth: 220, padding: '4px 0' }}
+                        onMouseEnter={() => setGreenHovered(true)}>
+                        <button className="w-full text-left px-3 py-1.5 text-[12px] hover:bg-blue-500 hover:text-white rounded-none flex items-center gap-2"
+                            onClick={(e) => { e.stopPropagation(); MacStore.toggleMaximize(windowId); setGreenHovered(false); }}>
+                            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><path d="M2 2h12v12H2V2zm1 1v10h10V3H3z"/></svg>
+                            Enter Full Screen
+                        </button>
+                        <div style={{ height: '0.5px', background: 'rgba(0,0,0,0.1)', margin: '2px 0' }}/>
+                        <button className="w-full text-left px-3 py-1.5 text-[12px] hover:bg-blue-500 hover:text-white flex items-center gap-2"
+                            onClick={(e) => { e.stopPropagation(); tileWindow('left'); }}>
+                            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><rect x="1" y="2" width="6" height="12" rx="1"/><rect x="9" y="2" width="6" height="12" rx="1" opacity="0.3"/></svg>
+                            Tile Window to Left of Screen
+                        </button>
+                        <button className="w-full text-left px-3 py-1.5 text-[12px] hover:bg-blue-500 hover:text-white flex items-center gap-2"
+                            onClick={(e) => { e.stopPropagation(); tileWindow('right'); }}>
+                            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><rect x="1" y="2" width="6" height="12" rx="1" opacity="0.3"/><rect x="9" y="2" width="6" height="12" rx="1"/></svg>
+                            Tile Window to Right of Screen
+                        </button>
+                    </div>
                 )}
-            </button>
+            </div>
         </div>
     );
 };
@@ -1507,10 +1715,11 @@ const Window = ({ windowData, children }) => {
             // Apply snap if preview is active
             if (dragState.current.dragging) {
                 const snap = MacStore.getState().windowSnapPreview;
+                const snapH = window.innerHeight - 25 - 85;
                 if (snap === 'left') {
-                    MacStore.updateWindow(dragState.current.winId, { x: 0, y: 25, width: Math.floor(window.innerWidth / 2), height: window.innerHeight - 25, maximized: false });
+                    MacStore.updateWindow(dragState.current.winId, { x: 0, y: 25, width: Math.floor(window.innerWidth / 2), height: snapH, maximized: false });
                 } else if (snap === 'right') {
-                    MacStore.updateWindow(dragState.current.winId, { x: Math.floor(window.innerWidth / 2), y: 25, width: Math.floor(window.innerWidth / 2), height: window.innerHeight - 25, maximized: false });
+                    MacStore.updateWindow(dragState.current.winId, { x: Math.floor(window.innerWidth / 2), y: 25, width: Math.floor(window.innerWidth / 2), height: snapH, maximized: false });
                 }
                 MacStore.setState({ windowSnapPreview: null });
             }
@@ -1625,12 +1834,14 @@ const FinderApp = () => {
     const [currentPath, setCurrentPath] = React.useState('/Users/user');
     const [selectedItem, setSelectedItem] = React.useState(null);
     const [activeSidebar, setActiveSidebar] = React.useState('Home');
+    const [viewMode, setViewMode] = React.useState('icon'); // 'icon' | 'list' | 'column'
     const [renaming, setRenaming] = React.useState(null);
     const [renameValue, setRenameValue] = React.useState('');
     const [dragOverItem, setDragOverItem] = React.useState(null);
     const [dragOverSidebar, setDragOverSidebar] = React.useState(null);
     const [draggingItem, setDraggingItem] = React.useState(null);
     const [dragGhost, setDragGhost] = React.useState(null);
+    const [finderSearch, setFinderSearch] = React.useState('');
     const vfsVersion = useStore(s => s.vfsVersion);
     const fileDrag = useStore(s => s.fileDrag);
     const dragRef = React.useRef({ startX: 0, startY: 0, name: null, moved: false, currentPath: '' });
@@ -1661,6 +1872,7 @@ const FinderApp = () => {
     ];
 
     const files = VFS.ls(currentPath);
+    const displayFiles = finderSearch ? files.filter(f => f.name.toLowerCase().includes(finderSearch.toLowerCase())) : files;
 
     const navigateTo = (item) => {
         if (item.type === 'folder') {
@@ -1693,6 +1905,16 @@ const FinderApp = () => {
             setSelectedItem(null);
         }
     };
+
+    const pendingFinderAction = useStore(s => s.pendingFinderAction);
+    React.useEffect(() => {
+        if (!pendingFinderAction) return;
+        if (pendingFinderAction.path === currentPath && pendingFinderAction.type === 'rename') {
+            setRenaming(pendingFinderAction.name);
+            setRenameValue(pendingFinderAction.name);
+            MacStore.setState({ pendingFinderAction: null });
+        }
+    }, [pendingFinderAction, currentPath]);
 
     const startRename = (name) => { setRenaming(name); setRenameValue(name); };
 
@@ -1856,7 +2078,24 @@ const FinderApp = () => {
                     <button onClick={goBack} className="p-1.5 rounded-md hover:bg-black/5">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="#666"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
                     </button>
+                    <div className="flex items-center gap-1 px-2 py-0.5 bg-black/[0.06] rounded-md border border-black/[0.08] ml-1" style={{minWidth:'160px'}}>
+                        <svg viewBox="0 0 24 24" width="11" height="11" fill="#999"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        <input type="text" value={finderSearch} onChange={e => setFinderSearch(e.target.value)} placeholder="Search" className="bg-transparent outline-none text-[11px] w-full"/>
+                        {finderSearch && <button onClick={() => setFinderSearch('')} className="text-gray-400 hover:text-gray-600 text-[13px] leading-none">&times;</button>}
+                    </div>
                     <div className="flex-1"/>
+                    {/* View mode toggle buttons */}
+                    <div className="flex items-center border border-black/10 rounded-md overflow-hidden mr-1">
+                        <button onClick={() => setViewMode('icon')} className={`p-1.5 transition-colors ${viewMode==='icon' ? 'bg-blue-500/15' : 'hover:bg-black/5'}`} title="Icon View">
+                            <svg viewBox="0 0 16 16" width="13" height="13" fill={viewMode==='icon' ? '#007AFF' : '#666'}><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+                        </button>
+                        <button onClick={() => setViewMode('list')} className={`p-1.5 transition-colors border-l border-black/10 ${viewMode==='list' ? 'bg-blue-500/15' : 'hover:bg-black/5'}`} title="List View">
+                            <svg viewBox="0 0 16 16" width="13" height="13" fill={viewMode==='list' ? '#007AFF' : '#666'}><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+                        </button>
+                        <button onClick={() => setViewMode('column')} className={`p-1.5 transition-colors border-l border-black/10 ${viewMode==='column' ? 'bg-blue-500/15' : 'hover:bg-black/5'}`} title="Column View">
+                            <svg viewBox="0 0 16 16" width="13" height="13" fill={viewMode==='column' ? '#007AFF' : '#666'}><rect x="1" y="1" width="4" height="14" rx="1"/><rect x="6" y="1" width="4" height="14" rx="1"/><rect x="11" y="1" width="4" height="14" rx="1"/></svg>
+                        </button>
+                    </div>
                     <button onClick={createNewFolder} className="p-1.5 rounded-md hover:bg-black/5" title="New Folder">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="#666"><path d="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm0 12H4V8h16v10zm-8-1h2v-3h3v-2h-3V9h-2v3H9v2h3v3z"/></svg>
                     </button>
@@ -1870,58 +2109,125 @@ const FinderApp = () => {
                     )}
                 </div>
 
-                <div className="flex-1 p-3 overflow-auto grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', alignContent: 'start' }}>
-                    {files.map(file => {
-                        const isDragging = draggingItem === file.name;
-                        const isDropTarget = dragOverItem === file.name && file.type === 'folder';
-                        const isExternalDropTarget = fileDrag && fileDrag.type === 'desktop' && dragOverItem === file.name && file.type === 'folder';
-
-                        return (
+                {/* File display — icon / list / column view */}
+                {viewMode === 'column' ? (
+                    /* COLUMN VIEW */
+                    <div className="flex flex-1 overflow-hidden">
+                        {/* Left column: file list */}
+                        <div className="w-[50%] border-r border-black/8 overflow-y-auto">
+                            {displayFiles.map(file => (
+                                <div key={file.name}
+                                    className={`flex items-center gap-2 px-3 py-1.5 cursor-default transition-colors ${selectedItem === file.name ? 'bg-blue-500 text-white' : 'hover:bg-black/[0.04]'}`}
+                                    onClick={() => setSelectedItem(file.name)}
+                                    onDoubleClick={() => { if (file.type === 'folder') { navigateTo(file); setSelectedItem(null); } }}>
+                                    <span className="text-[17px] flex-shrink-0">
+                                        {file.type === 'folder' ? '📁' : (file.icon || '📄')}
+                                    </span>
+                                    <span className="text-[13px] truncate flex-1">{file.name}</span>
+                                    {file.type === 'folder' && <svg viewBox="0 0 24 24" width="12" height="12" fill={selectedItem===file.name?'white':'#aaa'}><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>}
+                                </div>
+                            ))}
+                            {files.length === 0 && <div className="text-center text-gray-400 text-[13px] py-12">Empty</div>}
+                        </div>
+                        {/* Right pane: preview of selected item */}
+                        <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-6 bg-white/30">
+                            {selectedItem ? (() => {
+                                const f = files.find(x => x.name === selectedItem);
+                                if (!f) return null;
+                                const meta = VFS.get(currentPath + '/' + selectedItem);
+                                const subFiles = f.type === 'folder' ? VFS.ls(currentPath + '/' + selectedItem) : null;
+                                return (
+                                    <div className="w-full max-w-[280px]">
+                                        <div className="flex flex-col items-center mb-4">
+                                            <span className="text-[52px] mb-1">{f.type==='folder'?'📁':(f.icon||'📄')}</span>
+                                            <div className="text-[14px] font-semibold text-center">{f.name}</div>
+                                            {f.size && <div className="text-[11px] text-gray-400 mt-0.5">{f.size}</div>}
+                                        </div>
+                                        {f.type === 'folder' && subFiles && (
+                                            <div className="text-[12px] text-gray-500 text-center mb-2">{subFiles.length} item{subFiles.length!==1?'s':''}</div>
+                                        )}
+                                        {meta && meta.content && (
+                                            <pre className="text-[11px] text-gray-600 bg-black/5 rounded-lg p-3 overflow-auto max-h-[120px] font-mono whitespace-pre-wrap">{meta.content.slice(0,300)}{meta.content.length>300?'…':''}</pre>
+                                        )}
+                                        <div className="mt-3 text-[11px] text-gray-400 space-y-1">
+                                            <div className="flex justify-between"><span>Kind</span><span>{f.type==='folder'?'Folder':'Document'}</span></div>
+                                            <div className="flex justify-between"><span>Location</span><span className="truncate ml-2">{currentPath.replace('/Users/user','~')}</span></div>
+                                        </div>
+                                    </div>
+                                );
+                            })() : (
+                                <div className="text-gray-300 text-[13px] text-center">Select a file to preview</div>
+                            )}
+                        </div>
+                    </div>
+                ) : viewMode === 'list' ? (
+                    /* LIST VIEW */
+                    <div className="flex-1 overflow-auto">
+                        <div className="flex items-center px-3 py-1 border-b border-black/5 text-[11px] font-medium text-gray-400 bg-gray-50/80 sticky top-0">
+                            <span className="flex-1">Name</span><span className="w-[80px]">Size</span><span className="w-[60px]">Kind</span>
+                        </div>
+                        {displayFiles.map(file => (
                             <div key={file.name}
-                                data-finder-file={file.name}
-                                data-finder-path={currentPath}
-                                data-file-type={file.type}
-                                data-finder-folder={file.type === 'folder' ? file.name : undefined}
-                                className={`flex flex-col items-center p-2 rounded-lg cursor-default gap-1 transition-all
-                                    ${selectedItem === file.name ? 'bg-blue-500/15' : 'hover:bg-black/[0.03]'}
-                                    ${isDragging ? 'opacity-40' : ''}
-                                    ${isDropTarget || isExternalDropTarget ? 'bg-blue-400/20 ring-2 ring-blue-400/50 scale-105' : ''}`}
+                                className={`flex items-center gap-2 px-3 py-1.5 border-b border-black/[0.03] cursor-default transition-colors ${selectedItem===file.name?'bg-blue-500/15':'hover:bg-black/[0.02]'}`}
                                 onClick={() => setSelectedItem(file.name)}
                                 onMouseDown={(e) => handleFileMouseDown(e, file.name)}
-                                onDoubleClick={() => {
-                                    if (dragRef.current.moved) return;
-                                    if (file.type === 'folder') navigateTo(file);
-                                    else if (file.name.endsWith('.py')) {
-                                        MacStore.setState({ pendingOpenFile: { path: currentPath, name: file.name } });
-                                        MacStore.openWindow('vscode', 'VS Code', 950, 650);
-                                    }
-                                    else if (file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
-                                        MacStore.setState({ pendingOpenFile: { path: currentPath, name: file.name } });
-                                        MacStore.openWindow('word', 'Word', 900, 700);
-                                    }
-                                }}>
-                                <div className="w-[54px] h-[54px] flex items-center justify-center text-4xl">
-                                    {file.type === 'folder' ? (
-                                        <svg viewBox="0 0 48 48" width="48" height="48">
-                                            <path d="M6 8h14l4 4h18c1.1 0 2 .9 2 2v24c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V10c0-1.1.9-2 2-2z" fill={file.color || '#64B5F6'}/>
-                                            <rect x="4" y="14" width="40" height="24" rx="2" fill={file.color || '#42A5F5'} opacity="0.85"/>
-                                        </svg>
-                                    ) : <span>{file.icon}</span>}
-                                </div>
-                                <div className="text-[11px] text-center leading-tight max-w-[80px] break-words">
-                                    {renaming === file.name ? (
-                                        <input type="text" value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
-                                            onBlur={finishRename} onKeyDown={(e) => { if (e.key === 'Enter') finishRename(); if (e.key === 'Escape') setRenaming(null); }}
-                                            className="w-full text-center bg-white border border-blue-500 rounded px-1 outline-none text-[11px]" autoFocus/>
-                                    ) : file.name}
-                                </div>
+                                onDoubleClick={() => { if (dragRef.current.moved) return; if (file.type==='folder') navigateTo(file); }}>
+                                <span className="text-[16px] flex-shrink-0">{file.type==='folder'?'📁':(file.icon||'📄')}</span>
+                                <span className="flex-1 text-[13px] truncate">{file.name}</span>
+                                <span className="w-[80px] text-[11px] text-gray-400">{file.size||'—'}</span>
+                                <span className="w-[60px] text-[11px] text-gray-400">{file.type==='folder'?'Folder':'File'}</span>
                             </div>
-                        );
-                    })}
-                    {files.length === 0 && (
-                        <div className="col-span-full text-center text-gray-400 text-[13px] py-12">This folder is empty</div>
-                    )}
-                </div>
+                        ))}
+                        {displayFiles.length === 0 && <div className="text-center text-gray-400 text-[13px] py-12">{finderSearch ? 'No results' : 'This folder is empty'}</div>}
+                    </div>
+                ) : (
+                    /* ICON VIEW (default) */
+                    <div className="flex-1 p-3 overflow-auto grid gap-1" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', alignContent: 'start' }}>
+                        {displayFiles.map(file => {
+                            const isDragging = draggingItem === file.name;
+                            const isDropTarget = dragOverItem === file.name && file.type === 'folder';
+                            const isExternalDropTarget = fileDrag && fileDrag.type === 'desktop' && dragOverItem === file.name && file.type === 'folder';
+                            return (
+                                <div key={file.name}
+                                    data-finder-file={file.name}
+                                    data-finder-path={currentPath}
+                                    data-file-type={file.type}
+                                    data-finder-folder={file.type === 'folder' ? file.name : undefined}
+                                    className={`flex flex-col items-center p-2 rounded-lg cursor-default gap-1 transition-all
+                                        ${selectedItem === file.name ? 'bg-blue-500/15' : 'hover:bg-black/[0.03]'}
+                                        ${isDragging ? 'opacity-40' : ''}
+                                        ${isDropTarget || isExternalDropTarget ? 'bg-blue-400/20 ring-2 ring-blue-400/50 scale-105' : ''}`}
+                                    onClick={() => setSelectedItem(file.name)}
+                                    onMouseDown={(e) => handleFileMouseDown(e, file.name)}
+                                    onDoubleClick={() => {
+                                        if (dragRef.current.moved) return;
+                                        if (file.type === 'folder') navigateTo(file);
+                                        else if (file.name.endsWith('.py')) { MacStore.setState({ pendingOpenFile: { path: currentPath, name: file.name } }); MacStore.openWindow('vscode', 'VS Code', 950, 650); }
+                                        else if (file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.docx') || file.name.endsWith('.doc')) { MacStore.setState({ pendingOpenFile: { path: currentPath, name: file.name } }); MacStore.openWindow('word', 'Word', 900, 700); }
+                                    }}>
+                                    <div className="w-[54px] h-[54px] flex items-center justify-center text-4xl">
+                                        {file.type === 'folder' ? (
+                                            <svg viewBox="0 0 48 48" width="48" height="48">
+                                                <path d="M6 8h14l4 4h18c1.1 0 2 .9 2 2v24c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V10c0-1.1.9-2 2-2z" fill={file.color || '#64B5F6'}/>
+                                                <rect x="4" y="14" width="40" height="24" rx="2" fill={file.color || '#42A5F5'} opacity="0.85"/>
+                                            </svg>
+                                        ) : <span>{file.icon}</span>}
+                                    </div>
+                                    <div className="text-[11px] text-center leading-tight max-w-[80px] break-words">
+                                        {renaming === file.name ? (
+                                            <input type="text" value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
+                                                onBlur={finishRename} onKeyDown={(e) => { if (e.key === 'Enter') finishRename(); if (e.key === 'Escape') setRenaming(null); }}
+                                                className="w-full text-center bg-white border border-blue-500 rounded px-1 outline-none text-[11px]" autoFocus/>
+                                        ) : file.name}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {displayFiles.length === 0 && (
+                            <div className="col-span-full text-center text-gray-400 text-[13px] py-12">{finderSearch ? 'No results' : 'This folder is empty'}</div>
+                        )}
+                    </div>
+                )}
 
                 <div className="flex items-center gap-1 px-3 py-1 bg-gray-100/70 border-t border-black/5 text-[11px] text-gray-400">
                     <span>{files.length} items</span>
@@ -1959,6 +2265,14 @@ const SafariApp = () => {
     const [activeTab, setActiveTab] = React.useState(1);
     const [iframeError, setIframeError] = React.useState(false);
     const iframeRef = React.useRef(null);
+    // Tab Groups
+    const [tabGroupsOpen, setTabGroupsOpen] = React.useState(false);
+    const [tabGroups, setTabGroups] = React.useState([
+        { id: 1, name: 'Favorites', tabs: [{ id: 1, title: 'Start Page', url: '' }] },
+        { id: 2, name: 'Work', tabs: [{ id: 2, title: 'DuckDuckGo', url: 'https://duckduckgo.com' }] },
+        { id: 3, name: 'Reading List', tabs: [{ id: 3, title: 'Wikipedia', url: 'https://en.wikipedia.org' }] },
+    ]);
+    const [activeGroupId, setActiveGroupId] = React.useState(1);
 
     const favorites = [
         { name: 'Google', url: 'https://www.google.com/webhp?igu=1', color: '#4285F4', letter: 'G' },
@@ -2100,6 +2414,13 @@ const SafariApp = () => {
                     </div>
                 </div>
 
+                {/* Tab Groups sidebar toggle */}
+                <button onClick={() => setTabGroupsOpen(v => !v)}
+                    className={`w-7 h-7 flex items-center justify-center rounded-md transition-colors ${tabGroupsOpen ? 'bg-blue-500/15 text-blue-500' : 'hover:bg-black/5 text-gray-500'}`}
+                    title="Tab Groups"
+                >
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><rect x="3" y="3" width="7" height="18" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+                </button>
                 <button onClick={goHome}
                     className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-black/5"
                     title="Start Page"
@@ -2114,8 +2435,40 @@ const SafariApp = () => {
                 </button>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 relative overflow-hidden">
+            {/* Content area with optional Tab Groups sidebar */}
+            <div className="flex-1 flex overflow-hidden">
+                {/* Tab Groups sidebar */}
+                {tabGroupsOpen && (
+                    <div className="w-[180px] min-w-[180px] border-r border-black/8 bg-gray-50/95 flex flex-col py-2 overflow-y-auto">
+                        <div className="px-3 py-1 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Tab Groups</div>
+                        {tabGroups.map(group => (
+                            <div key={group.id}
+                                className={`flex items-center gap-2 mx-2 px-2 py-1.5 rounded-md cursor-default transition-colors ${activeGroupId === group.id ? 'bg-blue-500 text-white' : 'hover:bg-black/5'}`}
+                                onClick={() => {
+                                    setActiveGroupId(group.id);
+                                    const t = group.tabs[0];
+                                    if (t) { setTabs(group.tabs); setActiveTab(t.id); setCurrentUrl(t.url); setShowStartPage(!t.url); setUrl(t.url); setDisplayUrl(t.url ? t.url.replace('https://','').replace('http://','').replace('www.','').split('/')[0] : ''); }
+                                }}>
+                                <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" opacity={activeGroupId===group.id?1:0.5}><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+                                <span className="text-[12px] truncate">{group.name}</span>
+                                <span className={`ml-auto text-[10px] ${activeGroupId===group.id ? 'text-white/70' : 'text-gray-400'}`}>{group.tabs.length}</span>
+                            </div>
+                        ))}
+                        <div className="mt-1 mx-2">
+                            <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-black/5 text-blue-500 text-[12px]"
+                                onClick={() => {
+                                    const name = prompt('Tab Group name:', 'New Group');
+                                    if (name) { const id = Date.now(); setTabGroups(prev => [...prev, { id, name, tabs: [...tabs] }]); setActiveGroupId(id); }
+                                }}>
+                                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                                New Tab Group
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Main content */}
+                <div className="flex-1 relative overflow-hidden">
                 {showStartPage ? (
                     <div className="p-12 max-w-[800px] mx-auto">
                         <h2 className="text-xl font-semibold mb-6 text-gray-800">Favorites</h2>
@@ -2170,7 +2523,8 @@ const SafariApp = () => {
                         )}
                     </div>
                 )}
-            </div>
+                </div>{/* end main content */}
+            </div>{/* end content+sidebar flex */}
         </div>
     );
 };
@@ -2181,7 +2535,7 @@ window.SafariApp = SafariApp;
 
 <script type="text/babel">
 // Calculator Button - defined outside to prevent remount on parent re-render
-const CalcButton = ({ label, onClick, type = 'number', span = 1, activeOp }) => {
+const CalcButton = ({ label, onClick, type = 'number', span = 1, activeOp, textSize = 'text-[22px]' }) => {
     const isActive = type === 'operator' && activeOp === label;
     const bgClass = type === 'number' ? 'bg-[#505050] hover:bg-[#6a6a6a] text-white'
         : type === 'operator' ? (isActive ? 'bg-white text-[#FF9500]' : 'bg-[#FF9500] hover:bg-[#FFa833] text-white')
@@ -2191,7 +2545,7 @@ const CalcButton = ({ label, onClick, type = 'number', span = 1, activeOp }) => 
         <button
             onMouseDown={(e) => e.stopPropagation()}
             onClick={onClick}
-            className={`${bgClass} flex items-center text-[22px] h-full rounded-none active:brightness-125 transition-all cursor-default
+            className={`${bgClass} flex-1 flex items-center ${textSize} h-full rounded-none active:brightness-125 transition-all cursor-default
                 ${span > 1 ? 'col-span-2 justify-start pl-7' : 'justify-center'}`}
             style={{ fontFamily: 'Inter, sans-serif' }}
         >
@@ -2208,6 +2562,8 @@ const CalculatorApp = () => {
     const [operator, setOperator] = React.useState(null);
     const [waitingForSecond, setWaitingForSecond] = React.useState(false);
     const [activeOp, setActiveOp] = React.useState(null);
+    const [sciMode, setSciMode] = React.useState(false);
+    const [isDeg, setIsDeg] = React.useState(true);
 
     const inputNumber = (num) => {
         if (waitingForSecond) {
@@ -2288,13 +2644,37 @@ const CalculatorApp = () => {
         setActiveOp(null);
     };
 
-    const toggleSign = () => {
-        const val = String(-parseFloat(display));
-        setDisplay(val);
-    };
-    const percent = () => {
-        const val = String(parseFloat(display) / 100);
-        setDisplay(val);
+    const toggleSign = () => { setDisplay(String(-parseFloat(display))); };
+    const percent = () => { setDisplay(String(parseFloat(display) / 100)); };
+
+    const sciFunc = (fn) => {
+        const val = parseFloat(display);
+        const toRad = isDeg ? Math.PI / 180 : 1;
+        const fromRad = isDeg ? 180 / Math.PI : 1;
+        const fns = {
+            'sin': () => Math.sin(val * toRad), 'cos': () => Math.cos(val * toRad), 'tan': () => Math.tan(val * toRad),
+            'sin⁻¹': () => Math.asin(val) * fromRad, 'cos⁻¹': () => Math.acos(val) * fromRad, 'tan⁻¹': () => Math.atan(val) * fromRad,
+            'log': () => Math.log10(val), 'ln': () => Math.log(val),
+            '√': () => Math.sqrt(val), 'x²': () => val * val, 'x³': () => val * val * val,
+            '1/x': () => 1 / val, '|x|': () => Math.abs(val),
+            'eˣ': () => Math.exp(val), '10ˣ': () => Math.pow(10, val),
+        };
+        if (fn === 'π') { setDisplay(String(Math.PI)); setExpression('π'); return; }
+        if (fn === 'e') { setDisplay(String(Math.E)); setExpression('e'); return; }
+        if (fn === '(') { setExpression(prev => prev + '('); return; }
+        if (fn === ')') { setExpression(prev => prev + ')'); return; }
+        if (fn === '←') { setDisplay(prev => prev.length > 1 ? prev.slice(0, -1) : '0'); return; }
+        if (fn === 'Rand') { setDisplay(String(Math.random().toFixed(8))); setExpression('rand()'); return; }
+        if (fn === 'x!') {
+            const n = Math.round(val);
+            if (n < 0 || n > 170) { setDisplay('Error'); return; }
+            let fact = 1; for (let i = 2; i <= n; i++) fact *= i;
+            setDisplay(String(fact)); setExpression(val + '!'); return;
+        }
+        const result = fns[fn] ? fns[fn]() : val;
+        const r = isNaN(result) || !isFinite(result) ? 'Error' : String(+result.toPrecision(10));
+        setDisplay(r); setExpression(fn + '(' + val + ')');
+        setFirstOperand(null); setOperator(null); setWaitingForSecond(false); setActiveOp(null);
     };
 
     // Format display number
@@ -2304,41 +2684,102 @@ const CalculatorApp = () => {
     }
     const fontSize = displayText.length > 9 ? 'text-[32px]' : displayText.length > 7 ? 'text-[40px]' : 'text-[48px]';
 
+    const SciBtn = ({ label, fn }) => (
+        <button onMouseDown={e => e.stopPropagation()} onClick={() => sciFunc(fn || label)}
+            className="flex-1 flex items-center justify-center bg-[#4a4a4a] hover:bg-[#606060] text-white text-[13px] font-medium active:brightness-125 transition-colors cursor-default">
+            {label}
+        </button>
+    );
+
+    const toggleSciMode = () => {
+        const next = !sciMode;
+        setSciMode(next);
+        const calcWin = MacStore.getState().windows.find(w => w.appType === 'calculator');
+        if (calcWin) MacStore.updateWindow(calcWin.id, { width: next ? 660 : 250, height: next ? 460 : 400 });
+    };
+
     return (
         <div className="flex flex-col h-full bg-[#333]">
-            <div className="px-6 pt-3 pb-1 text-right bg-[#333]">
-                <div className="text-[14px] text-gray-400 min-h-[20px] overflow-hidden text-right truncate" style={{ fontFamily: 'Inter, sans-serif' }}>
-                    {expression}
-                </div>
-                <div className={`${fontSize} font-light text-white min-h-[54px] flex items-center justify-end overflow-hidden`}>
-                    {displayText}
-                </div>
+            <div className="flex items-center justify-between px-3 pt-2 pb-0">
+                <button onClick={toggleSciMode} className="text-[12px] font-semibold text-white px-3 py-1 rounded-md bg-[#FF9500] hover:bg-[#FFa833] active:brightness-90 transition-colors cursor-default">
+                    {sciMode ? 'Standard' : 'Scientific'}
+                </button>
             </div>
-            <div className="grid grid-cols-4 gap-px flex-1">
-                <CalcButton label="AC" onClick={clear} type="function" activeOp={activeOp}/>
-                <CalcButton label="±" onClick={toggleSign} type="function" activeOp={activeOp}/>
-                <CalcButton label="%" onClick={percent} type="function" activeOp={activeOp}/>
-                <CalcButton label="÷" onClick={() => inputOperator('÷')} type="operator" activeOp={activeOp}/>
-
-                <CalcButton label="7" onClick={() => inputNumber(7)} activeOp={activeOp}/>
-                <CalcButton label="8" onClick={() => inputNumber(8)} activeOp={activeOp}/>
-                <CalcButton label="9" onClick={() => inputNumber(9)} activeOp={activeOp}/>
-                <CalcButton label="×" onClick={() => inputOperator('×')} type="operator" activeOp={activeOp}/>
-
-                <CalcButton label="4" onClick={() => inputNumber(4)} activeOp={activeOp}/>
-                <CalcButton label="5" onClick={() => inputNumber(5)} activeOp={activeOp}/>
-                <CalcButton label="6" onClick={() => inputNumber(6)} activeOp={activeOp}/>
-                <CalcButton label="−" onClick={() => inputOperator('−')} type="operator" activeOp={activeOp}/>
-
-                <CalcButton label="1" onClick={() => inputNumber(1)} activeOp={activeOp}/>
-                <CalcButton label="2" onClick={() => inputNumber(2)} activeOp={activeOp}/>
-                <CalcButton label="3" onClick={() => inputNumber(3)} activeOp={activeOp}/>
-                <CalcButton label="+" onClick={() => inputOperator('+')} type="operator" activeOp={activeOp}/>
-
-                <CalcButton label="0" onClick={() => inputNumber(0)} span={2} activeOp={activeOp}/>
-                <CalcButton label="." onClick={inputDecimal} activeOp={activeOp}/>
-                <CalcButton label="=" onClick={inputEquals} type="operator" activeOp={activeOp}/>
+            <div className="px-6 pt-1 pb-1 text-right bg-[#333]">
+                <div className="text-[13px] text-gray-400 min-h-[18px] overflow-hidden text-right truncate">{expression}</div>
+                <div className={`${fontSize} font-light text-white min-h-[50px] flex items-center justify-end overflow-hidden`}>{displayText}</div>
             </div>
+            {sciMode ? (
+                <div className="flex flex-col flex-1 gap-0.5">
+                    {/* Row 1: trig + AC row */}
+                    <div className="flex flex-1 gap-0.5">
+                        <SciBtn label="sin"/><SciBtn label="cos"/><SciBtn label="tan"/><SciBtn label="log"/><SciBtn label="ln"/>
+                        <CalcButton label="AC" onClick={clear} type="function" activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="±" onClick={toggleSign} type="function" activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="%" onClick={percent} type="function" activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="÷" onClick={() => inputOperator('÷')} type="operator" activeOp={activeOp} textSize="text-[16px]"/>
+                    </div>
+                    {/* Row 2: inverse trig + 7-9 row */}
+                    <div className="flex flex-1 gap-0.5">
+                        <SciBtn label="sin⁻¹"/><SciBtn label="cos⁻¹"/><SciBtn label="tan⁻¹"/><SciBtn label="eˣ"/><SciBtn label="10ˣ"/>
+                        <CalcButton label="7" onClick={() => inputNumber(7)} activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="8" onClick={() => inputNumber(8)} activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="9" onClick={() => inputNumber(9)} activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="×" onClick={() => inputOperator('×')} type="operator" activeOp={activeOp} textSize="text-[16px]"/>
+                    </div>
+                    {/* Row 3: power/root + 4-6 row */}
+                    <div className="flex flex-1 gap-0.5">
+                        <SciBtn label="√"/><SciBtn label="x²"/><SciBtn label="x³"/><SciBtn label="1/x"/><SciBtn label="|x|"/>
+                        <CalcButton label="4" onClick={() => inputNumber(4)} activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="5" onClick={() => inputNumber(5)} activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="6" onClick={() => inputNumber(6)} activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="−" onClick={() => inputOperator('−')} type="operator" activeOp={activeOp} textSize="text-[16px]"/>
+                    </div>
+                    {/* Row 4: constants + 1-3 row */}
+                    <div className="flex flex-1 gap-0.5">
+                        <SciBtn label="π"/><SciBtn label="e"/><SciBtn label="("/><SciBtn label=")"/><SciBtn label="xʸ" fn="xʸ"/>
+                        <CalcButton label="1" onClick={() => inputNumber(1)} activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="2" onClick={() => inputNumber(2)} activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="3" onClick={() => inputNumber(3)} activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="+" onClick={() => inputOperator('+')} type="operator" activeOp={activeOp} textSize="text-[16px]"/>
+                    </div>
+                    {/* Row 5: extras + 0/./= row */}
+                    <div className="flex flex-1 gap-0.5">
+                        <SciBtn label="x!"/><SciBtn label="Rand"/><SciBtn label="EE"/><SciBtn label="←" fn="←"/>
+                        <button onMouseDown={e => e.stopPropagation()} onClick={() => setIsDeg(d => !d)}
+                            className="flex-1 flex items-center justify-center bg-[#4a4a4a] hover:bg-[#606060] text-white text-[13px] font-medium transition-colors cursor-default">
+                            {isDeg ? 'Deg' : 'Rad'}
+                        </button>
+                        <button onMouseDown={e => e.stopPropagation()} onClick={() => inputNumber(0)}
+                            className="flex-[2] flex items-center bg-[#505050] hover:bg-[#6a6a6a] text-white text-[16px] justify-start pl-5 active:brightness-125 transition-all cursor-default"
+                            style={{ fontFamily: 'Inter, sans-serif' }}>0</button>
+                        <CalcButton label="." onClick={inputDecimal} activeOp={activeOp} textSize="text-[16px]"/>
+                        <CalcButton label="=" onClick={inputEquals} type="operator" activeOp={activeOp} textSize="text-[16px]"/>
+                    </div>
+                </div>
+            ) : (
+                <div className="grid gap-px flex-1" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
+                    <CalcButton label="AC" onClick={clear} type="function" activeOp={activeOp}/>
+                    <CalcButton label="±" onClick={toggleSign} type="function" activeOp={activeOp}/>
+                    <CalcButton label="%" onClick={percent} type="function" activeOp={activeOp}/>
+                    <CalcButton label="÷" onClick={() => inputOperator('÷')} type="operator" activeOp={activeOp}/>
+                    <CalcButton label="7" onClick={() => inputNumber(7)} activeOp={activeOp}/>
+                    <CalcButton label="8" onClick={() => inputNumber(8)} activeOp={activeOp}/>
+                    <CalcButton label="9" onClick={() => inputNumber(9)} activeOp={activeOp}/>
+                    <CalcButton label="×" onClick={() => inputOperator('×')} type="operator" activeOp={activeOp}/>
+                    <CalcButton label="4" onClick={() => inputNumber(4)} activeOp={activeOp}/>
+                    <CalcButton label="5" onClick={() => inputNumber(5)} activeOp={activeOp}/>
+                    <CalcButton label="6" onClick={() => inputNumber(6)} activeOp={activeOp}/>
+                    <CalcButton label="−" onClick={() => inputOperator('−')} type="operator" activeOp={activeOp}/>
+                    <CalcButton label="1" onClick={() => inputNumber(1)} activeOp={activeOp}/>
+                    <CalcButton label="2" onClick={() => inputNumber(2)} activeOp={activeOp}/>
+                    <CalcButton label="3" onClick={() => inputNumber(3)} activeOp={activeOp}/>
+                    <CalcButton label="+" onClick={() => inputOperator('+')} type="operator" activeOp={activeOp}/>
+                    <CalcButton label="0" onClick={() => inputNumber(0)} span={2} activeOp={activeOp}/>
+                    <CalcButton label="." onClick={inputDecimal} activeOp={activeOp}/>
+                    <CalcButton label="=" onClick={inputEquals} type="operator" activeOp={activeOp}/>
+                </div>
+            )}
         </div>
     );
 };
@@ -2513,7 +2954,7 @@ const NotesApp = () => {
                             </div>
                             <div className="flex items-center gap-2 mt-0.5">
                                 <span className="text-[10px] text-gray-400">{formatDate(note.date)}</span>
-                                <span className="text-[11px] text-gray-400 truncate flex-1">{note.body.split('\n')[0] || 'No additional text'}</span>
+                                <span className="text-[11px] text-gray-400 truncate flex-1">{(note.body || '').replace(/<[^>]*>/g,'').split('\n')[0] || 'No additional text'}</span>
                             </div>
                         </div>
                     ))}
@@ -2525,11 +2966,22 @@ const NotesApp = () => {
                 {activeNote ? (
                     <>
                         <div className="flex items-center justify-between px-5 py-2 border-b border-black/5">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
                                 <select value={activeNote.folder} onChange={e => updateNote('folder', e.target.value)}
-                                    className="text-[11px] text-gray-500 bg-gray-100 border border-black/5 rounded px-2 py-0.5 outline-none cursor-default">
+                                    className="text-[11px] text-gray-500 bg-gray-100 border border-black/5 rounded px-2 py-0.5 outline-none cursor-default mr-1">
                                     {folders.map(f => <option key={f} value={f}>{f}</option>)}
                                 </select>
+                                {[['bold','B','font-bold'],['italic','I','italic'],['underline','U','underline']].map(([cmd,lbl,cls]) => (
+                                    <button key={cmd} onMouseDown={e => { e.preventDefault(); document.execCommand(cmd); }}
+                                        className={`w-6 h-6 flex items-center justify-center rounded text-[12px] hover:bg-black/10 text-gray-600 ${cls}`}>{lbl}</button>
+                                ))}
+                                <div className="w-px h-4 bg-black/10 mx-0.5"/>
+                                <button onMouseDown={e => { e.preventDefault(); document.execCommand('insertUnorderedList'); }}
+                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-black/10" title="Bullet List">
+                                    <svg viewBox="0 0 16 16" width="13" height="13" fill="#555"><circle cx="2" cy="4" r="1.2"/><rect x="5" y="3.2" width="9" height="1.5" rx="0.7"/><circle cx="2" cy="8" r="1.2"/><rect x="5" y="7.2" width="9" height="1.5" rx="0.7"/><circle cx="2" cy="12" r="1.2"/><rect x="5" y="11.2" width="9" height="1.5" rx="0.7"/></svg>
+                                </button>
+                                <button onMouseDown={e => { e.preventDefault(); document.execCommand('insertOrderedList'); }}
+                                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-black/10 text-[10px] font-bold text-gray-600" title="Numbered List">1.</button>
                             </div>
                             <div className="flex items-center gap-1">
                                 <button onClick={togglePin} title={activeNote.pinned ? 'Unpin' : 'Pin'}
@@ -2551,9 +3003,11 @@ const NotesApp = () => {
                                 className="w-full text-[22px] font-bold outline-none bg-transparent text-gray-900" placeholder="Title"/>
                             <div className="text-[11px] text-gray-400 mt-1">{new Date(activeNote.date).toLocaleString()}</div>
                         </div>
-                        <textarea value={activeNote.body} onChange={e => updateNote('body', e.target.value)}
-                            className="flex-1 px-6 py-3 text-[14px] leading-relaxed outline-none bg-transparent resize-none text-gray-800"
-                            placeholder="Start typing..."/>
+                        <div contentEditable suppressContentEditableWarning
+                            onInput={e => updateNote('body', e.currentTarget.innerHTML)}
+                            dangerouslySetInnerHTML={{ __html: activeNote.body }}
+                            className="flex-1 px-6 py-3 text-[14px] leading-relaxed outline-none bg-transparent overflow-auto text-gray-800 notes-body"
+                            style={{ minHeight: 0 }}/>
                     </>
                 ) : (
                     <div className="flex-1 flex items-center justify-center text-gray-400 text-[13px]">
@@ -2608,7 +3062,38 @@ const TerminalApp = () => {
         const trimmed = cmd.trim();
         if (!trimmed) return null;
 
-        // Handle pipes and redirects simply
+        // Pipe support: split on | and chain output
+        if (trimmed.includes('|')) {
+            const stages = trimmed.split('|').map(s => s.trim());
+            let result = null;
+            for (const stage of stages) {
+                const stageParts = stage.split(/\s+/);
+                const stageCmd = stageParts[0];
+                const stageArgs = stageParts.slice(1).join(' ');
+                if (stageCmd === 'grep' && result !== null) {
+                    const pattern = stageParts[1] || '';
+                    result = result.split('\n').filter(l => l.includes(pattern)).join('\n');
+                } else if (stageCmd === 'head' && result !== null) {
+                    const n = parseInt(stageParts[1]) || 10;
+                    result = result.split('\n').slice(0, n).join('\n');
+                } else if (stageCmd === 'tail' && result !== null) {
+                    const n = parseInt(stageParts[1]) || 10;
+                    result = result.split('\n').slice(-n).join('\n');
+                } else if (stageCmd === 'sort' && result !== null) {
+                    const lines = result.split('\n').sort();
+                    if (stageParts.includes('-r')) lines.reverse();
+                    result = lines.join('\n');
+                } else if (stageCmd === 'wc' && result !== null) {
+                    const words = result.split(/\s+/).filter(Boolean).length;
+                    const lineCount = result.split('\n').length;
+                    result = `${lineCount}\t${words}\t${result.length}`;
+                } else {
+                    result = processCommand(stage);
+                }
+            }
+            return result;
+        }
+
         const parts = trimmed.split(/\s+/);
         const command = parts[0];
         const args = parts.slice(1).join(' ');
@@ -2737,8 +3222,83 @@ const TerminalApp = () => {
             }
             case 'neofetch':
                 return `                    'c.          user@MacBook-Pro\n                 ,xNMM.          -------------------\n               .OMMMMo           OS: macOS 14.3.1 arm64\n               OMMM0,            Host: MacBook Pro (2023)\n     .;loddo:' loolloddol;.     Kernel: 23.3.0\n   cKMMMMMMMMMMNWMMMMMMMMMM0:   Shell: zsh 5.9\n .KMMMMMMMMMMMMMMMMMMMMMMMWd.   Terminal: Terminal.app\n XMMMMMMMMMMMMMMMMMMMMMMMX.     CPU: Apple M3 Pro\n;MMMMMMMMMMMMMMMMMMMMMMMM:      GPU: Apple M3 Pro\n.MMMMMMMMMMMMMMMMMMMMMMMMX.     Memory: 8192MiB / 18432MiB\n kMMMMMMMMMMMMMMMMMMMMMMMMWd.\n  .XMMMMMMMMMMMMMMMMMMMMK.\n    kMMMMMMMMMMMMMMMMMMd.\n     ;KMMMMMMMWXXWMMMMMk.\n       .cooc,.    .,coo:.`;
+            case 'grep': {
+                if (!argList[0]) return 'usage: grep pattern [file]';
+                const pattern = argList[0];
+                const grepFile = argList[1];
+                if (!grepFile) return 'usage: grep pattern file';
+                const gPath = resolvePath(grepFile.startsWith('/')||grepFile.startsWith('~') ? grepFile : cwd+'/'+grepFile);
+                const gContent = VFS.readFile(gPath);
+                if (gContent === null) return `grep: ${grepFile}: No such file`;
+                const matched = gContent.split('\n').filter(l => l.includes(pattern));
+                return matched.join('\n') || '';
+            }
+            case 'head': {
+                const nIdx = argList.indexOf('-n');
+                const n = nIdx >= 0 ? (parseInt(argList[nIdx+1]) || 10) : 10;
+                const hFile = argList.filter(a => !a.startsWith('-') && isNaN(a)).pop();
+                if (!hFile) return 'usage: head [-n count] file';
+                const hPath = resolvePath(hFile.startsWith('/')||hFile.startsWith('~') ? hFile : cwd+'/'+hFile);
+                const hContent = VFS.readFile(hPath);
+                if (hContent === null) return `head: ${hFile}: No such file`;
+                return hContent.split('\n').slice(0, n).join('\n');
+            }
+            case 'tail': {
+                const nIdx = argList.indexOf('-n');
+                const n = nIdx >= 0 ? (parseInt(argList[nIdx+1]) || 10) : 10;
+                const tFile = argList.filter(a => !a.startsWith('-') && isNaN(a)).pop();
+                if (!tFile) return 'usage: tail [-n count] file';
+                const tPath = resolvePath(tFile.startsWith('/')||tFile.startsWith('~') ? tFile : cwd+'/'+tFile);
+                const tContent = VFS.readFile(tPath);
+                if (tContent === null) return `tail: ${tFile}: No such file`;
+                return tContent.split('\n').slice(-n).join('\n');
+            }
+            case 'wc': {
+                const wcFile = argList.filter(a => !a.startsWith('-')).pop();
+                if (!wcFile) return 'usage: wc file';
+                const wcPath = resolvePath(wcFile.startsWith('/')||wcFile.startsWith('~') ? wcFile : cwd+'/'+wcFile);
+                const wcContent = VFS.readFile(wcPath);
+                if (wcContent === null) return `wc: ${wcFile}: No such file`;
+                const wWords = wcContent.split(/\s+/).filter(Boolean).length;
+                const wLines = wcContent.split('\n').length;
+                return `${String(wLines).padStart(8)}${String(wWords).padStart(8)}${String(wcContent.length).padStart(8)} ${wcFile}`;
+            }
+            case 'sort': {
+                const sFile = argList.filter(a => !a.startsWith('-')).pop();
+                if (!sFile) return 'usage: sort file';
+                const sPath = resolvePath(sFile.startsWith('/')||sFile.startsWith('~') ? sFile : cwd+'/'+sFile);
+                const sContent = VFS.readFile(sPath);
+                if (sContent === null) return `sort: ${sFile}: No such file`;
+                const sLines = sContent.split('\n').sort();
+                if (argList.includes('-r')) sLines.reverse();
+                return sLines.join('\n');
+            }
+            case 'cp': {
+                if (argList.length < 2) return 'usage: cp source dest';
+                const cpSrc = resolvePath(argList[0].startsWith('/')||argList[0].startsWith('~') ? argList[0] : cwd+'/'+argList[0]);
+                const cpContent = VFS.readFile(cpSrc);
+                if (cpContent === null) return `cp: ${argList[0]}: No such file`;
+                const cpDest = argList[1].split('/');
+                const cpName = cpDest.pop();
+                const cpDir = cpDest.length ? resolvePath(cwd+'/'+cpDest.join('/')) : resolvePath(cwd);
+                VFS.touch(cpDir, cpName, cpContent);
+                return null;
+            }
+            case 'history':
+                return history.map((c, i) => `${String(i+1).padStart(5)}  ${c}`).join('\n') || 'No history';
+            case 'find': {
+                const results = [];
+                const findDir = argList[0] ? resolvePath(cwd+'/'+argList[0]) : resolvePath(cwd);
+                const namePattern = argList.includes('-name') ? argList[argList.indexOf('-name')+1] : null;
+                const findIn = (p, d) => {
+                    if (d > 5) return;
+                    try { VFS.ls(p).forEach(item => { const full = p+'/'+item.name; if (!namePattern || item.name.includes(namePattern.replace('*',''))) results.push(full.replace('/Users/user','~')); if (item.type==='folder') findIn(full, d+1); }); } catch(e){}
+                };
+                findIn(findDir, 0);
+                return results.join('\n') || '';
+            }
             case 'help':
-                return 'Available commands:\n  ls, cd, pwd, cat, echo, clear, mkdir, touch, rm, mv,\n  whoami, hostname, date, uname, sw_vers, uptime, open,\n  top, ps, df, ifconfig, ping, git, python3, node,\n  neofetch, which, env, help\n\nFile commands work with the virtual filesystem.\nUse echo "text" > file.txt to write files.';
+                return 'Available commands:\n  ls, cd, pwd, cat, echo, clear, mkdir, touch, rm, mv, cp,\n  grep, head, tail, wc, sort, find, history,\n  whoami, hostname, date, uname, sw_vers, uptime, open,\n  top, ps, df, ifconfig, ping, git, python3, node,\n  neofetch, which, env, help\n\nPipe support: cmd1 | cmd2 | cmd3\nRedirect: echo "text" > file.txt  or  >> to append';
             default:
                 return `zsh: command not found: ${command}`;
         }
@@ -2814,6 +3374,10 @@ const SettingsSlider = ({ value, onChange, min = 0, max = 100, accentColor }) =>
 // System Settings App - Fully Functional
 const SettingsApp = () => {
     const [activeSection, setActiveSection] = React.useState('apple-id');
+    const settingsOpenTab = useStore(s => s.settingsOpenTab);
+    React.useEffect(() => {
+        if (settingsOpenTab) { setActiveSection(settingsOpenTab); MacStore.setState({ settingsOpenTab: null }); }
+    }, [settingsOpenTab]);
     const wifiOn = useStore(s => s.wifiOn);
     const bluetoothOn = useStore(s => s.bluetoothOn);
     const volume = useStore(s => s.volume);
@@ -2822,6 +3386,7 @@ const SettingsApp = () => {
     const darkMode = useStore(s => s.darkMode);
     const wallpaperIndex = useStore(s => s.wallpaperIndex);
     const accentColor = useStore(s => s.accentColor);
+    const hotCorners = useStore(s => s.hotCorners);
 
     // Keys that sync to global store (affect other components)
     const globalKeys = {
@@ -3267,6 +3832,30 @@ const SettingsApp = () => {
                         </SettingsGroup>
                         <SettingsGroup title="Desktop">
                             <SettingsRow label="Show items on desktop" right={<Toggle checked={true} onChange={() => {}}/>} />
+                        </SettingsGroup>
+                        <SettingsGroup title="Hot Corners">
+                            <div className="p-4">
+                                <p className="text-[12px] text-gray-400 mb-4">Move your pointer to a corner to trigger an action.</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[['tl','↖ Top Left'],['tr','↗ Top Right'],['bl','↙ Bottom Left'],['br','↘ Bottom Right']].map(([c, label]) => (
+                                        <div key={c}>
+                                            <div className="text-[11px] text-gray-500 mb-1">{label}</div>
+                                            <select value={hotCorners[c] || ''} onChange={e => {
+                                                const updated = { ...hotCorners, [c]: e.target.value || null };
+                                                MacStore.setState({ hotCorners: updated });
+                                                localStorage.setItem('macos_hot_corners', JSON.stringify(updated));
+                                            }} className="bg-gray-100 rounded-lg px-2 py-1.5 text-[12px] outline-none w-full border-0 cursor-default">
+                                                <option value="">— Disabled —</option>
+                                                <option value="mission-control">Mission Control</option>
+                                                <option value="launchpad">Launchpad</option>
+                                                <option value="desktop">Show Desktop</option>
+                                                <option value="screensaver">Start Screensaver</option>
+                                                <option value="lock-screen">Lock Screen</option>
+                                            </select>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </SettingsGroup>
                     </div>
                 );
@@ -4555,6 +5144,7 @@ const TrashApp = () => {
 
     const handleEmptyTrash = () => {
         VFS.emptyTrash();
+        SoundManager.play('empty_trash');
         setConfirmEmpty(false);
         setSelected(null);
     };
@@ -6121,7 +6711,11 @@ const VSCodeApp = () => {
     const [saveFileName, setSaveFileName] = React.useState('');
     const [showOpenDialog, setShowOpenDialog] = React.useState(false);
     const [openPath, setOpenPath] = React.useState('/Users/user/Desktop');
+    const [showFind, setShowFind] = React.useState(false);
+    const [findQuery, setFindQuery] = React.useState('');
+    const [replaceQuery, setReplaceQuery] = React.useState('');
     const textareaRef = React.useRef(null);
+    const findInputRef = React.useRef(null);
     const loadedPending = React.useRef(false);
     const vfsVersion = useStore(s => s.vfsVersion);
 
@@ -6237,10 +6831,37 @@ const VSCodeApp = () => {
         }
     };
 
-    // Simple Python interpreter (subset)
-    const runPython = (code) => {
+    // Real Python via Pyodide (WebAssembly)
+    const runPython = async (code) => {
         setRunning(true);
         setShowOutput(true);
+        setOutput('⏳ Loading Python runtime…');
+        try {
+            const py = await getPyodide();
+            // Reset stdout/stderr for each run
+            py.runPython(`
+import sys
+from io import StringIO
+_out = StringIO()
+sys.stdout = _out
+sys.stderr = _out
+`);
+            try {
+                py.runPython(code);
+            } catch (pyErr) {
+                const captured = py.runPython('_out.getvalue()');
+                setOutput((captured ? captured + '\n' : '') + String(pyErr));
+                setRunning(false);
+                return;
+            }
+            const result = py.runPython('_out.getvalue()');
+            setOutput(result || '(No output)');
+        } catch (err) {
+            setOutput('Error: ' + err.message);
+        }
+        setRunning(false);
+    };
+    const _unused_runPython_old = (code) => {
         let out = [];
         try {
             const env = {};
@@ -6523,67 +7144,112 @@ const VSCodeApp = () => {
                 }
             };
 
-            execBlock(0, lines.length, 0);
-            setOutput(out.join('\n') || '(No output)');
-        } catch(err) {
-            setOutput('Error: ' + err.message);
-        }
-        setRunning(false);
-    };
+        } catch(err) {} // end of old interpreter (unused)
+    }; // end _unused_runPython_old
 
-    // Syntax highlighting - tokenize first to prevent regex interference
-    const highlight = (code) => {
-        const keywords = new Set(['def','return','if','else','elif','for','while','in','import','from','class','try','except','finally','with','as','yield','lambda','pass','break','continue','and','or','not','is','True','False','None','print','range','len','int','str','float','list','dict','set','tuple','input','type','abs','max','min','sum','sorted','reversed','enumerate','zip','map','filter']);
-        return code.split('\n').map((line) => {
-            // Tokenize: split into strings, comments, and code segments
-            const tokens = [];
-            let i = 0;
-            while (i < line.length) {
-                // Comment
-                if (line[i] === '#') {
-                    tokens.push({ type: 'comment', text: line.slice(i) });
-                    i = line.length;
+    // Syntax highlighting — proper single-pass tokenizer, never runs regex on already-generated HTML
+    const highlight = React.useMemo(() => {
+        const kwControl = new Set(['def','return','if','else','elif','for','while','in','import','from','class','try','except','finally','with','as','yield','lambda','pass','break','continue','and','or','not','is','raise','del','global','nonlocal','assert','async','await']);
+        const kwLiteral = new Set(['True','False','None']);
+        const kwBuiltin = new Set(['print','range','len','int','str','float','list','dict','set','tuple','input','type','abs','max','min','sum','sorted','reversed','enumerate','zip','map','filter','open','super','isinstance','hasattr','getattr','setattr','vars','dir','repr','hash','id','round','pow','divmod','any','all','next','iter']);
+        const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const span = (color, text) => '<span style="color:' + color + '">' + esc(text) + '</span>';
+
+        // Tokenize a plain code segment (no strings/comments) char by char
+        const tokenizeCode = (text) => {
+            let out = '', i = 0;
+            while (i < text.length) {
+                // identifier or keyword
+                if (/[a-zA-Z_]/.test(text[i])) {
+                    let j = i;
+                    while (j < text.length && /\w/.test(text[j])) j++;
+                    const word = text.slice(i, j);
+                    // look ahead for '('
+                    let k = j;
+                    while (k < text.length && text[k] === ' ') k++;
+                    const isCall = text[k] === '(';
+                    if (isCall) {
+                        if (kwControl.has(word)) out += span('#C586C0', word);
+                        else if (kwBuiltin.has(word)) out += span('#4EC9B0', word);
+                        else out += span('#DCDCAA', word);
+                    } else if (kwControl.has(word)) out += span('#C586C0', word);
+                    else if (kwLiteral.has(word)) out += span('#569CD6', word);
+                    else if (word === 'self' || word === 'cls') out += span('#9CDCFE', word);
+                    else out += esc(word);
+                    i = j;
                 }
-                // String
-                else if (line[i] === '"' || line[i] === "'") {
-                    const q = line[i];
+                // number
+                else if (/\d/.test(text[i]) || (text[i] === '.' && /\d/.test(text[i+1]))) {
+                    let j = i;
+                    while (j < text.length && /[\d.]/.test(text[j])) j++;
+                    if (text[j] === 'e' || text[j] === 'E') {
+                        j++;
+                        if (text[j] === '+' || text[j] === '-') j++;
+                        while (j < text.length && /\d/.test(text[j])) j++;
+                    }
+                    out += span('#B5CEA8', text.slice(i, j));
+                    i = j;
+                }
+                // operators (2-char first)
+                else if ('=!<>+-*/%'.includes(text[i])) {
+                    const two = text.slice(i, i+2);
+                    if (['==','!=','<=','>=','+=','-=','*=','/=','**','//','->'].includes(two)) {
+                        out += span('#D4D4D4', two); i += 2;
+                    } else {
+                        out += span('#D4D4D4', text[i]); i++;
+                    }
+                }
+                // decorator
+                else if (text[i] === '@') {
                     let j = i + 1;
-                    while (j < line.length && line[j] !== q) { if (line[j] === '\\') j++; j++; }
-                    j = Math.min(j + 1, line.length);
-                    tokens.push({ type: 'string', text: line.slice(i, j) });
+                    while (j < text.length && /[\w.]/.test(text[j])) j++;
+                    out += span('#C586C0', text.slice(i, j));
                     i = j;
                 }
-                // f-string
-                else if ((line[i] === 'f') && (line[i+1] === '"' || line[i+1] === "'")) {
-                    const q = line[i+1];
-                    let j = i + 2;
-                    while (j < line.length && line[j] !== q) { if (line[j] === '\\') j++; j++; }
-                    j = Math.min(j + 1, line.length);
-                    tokens.push({ type: 'string', text: line.slice(i, j) });
-                    i = j;
+                else { out += esc(text[i]); i++; }
+            }
+            return out;
+        };
+
+        return (code) => code.split('\n').map((line) => {
+            let out = '', i = 0;
+            while (i < line.length) {
+                // comment
+                if (line[i] === '#') {
+                    out += span('#6A9955', line.slice(i)); i = line.length;
                 }
-                // Code
+                // triple-quoted string
+                else if (line.slice(i,i+3) === '"""' || line.slice(i,i+3) === "'''") {
+                    const q = line.slice(i,i+3); let j = i+3;
+                    while (j < line.length && line.slice(j,j+3) !== q) j++;
+                    j = Math.min(j+3, line.length);
+                    out += span('#CE9178', line.slice(i,j)); i = j;
+                }
+                // f/r/b-string prefix
+                else if ((line[i]==='f'||line[i]==='r'||line[i]==='b') && (line[i+1]==='"'||line[i+1]==="'")) {
+                    const q = line[i+1]; let j = i+2;
+                    while (j < line.length && line[j] !== q) { if (line[j]==='\\') j++; j++; }
+                    j = Math.min(j+1, line.length);
+                    out += span('#CE9178', line.slice(i,j)); i = j;
+                }
+                // regular string
+                else if (line[i]==='"'||line[i]==="'") {
+                    const q = line[i]; let j = i+1;
+                    while (j < line.length && line[j] !== q) { if (line[j]==='\\') j++; j++; }
+                    j = Math.min(j+1, line.length);
+                    out += span('#CE9178', line.slice(i,j)); i = j;
+                }
+                // code — collect until next string/comment delimiter
                 else {
                     let j = i;
-                    while (j < line.length && line[j] !== '#' && line[j] !== '"' && line[j] !== "'" && !(line[j] === 'f' && (line[j+1] === '"' || line[j+1] === "'"))) j++;
-                    tokens.push({ type: 'code', text: line.slice(i, j) });
-                    i = j;
+                    while (j < line.length && line[j]!=='#' && line[j]!=='"' && line[j]!=="'" &&
+                        !((line[j]==='f'||line[j]==='r'||line[j]==='b')&&(line[j+1]==='"'||line[j+1]==="'"))) j++;
+                    out += tokenizeCode(line.slice(i, j)); i = j;
                 }
             }
-            if (tokens.length === 0) return '';
-            // Render each token
-            return tokens.map(t => {
-                const esc = t.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                if (t.type === 'comment') return '<span style="color:#6A9955">' + esc + '</span>';
-                if (t.type === 'string') return '<span style="color:#CE9178">' + esc + '</span>';
-                // Code: highlight keywords, numbers, function calls
-                return esc
-                    .replace(/\b(\w+)(?=\s*\()/g, (m, fn) => keywords.has(fn) ? '<span style="color:#C586C0">' + fn + '</span>' : '<span style="color:#DCDCAA">' + fn + '</span>')
-                    .replace(/\b(def|return|if|else|elif|for|while|in|import|from|class|try|except|finally|with|as|yield|lambda|pass|break|continue|and|or|not|is|True|False|None)\b/g, (m) => '<span style="color:#C586C0">' + m + '</span>')
-                    .replace(/\b(\d+\.?\d*)\b/g, '<span style="color:#B5CEA8">$1</span>');
-            }).join('');
+            return out;
         }).join('\n');
-    };
+    }, []);
 
     const currentFile = files[activeFile];
     const saveFolders = VFS.ls(savePath).filter(f => f.type === 'folder');
@@ -6659,6 +7325,32 @@ const VSCodeApp = () => {
                             </div>
                         ))}
                     </div>
+                    {/* Find & Replace bar */}
+                    {showFind && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#252526] border-b border-[#1e1e1e]">
+                            <input ref={findInputRef} type="text" value={findQuery} onChange={e => setFindQuery(e.target.value)}
+                                placeholder="Find" className="bg-[#3c3c3c] text-white text-[12px] px-2 py-1 rounded border border-[#555] outline-none w-[160px]"/>
+                            <input type="text" value={replaceQuery} onChange={e => setReplaceQuery(e.target.value)}
+                                placeholder="Replace" className="bg-[#3c3c3c] text-white text-[12px] px-2 py-1 rounded border border-[#555] outline-none w-[160px]"/>
+                            <button onClick={() => {
+                                if (!findQuery) return;
+                                const idx = currentFile.content.indexOf(findQuery);
+                                if (idx >= 0 && textareaRef.current) { textareaRef.current.focus(); textareaRef.current.setSelectionRange(idx, idx + findQuery.length); }
+                            }} className="px-2 py-1 text-[11px] bg-[#3c3c3c] text-white rounded hover:bg-[#4c4c4c]">Find</button>
+                            <button onClick={() => {
+                                if (!findQuery) return;
+                                updateContent(currentFile.content.replace(findQuery, replaceQuery));
+                            }} className="px-2 py-1 text-[11px] bg-[#3c3c3c] text-white rounded hover:bg-[#4c4c4c]">Replace</button>
+                            <button onClick={() => {
+                                if (!findQuery) return;
+                                updateContent(currentFile.content.split(findQuery).join(replaceQuery));
+                            }} className="px-2 py-1 text-[11px] bg-[#3c3c3c] text-white rounded hover:bg-[#4c4c4c]">Replace All</button>
+                            <span className="text-[11px] text-gray-500 ml-1">
+                                {findQuery ? (currentFile.content.split(findQuery).length - 1) + ' matches' : ''}
+                            </span>
+                            <button onClick={() => setShowFind(false)} className="ml-auto text-gray-500 hover:text-white text-[14px]">&times;</button>
+                        </div>
+                    )}
                     {/* Code editor */}
                     <div className="flex-1 overflow-auto relative" style={{ fontFamily: "'SF Mono', Menlo, Monaco, monospace" }}>
                         <div className="flex min-h-full">
@@ -6681,6 +7373,52 @@ const VSCodeApp = () => {
                                             const val = ta.value;
                                             updateContent(val.substring(0, start) + '    ' + val.substring(end));
                                             setTimeout(() => { ta.selectionStart = ta.selectionEnd = start + 4; }, 0);
+                                        }
+                                        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                                            e.preventDefault();
+                                            setShowFind(f => !f);
+                                            setTimeout(() => findInputRef.current?.focus(), 50);
+                                        }
+                                        // Auto-close brackets and quotes
+                                        const PAIRS = {'(':')',  '[':']', '{':'}', '"':'"', "'":"'"};
+                                        const CLOSERS = new Set([')', ']', '}']);
+                                        if (PAIRS[e.key]) {
+                                            e.preventDefault();
+                                            const ta = e.target;
+                                            const val = ta.value, s = ta.selectionStart, end = ta.selectionEnd;
+                                            const close = PAIRS[e.key];
+                                            if (s !== end) {
+                                                const newVal = val.slice(0,s) + e.key + val.slice(s,end) + close + val.slice(end);
+                                                updateContent(newVal);
+                                                setTimeout(() => { ta.selectionStart = s+1; ta.selectionEnd = end+1; }, 0);
+                                            } else {
+                                                updateContent(val.slice(0,s) + e.key + close + val.slice(s));
+                                                setTimeout(() => { ta.selectionStart = ta.selectionEnd = s+1; }, 0);
+                                            }
+                                        }
+                                        if (CLOSERS.has(e.key) && ta.selectionStart === ta.selectionEnd) {
+                                            const ta = e.target;
+                                            if (ta.value[ta.selectionStart] === e.key) {
+                                                e.preventDefault();
+                                                setTimeout(() => { ta.selectionStart = ta.selectionEnd = ta.selectionStart + 1; }, 0);
+                                            }
+                                        }
+                                        if (e.key === 'Backspace') {
+                                            const ta = e.target;
+                                            if (ta.selectionStart !== ta.selectionEnd) return; // let default handle selection
+                                            const val = ta.value;
+                                            const pos = ta.selectionStart;
+                                            const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
+                                            const textBeforeCursor = val.substring(lineStart, pos);
+                                            if (textBeforeCursor.length > 0 && /^ +$/.test(textBeforeCursor)) {
+                                                e.preventDefault();
+                                                const spaces = textBeforeCursor.length;
+                                                const deleteCount = spaces % 4 === 0 ? 4 : spaces % 4;
+                                                const newVal = val.substring(0, pos - deleteCount) + val.substring(pos);
+                                                updateContent(newVal);
+                                                const newPos = pos - deleteCount;
+                                                setTimeout(() => { ta.selectionStart = ta.selectionEnd = newPos; }, 0);
+                                            }
                                         }
                                         if (e.key === 'Enter') {
                                             const ta = e.target;
@@ -7603,6 +8341,7 @@ const MenuBar = () => {
     const focusOn = useStore(s => s.focusOn);
     const stageManagerOn = useStore(s => s.stageManagerOn);
     const batteryLevel = React.useRef(Math.floor(Math.random() * 30) + 65);
+    const capsLock = useStore(s => s.capsLock);
 
     React.useEffect(() => {
         const update = () => {
@@ -8065,6 +8804,13 @@ const MenuBar = () => {
                     )}
                 </div>
 
+                {/* Caps Lock indicator */}
+                {capsLock && (
+                    <div className="flex items-center px-1.5 h-full" title="Caps Lock is On">
+                        <div className="rounded px-1 py-0.5 text-[9px] font-bold text-black bg-white/90 leading-none tracking-wide">⇪</div>
+                    </div>
+                )}
+
                 {/* Spotlight */}
                 <MenuIcon title="Spotlight" onClick={() => MacStore.setState(s => ({ spotlightOpen: !s.spotlightOpen }))}>
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="white"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
@@ -8234,7 +8980,7 @@ const Dock = () => {
 
     // Position classes
     const positionStyle = {};
-    const containerClass = 'fixed z-[9998]';
+    const containerClass = 'fixed z-[550]';
     if (dockPosition === 'bottom') {
         positionStyle.bottom = '6px';
         positionStyle.left = '50%';
@@ -8309,6 +9055,8 @@ const Dock = () => {
 
                     return (
                         <div key={app.type}
+                            data-dock-app={app.type}
+                            data-dock-name={app.name}
                             className="dock-item-base flex flex-col items-center p-0.5 cursor-default relative group"
                             onClick={() => handleClick(app.type, app.name)}>
                             {/* Tooltip */}
@@ -8375,9 +9123,27 @@ const SpotlightSearch = () => {
 
     // Try math
     let calcResult = null;
-    if (q && /^[\d\s+\-*/().]+$/.test(q) && q.length > 1) {
-        try { calcResult = Function('"use strict"; return (' + q + ')')(); if (isNaN(calcResult)) calcResult = null; } catch(e) {}
+    if (q && /^[\d\s+\-*/().^]+$/.test(q) && q.length > 1) {
+        try { calcResult = Function('"use strict"; return (' + q + ')')(); if (isNaN(calcResult) || !isFinite(calcResult)) calcResult = null; } catch(e) {}
     }
+
+    // VFS file search
+    const fileResults = React.useMemo(() => {
+        if (!q || q.length < 2) return [];
+        const results = [];
+        const search = (path, depth) => {
+            if (depth > 4) return;
+            try {
+                const items = VFS.ls(path);
+                for (const item of items) {
+                    if (item.name.toLowerCase().includes(q)) results.push({ name: item.name, path, type: item.type });
+                    if (item.type === 'folder' && results.length < 8) search(path + '/' + item.name, depth + 1);
+                }
+            } catch(e) {}
+        };
+        search('/Users/user', 0);
+        return results.slice(0, 5);
+    }, [q]);
 
     const close = () => MacStore.setState({ spotlightOpen: false });
 
@@ -8402,7 +9168,7 @@ const SpotlightSearch = () => {
                         }}
                         placeholder="Spotlight Search" className="flex-1 bg-transparent outline-none text-[20px] font-light font-sf"/>
                 </div>
-                {(matched.length > 0 || calcResult !== null) && (
+                {(matched.length > 0 || calcResult !== null || fileResults.length > 0) && (
                     <div className="max-h-[400px] overflow-y-auto">
                         {matched.length > 0 && (
                             <div className="py-1">
@@ -8434,6 +9200,21 @@ const SpotlightSearch = () => {
                                         <div className="text-[11px] text-gray-400">{query} =</div>
                                     </div>
                                 </div>
+                            </div>
+                        )}
+                        {fileResults.length > 0 && (
+                            <div className="py-1 border-t border-black/5">
+                                <div className="text-[12px] font-semibold text-gray-400 px-5 py-1">Files & Folders</div>
+                                {fileResults.map((f, i) => (
+                                    <div key={i} className="flex items-center gap-3 px-5 py-1.5 mx-2 rounded-md hover:bg-blue-500 hover:text-white cursor-default group"
+                                        onClick={() => { MacStore.setState({ pendingOpenFile: null }); MacStore.openWindow('finder','Finder',900,550); close(); }}>
+                                        <div className="w-8 h-8 flex items-center justify-center text-2xl">{f.type==='folder'?'📁':'📄'}</div>
+                                        <div>
+                                            <div className="text-[14px] font-medium">{f.name}</div>
+                                            <div className="text-[11px] text-gray-400 group-hover:text-white/70">{f.path.replace('/Users/user','~')}</div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                         {q.length >= 2 && (
@@ -8507,7 +9288,7 @@ const ControlCenter = () => {
                     <div className="text-[12px] font-semibold text-gray-400 mb-1.5">Display</div>
                     <div className="flex items-center gap-2 bg-white/60 rounded-xl px-3 py-2">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="#666"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69z"/></svg>
-                        <MacSlider min={10} max={100} value={brightness} onChange={v => MacStore.setState({ brightness: v })} className="flex-1" accentColor={accentColor}/>
+                        <MacSlider min={10} max={100} value={brightness} onChange={v => { MacStore.setState({ brightness: v }); MacStore.showOSD('brightness', v); }} className="flex-1" accentColor={accentColor}/>
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="#333"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/></svg>
                     </div>
                 </div>
@@ -8516,7 +9297,7 @@ const ControlCenter = () => {
                     <div className="text-[12px] font-semibold text-gray-400 mb-1.5">Sound</div>
                     <div className="flex items-center gap-2 bg-white/60 rounded-xl px-3 py-2">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="#666"><path d="M3 9v6h4l5 5V4L7 9H3z"/></svg>
-                        <MacSlider min={0} max={100} value={volume} onChange={v => MacStore.setState({ volume: v })} className="flex-1" accentColor={accentColor}/>
+                        <MacSlider min={0} max={100} value={volume} onChange={v => { MacStore.setState({ volume: v }); MacStore.showOSD('volume', v); }} className="flex-1" accentColor={accentColor}/>
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="#333"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
                     </div>
                 </div>
@@ -8555,6 +9336,7 @@ window.ControlCenter = ControlCenter;
 const NotificationCenter = () => {
     const isOpen = useStore(s => s.notificationCenterOpen);
     const darkMode = useStore(s => s.darkMode);
+    const notifications = useStore(s => s.notifications);
     const [checkedReminders, setCheckedReminders] = React.useState(new Set());
 
     const { shouldRender, isClosing } = useAnimatedVisibility(isOpen, 200);
@@ -8592,20 +9374,36 @@ const NotificationCenter = () => {
 
                 {/* Notifications section */}
                 <div className="p-3.5 pb-0">
-                    <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Notifications</div>
-                    <div className={`rounded-xl p-3 mb-3 ${darkMode ? 'bg-white/10' : 'bg-white/70'} shadow-sm`}>
-                        <div className="flex items-start gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">m</div>
-                            <div className="flex-1">
-                                <div className="flex justify-between">
-                                    <span className="text-[11px] text-gray-400 font-medium">Messages</span>
-                                    <span className="text-[10px] text-gray-400">2m ago</span>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Notifications</div>
+                        {notifications.length > 0 && (
+                            <button onClick={() => MacStore.setState({ notifications: [] })}
+                                className="text-[11px] text-blue-500 hover:text-blue-600 font-medium">Clear All</button>
+                        )}
+                    </div>
+                    {notifications.length === 0 && (
+                        <div className={`rounded-xl p-4 mb-3 text-center ${darkMode ? 'bg-white/10' : 'bg-white/70'} shadow-sm`}>
+                            <div className="text-[13px] text-gray-400">No new notifications</div>
+                        </div>
+                    )}
+                    {[...notifications].reverse().map(n => (
+                        <div key={n.id} className={`rounded-xl p-3 mb-2 ${darkMode ? 'bg-white/10' : 'bg-white/70'} shadow-sm`}>
+                            <div className="flex items-start gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white text-[13px] font-bold flex-shrink-0">
+                                    {(n.app || '?')[0].toUpperCase()}
                                 </div>
-                                <div className="text-[13px] font-semibold">New Message</div>
-                                <div className="text-[12px] text-gray-500">Hey, are you free for lunch?</div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-start">
+                                        <span className="text-[11px] text-gray-400 font-medium">{n.app}</span>
+                                        <button onClick={() => MacStore.setState(s => ({ notifications: s.notifications.filter(x => x.id !== n.id) }))}
+                                            className="text-gray-400 hover:text-gray-600 text-[14px] leading-none ml-1">&times;</button>
+                                    </div>
+                                    <div className="text-[13px] font-semibold truncate">{n.title}</div>
+                                    <div className="text-[12px] text-gray-500 truncate">{n.body}</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    ))}
                 </div>
 
                 {/* Widgets section */}
@@ -8726,6 +9524,15 @@ const ContextMenuComponent = () => {
                 return;
             }
 
+            // Check if right-clicked on a dock item
+            const dockAppEl = target.closest('[data-dock-app]');
+            if (dockAppEl) {
+                const appType = dockAppEl.getAttribute('data-dock-app');
+                const appName = dockAppEl.getAttribute('data-dock-name');
+                setMenu({ x: e.clientX, y: e.clientY, type: 'dock-app', data: { appType, appName } });
+                return;
+            }
+
             // Check if right-clicked on desktop background
             if (target.id === 'desktop-bg' || (target.closest('#desktop-bg') && !target.closest('.glass-menu') && !target.closest('.glass-dock'))) {
                 setMenu({ x: e.clientX, y: e.clientY, type: 'desktop-bg', data: {} });
@@ -8832,7 +9639,7 @@ const ContextMenuComponent = () => {
                     <CtxItem label="Open" onClick={() => {
                         const n = menu.data.name;
                         if (menu.data.fileType === 'folder') {
-                            // Finder navigation handled separately
+                            // Finder navigation happens via double-click
                         } else if (n.endsWith('.py')) {
                             MacStore.setState({ pendingOpenFile: { path: menu.data.path, name: n } });
                             MacStore.openWindow('vscode', 'VS Code', 950, 650);
@@ -8841,11 +9648,49 @@ const ContextMenuComponent = () => {
                             MacStore.openWindow('word', 'Word', 900, 700);
                         }
                     }}/>
-                    <CtxItem label="Get Info"/>
-                    <CtxItem label="Rename"/>
+                    <CtxItem label="Get Info" onClick={() => {
+                        const fileData = VFS.get ? VFS.get(menu.data.path + '/' + menu.data.name) : null;
+                        const size = fileData && fileData.content ? fileData.content.length + ' bytes' : '—';
+                        MacStore.addNotification('Finder', menu.data.name, `Kind: ${menu.data.fileType === 'folder' ? 'Folder' : 'Document'} · Size: ${size} · Location: ${menu.data.path}`);
+                    }}/>
+                    <CtxItem label="Rename" onClick={() => MacStore.setState({ pendingFinderAction: { type: 'rename', path: menu.data.path, name: menu.data.name } })}/>
+                    <CtxItem label="Duplicate" onClick={() => {
+                        const n = menu.data.name, p = menu.data.path;
+                        const dotIdx = n.lastIndexOf('.');
+                        const ext = dotIdx > 0 ? n.slice(dotIdx) : '';
+                        const base = dotIdx > 0 ? n.slice(0, dotIdx) : n;
+                        let copyName = base + ' copy' + ext;
+                        let i = 2;
+                        while (VFS.exists(p + '/' + copyName)) { copyName = base + ' copy ' + i + ext; i++; }
+                        if (menu.data.fileType === 'folder') {
+                            VFS.mkdir(p, copyName);
+                        } else {
+                            const content = VFS.readFile(p + '/' + n) || '';
+                            VFS.touch(p, copyName, content);
+                        }
+                    }}/>
                     <div className="h-px bg-black/10 my-1 mx-3"/>
                     <CtxItem label="Move to Trash" danger onClick={() => moveFinderFileToTrash(menu.data.path, menu.data.name)}/>
                 </>);
+
+            case 'dock-app': {
+                const appSizes = { finder:{w:900,h:550}, safari:{w:1000,h:650}, calculator:{w:250,h:400}, notes:{w:800,h:550}, terminal:{w:650,h:420}, settings:{w:920,h:600}, messages:{w:800,h:550}, mail:{w:1000,h:600}, maps:{w:850,h:550}, photos:{w:900,h:600}, word:{w:900,h:700}, trash:{w:700,h:450}, calendar:{w:800,h:600}, music:{w:950,h:600}, appstore:{w:950,h:650}, snake:{w:530,h:500}, tetris:{w:480,h:560}, game2048:{w:430,h:550}, vscode:{w:950,h:650}, paint:{w:1000,h:700}, aboutdev:{w:550,h:580} };
+                const ds = appSizes[menu.data.appType] || { w: 800, h: 500 };
+                const appWins = MacStore.getState().windows.filter(w => w.appType === menu.data.appType && !w.closing);
+                return (<>
+                    <CtxItem label={`Open ${menu.data.appName}`} onClick={() => MacStore.openWindow(menu.data.appType, menu.data.appName, ds.w, ds.h)}/>
+                    {appWins.length > 0 && <>
+                        <div className="h-px bg-black/10 my-1 mx-3"/>
+                        {appWins.map(w => (
+                            <CtxItem key={w.id} label={w.title} onClick={() => MacStore.focusWindow(w.id)}/>
+                        ))}
+                        <div className="h-px bg-black/10 my-1 mx-3"/>
+                        <CtxItem label="Quit" danger onClick={() => appWins.forEach(w => MacStore.closeWindow(w.id))}/>
+                    </>}
+                    <div className="h-px bg-black/10 my-1 mx-3"/>
+                    <CtxItem label="Show in Finder" onClick={() => MacStore.openWindow('finder', 'Finder', 900, 550)}/>
+                </>);
+            }
 
             case 'desktop-bg':
             default:
@@ -8854,7 +9699,7 @@ const ContextMenuComponent = () => {
                     <CtxItem label="New File" onClick={createNewFile}/>
                     <div className="h-px bg-black/10 my-1 mx-3"/>
                     <CtxItem label="Get Info"/>
-                    <CtxItem label="Change Wallpaper..." onClick={() => MacStore.nextWallpaper()}/>
+                    <CtxItem label="Change Wallpaper..." onClick={() => { MacStore.openWindow('settings', 'System Settings', 920, 600); MacStore.setState({ settingsOpenTab: 'wallpaper' }); }}/>
                     <div className="h-px bg-black/10 my-1 mx-3"/>
                     <CtxItem label="Sort By" hasArrow/>
                     <CtxItem label="Clean Up"/>
@@ -8866,6 +9711,17 @@ const ContextMenuComponent = () => {
                         VFS.addDesktopApp(apps[idx], names[idx]);
                     }}/>
                     <CtxItem label="Open Finder" onClick={() => MacStore.openWindow('finder','Finder',900,550)}/>
+                    <div className="h-px bg-black/10 my-1 mx-3"/>
+                    <CtxItem label="Toggle Clock Widget" onClick={() => {
+                        const w = MacStore.getState().desktopWidgets.map(w => w.id==='clock' ? {...w,visible:!w.visible} : w);
+                        MacStore.setState({ desktopWidgets: w });
+                        localStorage.setItem('macos_desktop_widgets', JSON.stringify(w));
+                    }}/>
+                    <CtxItem label="Toggle Weather Widget" onClick={() => {
+                        const w = MacStore.getState().desktopWidgets.map(w => w.id==='weather' ? {...w,visible:!w.visible} : w);
+                        MacStore.setState({ desktopWidgets: w });
+                        localStorage.setItem('macos_desktop_widgets', JSON.stringify(w));
+                    }}/>
                 </>);
         }
     };
@@ -8993,6 +9849,72 @@ const hexToRgb = (hex) => {
     return r + ',' + g + ',' + b;
 };
 
+// ===================== DESKTOP WIDGETS =====================
+const ClockWidget = () => {
+    const [now, setNow] = React.useState(new Date());
+    React.useEffect(() => {
+        const t = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(t);
+    }, []);
+    const h = now.getHours().toString().padStart(2, '0');
+    const m = now.getMinutes().toString().padStart(2, '0');
+    const day = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    return (
+        <div style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '16px', padding: '14px 20px', minWidth: '160px', border: '1px solid rgba(255,255,255,0.12)', color: 'white', userSelect: 'none', boxShadow: '0 4px 30px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize: '42px', fontWeight: '300', letterSpacing: '-1px', lineHeight: 1, fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>{h}:{m}</div>
+            <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px', fontWeight: '500' }}>{day}</div>
+        </div>
+    );
+};
+
+const WeatherWidget = () => {
+    const weather = { city: 'San Francisco', temp: 68, condition: 'Partly Cloudy', high: 72, low: 58, icon: '⛅' };
+    return (
+        <div style={{ background: 'rgba(0,120,200,0.5)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '16px', padding: '14px 18px', minWidth: '180px', border: '1px solid rgba(255,255,255,0.15)', color: 'white', userSelect: 'none', boxShadow: '0 4px 30px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9 }}>{weather.city}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                <span style={{ fontSize: '32px' }}>{weather.icon}</span>
+                <span style={{ fontSize: '36px', fontWeight: '300', lineHeight: 1 }}>{weather.temp}°</span>
+            </div>
+            <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '2px' }}>{weather.condition}</div>
+            <div style={{ fontSize: '11px', opacity: 0.65, marginTop: '2px' }}>H:{weather.high}° L:{weather.low}°</div>
+        </div>
+    );
+};
+
+const DesktopWidget = ({ widget, children }) => {
+    const dragRef = React.useRef({ dragging: false, startX: 0, startY: 0, origX: 0, origY: 0 });
+    const onMouseDown = (e) => {
+        if (e.button !== 0) return;
+        e.stopPropagation();
+        dragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, origX: widget.x, origY: widget.y };
+        const onMove = (ev) => {
+            if (!dragRef.current.dragging) return;
+            const dx = ev.clientX - dragRef.current.startX;
+            const dy = ev.clientY - dragRef.current.startY;
+            const newX = Math.max(0, dragRef.current.origX + dx);
+            const newY = Math.max(30, dragRef.current.origY + dy);
+            const updated = MacStore.getState().desktopWidgets.map(w => w.id === widget.id ? { ...w, x: newX, y: newY } : w);
+            MacStore.setState({ desktopWidgets: updated });
+        };
+        const onUp = () => {
+            dragRef.current.dragging = false;
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            localStorage.setItem('macos_desktop_widgets', JSON.stringify(MacStore.getState().desktopWidgets));
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    };
+    return (
+        <div style={{ position: 'absolute', left: widget.x, top: widget.y, zIndex: 5, cursor: 'grab' }}
+            onMouseDown={onMouseDown}>
+            {children}
+        </div>
+    );
+};
+// ===================== END DESKTOP WIDGETS =====================
+
 // Desktop - main workspace with all overlays
 const Desktop = () => {
     const windows = useStore(s => s.windows);
@@ -9016,6 +9938,68 @@ const Desktop = () => {
     const appSwitcherIndex = useStore(s => s.appSwitcherIndex);
     const quickLookFile = useStore(s => s.quickLookFile);
     const windowSnapPreview = useStore(s => s.windowSnapPreview);
+    const osd = useStore(s => s.osd);
+    const capsLock = useStore(s => s.capsLock);
+    const screensaverActive = useStore(s => s.screensaverActive);
+    const screenshotThumb = useStore(s => s.screenshotThumb);
+    const screenshotRegionMode = useStore(s => s.screenshotRegionMode);
+    const desktopWidgets = useStore(s => s.desktopWidgets);
+    const hotCorners = useStore(s => s.hotCorners);
+
+    // Hot corners: trigger actions when mouse reaches screen corners
+    const hotCornerTimer = React.useRef(null);
+    React.useEffect(() => {
+        const THRESH = 4;
+        const handler = (e) => {
+            const { clientX: mx, clientY: my } = e;
+            const W = window.innerWidth, H = window.innerHeight;
+            let corner = null;
+            if (mx <= THRESH && my <= THRESH) corner = 'tl';
+            else if (mx >= W - THRESH && my <= THRESH) corner = 'tr';
+            else if (mx <= THRESH && my >= H - THRESH) corner = 'bl';
+            else if (mx >= W - THRESH && my >= H - THRESH) corner = 'br';
+            if (!corner) { clearTimeout(hotCornerTimer.current); return; }
+            const action = MacStore.getState().hotCorners[corner];
+            if (!action) return;
+            clearTimeout(hotCornerTimer.current);
+            hotCornerTimer.current = setTimeout(() => {
+                switch (action) {
+                    case 'mission-control': MacStore.setState({ missionControlOpen: true }); break;
+                    case 'launchpad': MacStore.setState({ launchpadOpen: true }); break;
+                    case 'desktop':
+                        MacStore.setState(s => ({ windows: s.windows.map(w => ({ ...w, minimized: true })) }));
+                        break;
+                    case 'screensaver': MacStore.setState({ screensaverActive: true }); break;
+                    case 'lock-screen': MacStore.setState({ locked: true, screensaverActive: false }); break;
+                }
+            }, 450);
+        };
+        window.addEventListener('mousemove', handler);
+        return () => { window.removeEventListener('mousemove', handler); clearTimeout(hotCornerTimer.current); };
+    }, []);
+
+    // Idle timer for screensaver (3 minutes)
+    React.useEffect(() => {
+        let idleTimer = null;
+        const resetIdle = () => {
+            clearTimeout(idleTimer);
+            if (!MacStore.getState().screensaverActive) {
+                idleTimer = setTimeout(() => {
+                    if (!MacStore.getState().locked) MacStore.setState({ screensaverActive: true });
+                }, 3 * 60 * 1000);
+            }
+        };
+        resetIdle();
+        window.addEventListener('mousemove', resetIdle);
+        window.addEventListener('keydown', resetIdle);
+        window.addEventListener('click', resetIdle);
+        return () => {
+            clearTimeout(idleTimer);
+            window.removeEventListener('mousemove', resetIdle);
+            window.removeEventListener('keydown', resetIdle);
+            window.removeEventListener('click', resetIdle);
+        };
+    }, []);
 
     // Apply global CSS classes and variables to document
     React.useEffect(() => {
@@ -9084,8 +10068,56 @@ const Desktop = () => {
             const state = MacStore.getState();
             const activeWin = state.windows.find(w => w.focused);
 
+            // Track Caps Lock state
+            MacStore.setState({ capsLock: e.getModifierState('CapsLock') });
+
+            // Dismiss screensaver on any key
+            if (state.screensaverActive) {
+                MacStore.setState({ screensaverActive: false });
+                return;
+            }
+
             if (e.key === 'Escape') {
                 MacStore.setState({ spotlightOpen: false, controlCenterOpen: false, notificationCenterOpen: false, launchpadOpen: false, aboutMacOpen: false, missionControlOpen: false, quickLookFile: null, });
+                return;
+            }
+
+            // Brightness keys F1/F2
+            if (e.key === 'F1') {
+                e.preventDefault();
+                const val = Math.max(0, MacStore.getState().brightness - 10);
+                MacStore.setState({ brightness: val });
+                MacStore.showOSD('brightness', val);
+                return;
+            }
+            if (e.key === 'F2') {
+                e.preventDefault();
+                const val = Math.min(100, MacStore.getState().brightness + 10);
+                MacStore.setState({ brightness: val });
+                MacStore.showOSD('brightness', val);
+                return;
+            }
+            // Volume keys F10/F11/F12
+            if (e.key === 'F10') {
+                e.preventDefault();
+                const muted = !MacStore.getState().muted;
+                MacStore.setState({ muted: muted });
+                SoundManager.setMuted(muted);
+                MacStore.showOSD('volume', muted ? 0 : MacStore.getState().volume);
+                return;
+            }
+            if (e.key === 'F11') {
+                e.preventDefault();
+                const val = Math.max(0, MacStore.getState().volume - 10);
+                MacStore.setState({ volume: val });
+                MacStore.showOSD('volume', val);
+                return;
+            }
+            if (e.key === 'F12') {
+                e.preventDefault();
+                const val = Math.min(100, MacStore.getState().volume + 10);
+                MacStore.setState({ volume: val });
+                MacStore.showOSD('volume', val);
                 return;
             }
 
@@ -9116,6 +10148,33 @@ const Desktop = () => {
             }
 
             if (!meta) return;
+            // Cmd+Shift+3 - Full screenshot
+            if (e.key === '3' && shift) {
+                e.preventDefault();
+                const flashEl = document.getElementById('screenshot-flash');
+                if (flashEl) { flashEl.style.opacity = '1'; setTimeout(() => { flashEl.style.opacity = '0'; }, 120); }
+                SoundManager.play('screenshot');
+                if (typeof html2canvas !== 'undefined') {
+                    html2canvas(document.getElementById('root'), { useCORS: true, allowTaint: true, scale: 0.5 }).then(canvas => {
+                        const dataUrl = canvas.toDataURL('image/png');
+                        const ts = Date.now();
+                        VFS.touch('/Users/user/Pictures/Screenshots', 'Screenshot ' + new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}).replace(/[/:]/g,'-') + '.png', '');
+                        MacStore.setState({ screenshotThumb: { dataUrl, timestamp: ts } });
+                        setTimeout(() => MacStore.setState(s => s.screenshotThumb && s.screenshotThumb.timestamp === ts ? { screenshotThumb: null } : {}), 3500);
+                    }).catch(() => {});
+                } else {
+                    const ts = Date.now();
+                    MacStore.setState({ screenshotThumb: { dataUrl: null, timestamp: ts } });
+                    setTimeout(() => MacStore.setState(s => s.screenshotThumb && s.screenshotThumb.timestamp === ts ? { screenshotThumb: null } : {}), 3500);
+                }
+                return;
+            }
+            // Cmd+Shift+4 - Region screenshot (crosshair mode)
+            if (e.key === '4' && shift) {
+                e.preventDefault();
+                MacStore.setState({ screenshotRegionMode: true });
+                return;
+            }
             if (e.code === 'Space' && !shift) { e.preventDefault(); MacStore.setState(s => ({ spotlightOpen: !s.spotlightOpen })); return; }
             if (e.key === 'w' && !shift) { e.preventDefault(); if (activeWin) MacStore.closeWindow(activeWin.id); return; }
             if (e.key === 'q' && !shift && !e.ctrlKey) { e.preventDefault(); if (activeWin) MacStore.closeWindow(activeWin.id); return; }
@@ -9463,6 +10522,13 @@ const Desktop = () => {
                 })}
             </div>
 
+            {/* Desktop Widgets */}
+            {desktopWidgets.filter(w => w.visible).map(w => (
+                <DesktopWidget key={w.id} widget={w}>
+                    {w.type === 'clock' ? <ClockWidget /> : <WeatherWidget />}
+                </DesktopWidget>
+            ))}
+
             {/* Stage Manager - side thumbnails */}
             {stageManagerOn && windows.filter(w => !w.minimized && !w.focused).length > 0 && (
                 <div className="fixed left-2 top-[30px] bottom-[80px] w-[120px] z-[9996] flex flex-col gap-2 py-2 animate-stage-slide-in overflow-y-auto">
@@ -9706,27 +10772,62 @@ const Desktop = () => {
 
             {(() => {
                 const [dismissing, setDismissing] = React.useState(new Set());
+                const appColorMap = {
+                    'macOS Sonoma': '#555', 'Safari': '#006CFF', 'Mail': '#147EFB', 'Messages': '#4CD964',
+                    'Calendar': '#FF3B30', 'Reminders': '#FF9500', 'Notes': '#FFD60A', 'Photos': '#FF2D55',
+                    'Music': '#FF2D55', 'Maps': '#34C759', 'Finder': '#147EFB',
+                };
+                const appTypeMap = {
+                    'Safari': 'safari', 'Mail': 'mail', 'Messages': 'messages',
+                    'Calendar': 'calendar', 'Notes': 'notes', 'Photos': 'photos',
+                    'Music': 'music', 'Maps': 'maps', 'Finder': 'finder',
+                };
+                const dismiss = (id) => {
+                    setDismissing(prev => new Set([...prev, id]));
+                    setTimeout(() => {
+                        MacStore.setState(s => ({ notifications: s.notifications.filter(n => n.id !== id) }));
+                        setDismissing(prev => { const next = new Set(prev); next.delete(id); return next; });
+                    }, 250);
+                };
                 return (
                     <div className="fixed top-[32px] right-3 z-[10005] flex flex-col gap-2">
-                        {notifications.map(notif => (
-                            <div key={notif.id} className={`glass-menu rounded-xl shadow-xl border border-black/10 p-3 w-[320px] cursor-default ${dismissing.has(notif.id) ? 'animate-toast-out' : 'animate-toast-in'}`}
-                                onClick={() => {
-                                    setDismissing(prev => new Set([...prev, notif.id]));
-                                    setTimeout(() => {
-                                        MacStore.setState(s => ({ notifications: s.notifications.filter(n => n.id !== notif.id) }));
-                                        setDismissing(prev => { const next = new Set(prev); next.delete(notif.id); return next; });
-                                    }, 250);
-                                }}>
-                                <div className="flex items-start gap-2.5">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">{notif.app[0]}</div>
-                                    <div>
-                                        <div className="text-[11px] text-gray-400 font-medium">{notif.app}</div>
-                                        <div className="text-[13px] font-semibold">{notif.title}</div>
-                                        <div className="text-[12px] text-gray-500">{notif.body}</div>
+                        {notifications.map(notif => {
+                            const color = appColorMap[notif.app] || '#555';
+                            const appType = appTypeMap[notif.app];
+                            return (
+                                <div key={notif.id} className={`glass-menu rounded-2xl shadow-2xl border border-black/10 overflow-hidden w-[330px] cursor-default ${dismissing.has(notif.id) ? 'animate-toast-out' : 'animate-toast-in'}`}>
+                                    {/* Top accent line */}
+                                    <div style={{ height: 2, background: color }}/>
+                                    <div className="p-3">
+                                        <div className="flex items-start gap-2.5">
+                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[13px] font-bold flex-shrink-0"
+                                                style={{ background: color }}>{notif.app[0]}</div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-0.5">
+                                                    <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{notif.app}</div>
+                                                    <div className="text-[10px] text-gray-300">now</div>
+                                                </div>
+                                                <div className="text-[13px] font-semibold leading-tight">{notif.title}</div>
+                                                <div className="text-[12px] text-gray-500 mt-0.5 leading-snug">{notif.body}</div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1.5 mt-2.5 justify-end">
+                                            {appType && (
+                                                <button className="px-3 py-1 rounded-lg text-[11px] font-medium transition-colors"
+                                                    style={{ background: color + '22', color: color }}
+                                                    onClick={() => { dismiss(notif.id); MacStore.openWindow(appType, notif.app); }}>
+                                                    Open
+                                                </button>
+                                            )}
+                                            <button className="px-3 py-1 rounded-lg text-[11px] font-medium bg-black/5 text-gray-500 hover:bg-black/10 transition-colors"
+                                                onClick={() => dismiss(notif.id)}>
+                                                Dismiss
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 );
             })()}
@@ -9744,6 +10845,111 @@ const Desktop = () => {
                 <div className="fixed inset-0 pointer-events-none z-[99990]"
                     style={{ background: 'rgba(255, 147, 41, 0.18)', mixBlendMode: 'multiply' }}/>
             )}
+
+            {/* Screenshot flash */}
+            <div id="screenshot-flash" className="fixed inset-0 pointer-events-none z-[99992]"
+                style={{ background: 'white', opacity: 0, transition: 'opacity 0.12s ease-out' }}/>
+
+            {/* Screenshot thumbnail (bottom-right) */}
+            {screenshotThumb && (
+                <div className="fixed bottom-[85px] right-3 z-[99993] rounded-lg overflow-hidden shadow-2xl border border-white/30 animate-toast-in cursor-default"
+                    style={{ width: 180, height: 112, background: '#111' }}>
+                    {screenshotThumb.dataUrl
+                        ? <img src={screenshotThumb.dataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                        : <div className="w-full h-full flex items-center justify-center">
+                            <svg viewBox="0 0 24 24" width="36" height="36" fill="white" opacity="0.4"><path d="M12 15.2A3.2 3.2 0 0 1 8.8 12 3.2 3.2 0 0 1 12 8.8 3.2 3.2 0 0 1 15.2 12 3.2 3.2 0 0 1 12 15.2M12 7a5 5 0 0 0-5 5 5 5 0 0 0 5 5 5 5 0 0 0 5-5 5 5 0 0 0-5-5m0-5a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2m8 2h-4.18C15.4 2.84 13.82 2 12 2c-1.82 0-3.4.84-3.82 2H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2z"/></svg>
+                          </div>
+                    }
+                    <div className="absolute bottom-0 left-0 right-0 py-1 px-2 text-white text-[9px] text-center font-medium" style={{ background: 'rgba(0,0,0,0.5)' }}>Screenshot saved</div>
+                </div>
+            )}
+
+            {/* Region screenshot mode */}
+            {screenshotRegionMode && (() => {
+                const [startPt, setStartPt] = React.useState(null);
+                const [endPt, setEndPt] = React.useState(null);
+                const onDown = (e) => { setStartPt({ x: e.clientX, y: e.clientY }); setEndPt({ x: e.clientX, y: e.clientY }); };
+                const onMove = (e) => { if (startPt) setEndPt({ x: e.clientX, y: e.clientY }); };
+                const onUp = (e) => {
+                    const x1 = Math.min(startPt.x, e.clientX), y1 = Math.min(startPt.y, e.clientY);
+                    const w = Math.abs(e.clientX - startPt.x), h = Math.abs(e.clientY - startPt.y);
+                    MacStore.setState({ screenshotRegionMode: false });
+                    if (w < 10 || h < 10) return;
+                    const flashEl = document.getElementById('screenshot-flash');
+                    if (flashEl) { flashEl.style.opacity = '1'; setTimeout(() => { flashEl.style.opacity = '0'; }, 120); }
+                    SoundManager.play('screenshot');
+                    if (typeof html2canvas !== 'undefined') {
+                        html2canvas(document.getElementById('root'), { useCORS: true, allowTaint: true, scale: 0.5, x: x1, y: y1, width: w, height: h }).then(canvas => {
+                            const dataUrl = canvas.toDataURL('image/png');
+                            const ts = Date.now();
+                            MacStore.setState({ screenshotThumb: { dataUrl, timestamp: ts } });
+                            setTimeout(() => MacStore.setState(s => s.screenshotThumb && s.screenshotThumb.timestamp === ts ? { screenshotThumb: null } : {}), 3500);
+                        }).catch(() => {});
+                    }
+                };
+                const sel = startPt && endPt ? {
+                    left: Math.min(startPt.x, endPt.x), top: Math.min(startPt.y, endPt.y),
+                    width: Math.abs(endPt.x - startPt.x), height: Math.abs(endPt.y - startPt.y)
+                } : null;
+                return (
+                    <div className="fixed inset-0 z-[99994]" style={{ cursor: 'crosshair', background: 'rgba(0,0,0,0.25)' }}
+                        onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}>
+                        {sel && sel.width > 4 && sel.height > 4 && (
+                            <div className="absolute border-2 border-white/80 shadow-lg" style={{ left: sel.left, top: sel.top, width: sel.width, height: sel.height, background: 'rgba(255,255,255,0.05)' }}/>
+                        )}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white text-[13px] font-medium bg-black/50 px-3 py-1.5 rounded-lg pointer-events-none" style={{ opacity: startPt ? 0 : 1 }}>
+                            Click and drag to capture a region · Esc to cancel
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* OSD pill (volume / brightness) */}
+            {osd && (
+                <div className="fixed z-[99993] pointer-events-none animate-fade-in" style={{ top: 56, left: '50%', transform: 'translateX(-50%)' }}>
+                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl shadow-2xl" style={{ background: 'rgba(30,30,30,0.82)', backdropFilter: 'blur(20px)', minWidth: 220 }}>
+                        <div className="text-white opacity-80">
+                            {osd.type === 'brightness' ? (
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M12 18a6 6 0 0 0 6-6 6 6 0 0 0-6-6 6 6 0 0 0-6 6 6 6 0 0 0 6 6m0-14.4v-2.4M12 18.6v2.4M5.64 5.64l-1.7-1.7M18.06 18.06l1.7 1.7M2 12H-.4M22 12h-2.4M5.64 18.36l-1.7 1.7M18.06 5.94l1.7-1.7"/></svg>
+                            ) : osd.value === 0 ? (
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                            ) : (
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="white"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                            )}
+                        </div>
+                        <div className="flex-1 h-[4px] rounded-full bg-white/20">
+                            <div className="h-full rounded-full bg-white transition-all duration-150" style={{ width: osd.value + '%' }}/>
+                        </div>
+                        <span className="text-white text-[13px] font-medium w-[28px] text-right opacity-80">{osd.value}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Screensaver */}
+            {screensaverActive && (() => {
+                const [ssTime, setSsTime] = React.useState(new Date());
+                React.useEffect(() => {
+                    const t = setInterval(() => setSsTime(new Date()), 1000);
+                    return () => clearInterval(t);
+                }, []);
+                const hours = ssTime.getHours().toString().padStart(2,'0');
+                const mins = ssTime.getMinutes().toString().padStart(2,'0');
+                const dateStr = ssTime.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+                return (
+                    <div className="fixed inset-0 z-[99995] flex items-center justify-center cursor-none"
+                        style={{ background: 'black' }}
+                        onClick={() => MacStore.setState({ screensaverActive: false })}>
+                        <div className="text-center text-white select-none animate-fade-in">
+                            <div className="font-bold" style={{ fontSize: 'clamp(80px,15vw,160px)', lineHeight: 1, letterSpacing: '-0.03em', textShadow: '0 0 80px rgba(255,255,255,0.15)' }}>
+                                {hours}:{mins}
+                            </div>
+                            <div className="text-white/60 mt-3" style={{ fontSize: 'clamp(18px,2.5vw,28px)', fontWeight: 300, letterSpacing: '0.01em' }}>
+                                {dateStr}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 };
