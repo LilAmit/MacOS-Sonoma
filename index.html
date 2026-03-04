@@ -252,6 +252,11 @@ input, textarea {
     50% { opacity: 0; }
 }
 
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); opacity: 0.4; }
+    50% { transform: translateY(-4px); opacity: 1; }
+}
+
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
@@ -1166,6 +1171,10 @@ const MacStore = {
         currentUser: null,
         backendOnline: false,
         onlineUserIds: [],
+        friends: [],
+        friendRequests: [],
+        groups: [],
+        pendingPlaylist: null,
     },
 
     getState() {
@@ -3522,6 +3531,58 @@ const SettingsApp = () => {
     React.useEffect(() => {
         if (settingsOpenTab) { setActiveSection(settingsOpenTab); MacStore.setState({ settingsOpenTab: null }); }
     }, [settingsOpenTab]);
+
+    // Profile state
+    const currentUser = useStore(s => s.currentUser);
+    const [profileName, setProfileName] = React.useState('');
+    const [profileAvatar, setProfileAvatar] = React.useState(null);
+    const [profileLoading, setProfileLoading] = React.useState(false);
+    const [profileMsg, setProfileMsg] = React.useState('');
+    const [emailStep, setEmailStep] = React.useState('input'); // 'input' | 'verify'
+    const [newEmail, setNewEmail] = React.useState('');
+    const [emailCode, setEmailCode] = React.useState('');
+    const [emailMsg, setEmailMsg] = React.useState('');
+    const [currentPw, setCurrentPw] = React.useState('');
+    const [newPw, setNewPw] = React.useState('');
+    const [pwMsg, setPwMsg] = React.useState('');
+    const avatarFileRef = React.useRef(null);
+
+    React.useEffect(() => {
+        if (currentUser) { setProfileName(currentUser.display_name || ''); setProfileAvatar(currentUser.avatar_base64 || null); }
+    }, [currentUser]);
+
+    const saveProfile = async () => {
+        setProfileLoading(true); setProfileMsg('');
+        try {
+            const updated = await API.put('/api/auth/profile', { display_name: profileName, avatar_base64: profileAvatar });
+            MacStore.setState({ currentUser: updated });
+            setProfileMsg('Saved!');
+        } catch (e) { setProfileMsg(e.error || 'Failed to save'); }
+        finally { setProfileLoading(false); setTimeout(() => setProfileMsg(''), 3000); }
+    };
+
+    const sendEmailCode = async () => {
+        setEmailMsg('');
+        try { await API.put('/api/auth/change-email', { new_email: newEmail }); setEmailStep('verify'); setEmailMsg('Code sent to ' + newEmail); }
+        catch (e) { setEmailMsg(e.error || 'Failed'); }
+    };
+
+    const verifyEmailCode = async () => {
+        setEmailMsg('');
+        try {
+            const { token, user } = await API.post('/api/auth/verify-change-email', { code: emailCode });
+            API.setToken(token); MacStore.setState({ currentUser: user });
+            setEmailStep('input'); setNewEmail(''); setEmailCode(''); setEmailMsg('Email updated!');
+        } catch (e) { setEmailMsg(e.error || 'Invalid code'); }
+    };
+
+    const changePassword = async () => {
+        setPwMsg('');
+        try { await API.put('/api/auth/change-password', { current_password: currentPw, new_password: newPw }); setCurrentPw(''); setNewPw(''); setPwMsg('Password changed!'); }
+        catch (e) { setPwMsg(e.error || 'Failed'); }
+        setTimeout(() => setPwMsg(''), 3000);
+    };
+
     const wifiOn = useStore(s => s.wifiOn);
     const bluetoothOn = useStore(s => s.bluetoothOn);
     const volume = useStore(s => s.volume);
@@ -3623,17 +3684,84 @@ const SettingsApp = () => {
     const renderContent = () => {
         switch(activeSection) {
             case 'apple-id':
+                const pfInStyle = { width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.15)', fontSize: 14, outline: 'none', background: 'rgba(0,0,0,0.04)', boxSizing: 'border-box' };
                 return (
-                    <div>
-                        <h2 className="text-[22px] font-bold mb-5">Apple ID</h2>
-                        <SettingsGroup>
-                            <SettingsRow label="Name, Phone Numbers, Email" hasArrow />
-                            <SettingsRow label="Password & Security" hasArrow />
-                            <SettingsRow label="iCloud" detail="5 GB of 5 GB used" hasArrow />
-                            <SettingsRow label="Media & Purchases" hasArrow />
+                    <div style={{ maxWidth: 560 }}>
+                        <h2 className="text-[22px] font-bold mb-5">Profile & Account</h2>
+
+                        {/* Profile Photo + Name */}
+                        <SettingsGroup title="Profile">
+                            <div style={{ padding: '16px 16px', display: 'flex', alignItems: 'center', gap: 20 }}>
+                                <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => avatarFileRef.current?.click()}>
+                                    <Avatar user={{ ...currentUser, avatar_base64: profileAvatar }} size={72}/>
+                                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: '#007AFF', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid white' }}>
+                                        <svg viewBox="0 0 16 16" width="10" height="10" fill="white"><path d="M11 1.5a1.5 1.5 0 013 0v1a.5.5 0 01-.5.5H11.5A.5.5 0 0111 2.5v-1zM1.5 11h1v2.5A1.5 1.5 0 004 15h8a1.5 1.5 0 001.5-1.5V11h1a.5.5 0 000-1H1.5a.5.5 0 000 1zM8 5a3 3 0 100 6A3 3 0 008 5z"/></svg>
+                                    </div>
+                                </div>
+                                <input type="file" accept="image/*" ref={avatarFileRef} style={{ display: 'none' }} onChange={e => {
+                                    const f = e.target.files?.[0]; if (!f) return;
+                                    resizeImage(f, 256, 0.8, (b64) => setProfileAvatar(b64));
+                                    e.target.value = '';
+                                }}/>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6, color: '#666' }}>Display Name</div>
+                                    <input value={profileName} onChange={e => setProfileName(e.target.value)} placeholder="Your name" style={pfInStyle}/>
+                                </div>
+                            </div>
+                            <div style={{ padding: '0 16px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <button onClick={saveProfile} disabled={profileLoading} style={{ padding: '8px 20px', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+                                    {profileLoading ? 'Saving...' : 'Save Profile'}
+                                </button>
+                                {profileMsg && <span style={{ fontSize: 13, color: profileMsg === 'Saved!' ? '#34C759' : '#FF3B30' }}>{profileMsg}</span>}
+                            </div>
                         </SettingsGroup>
+
+                        {/* Friend Tag */}
+                        <SettingsGroup title="Friend Tag">
+                            <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div>
+                                    <div style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Your unique friend tag — share it to receive friend requests</div>
+                                    <div style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 700, color: '#007AFF', letterSpacing: 2 }}>#{currentUser?.friend_tag || '—'}</div>
+                                </div>
+                                <button onClick={() => { navigator.clipboard?.writeText('#' + (currentUser?.friend_tag || '')); }} style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(0,122,255,0.1)', color: '#007AFF', border: 'none', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>Copy</button>
+                            </div>
+                        </SettingsGroup>
+
+                        {/* Change Email */}
+                        <SettingsGroup title="Change Email">
+                            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <div style={{ fontSize: 13, color: '#666' }}>Current: <b>{currentUser?.email}</b></div>
+                                {emailStep === 'input' ? (<>
+                                    <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="New email address" style={pfInStyle}/>
+                                    <button onClick={sendEmailCode} disabled={!newEmail} style={{ padding: '8px 16px', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 500, alignSelf: 'flex-start' }}>Send Verification Code</button>
+                                </>) : (<>
+                                    <input value={emailCode} onChange={e => setEmailCode(e.target.value)} placeholder="6-digit code" maxLength={6} style={{ ...pfInStyle, letterSpacing: 4, fontSize: 18, textAlign: 'center' }}/>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <button onClick={verifyEmailCode} disabled={emailCode.length !== 6} style={{ padding: '8px 16px', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>Verify</button>
+                                        <button onClick={() => { setEmailStep('input'); setEmailMsg(''); }} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.07)', color: '#333', border: 'none', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                                    </div>
+                                </>)}
+                                {emailMsg && <div style={{ fontSize: 13, color: emailMsg.includes('sent') || emailMsg.includes('updated') ? '#34C759' : '#FF3B30' }}>{emailMsg}</div>}
+                            </div>
+                        </SettingsGroup>
+
+                        {/* Change Password */}
+                        <SettingsGroup title="Change Password">
+                            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <input type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="Current password" style={pfInStyle}/>
+                                <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="New password (min 6 chars)" style={pfInStyle}/>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <button onClick={changePassword} disabled={!currentPw || newPw.length < 6} style={{ padding: '8px 16px', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>Change Password</button>
+                                    {pwMsg && <span style={{ fontSize: 13, color: pwMsg.includes('changed') ? '#34C759' : '#FF3B30' }}>{pwMsg}</span>}
+                                </div>
+                            </div>
+                        </SettingsGroup>
+
+                        {/* Sign Out */}
                         <SettingsGroup>
-                            <SettingsRow label="Family Sharing" detail="Set Up" hasArrow />
+                            <div className="flex items-center justify-between px-4 py-2.5 text-[13px] cursor-pointer" onClick={() => { API.setToken(null); WSManager.disconnect(); MacStore.setState({ currentUser: null, friends: [], friendRequests: [], groups: [] }); window.location.reload(); }}>
+                                <span style={{ color: '#FF3B30', fontWeight: 500 }}>Sign Out</span>
+                            </div>
                         </SettingsGroup>
                     </div>
                 );
@@ -4230,12 +4358,10 @@ const SettingsApp = () => {
                             className={`flex items-center gap-3 p-3 mx-1 rounded-xl cursor-default ${activeSection === s.id ? 'text-white' : 'hover:bg-black/[0.03]'}`}
                             style={activeSection === s.id ? { background: accentColor } : undefined}
                             onClick={() => setActiveSection(s.id)}>
-                            <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center overflow-hidden">
-                                <svg viewBox="0 0 100 100" width="48" height="48"><circle cx="50" cy="50" r="50" fill="#c7c7cc"/><circle cx="50" cy="38" r="18" fill="#e5e5ea"/><ellipse cx="50" cy="80" rx="30" ry="22" fill="#e5e5ea"/></svg>
-                            </div>
+                            <Avatar user={currentUser} size={48}/>
                             <div>
-                                <div className="text-[14px] font-semibold">User</div>
-                                <div className={`text-[11px] ${activeSection === s.id ? 'text-white/70' : 'text-gray-400'}`}>Apple ID, iCloud+</div>
+                                <div className="text-[14px] font-semibold">{currentUser?.display_name || 'User'}</div>
+                                <div className={`text-[11px] ${activeSection === s.id ? 'text-white/70' : 'text-gray-400'}`}>{currentUser?.email || 'Apple ID, iCloud+'}</div>
                             </div>
                         </div>
                     );
@@ -4283,56 +4409,169 @@ window.SettingsRow = SettingsRow;
 </script>
 
 <script type="text/babel">
-// Messages App - Real WebSocket chat (falls back to local mock if backend offline)
+// ── Shared Avatar component & image resize helper ─────────────────────────────
+const Avatar = ({ user, size = 36 }) => (
+    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: user?.avatar_color || '#007AFF', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {user?.avatar_base64
+            ? <img src={user.avatar_base64} style={{ width: '100%', height: '100%', objectFit: 'cover' }} draggable="false"/>
+            : <span style={{ color: 'white', fontWeight: 700, fontSize: Math.round(size * 0.4) }}>{(user?.display_name || user?.email || '?')[0]?.toUpperCase()}</span>
+        }
+    </div>
+);
+
+const resizeImage = (file, maxDim, quality, cb) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            cb(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+};
+
+window.Avatar = Avatar;
+window.resizeImage = resizeImage;
+</script>
+
+<script type="text/babel">
+// ─── Messages App — Friends, Groups, File/Playlist Sharing ─────────────────────
 const MessagesApp = () => {
     const currentUser = useStore(s => s.currentUser);
     const backendOnline = useStore(s => s.backendOnline);
     const onlineUserIds = useStore(s => s.onlineUserIds);
+    const friends = useStore(s => s.friends);
+    const friendRequests = useStore(s => s.friendRequests);
+    const groups = useStore(s => s.groups);
 
-    // Contacts sidebar: 'global' channel + DM contacts
-    const [contacts, setContacts] = React.useState([]);
-    // messages keyed by contact id ('global' or user id)
-    const [msgMap, setMsgMap] = React.useState({ global: [] });
-    const [activeId, setActiveId] = React.useState('global');
+    // 'dm:{userId}' | 'group:{groupId}' | null
+    const [activeId, setActiveId] = React.useState(null);
+    // 'chats' | 'requests'
+    const [sidebarTab, setSidebarTab] = React.useState('chats');
+    const [msgMap, setMsgMap] = React.useState({});
     const [input, setInput] = React.useState('');
+    const [typingUsers, setTypingUsers] = React.useState({});
+    const [readReceipts, setReadReceipts] = React.useState({});
+    const [reactionTarget, setReactionTarget] = React.useState(null);
+    const [attachFile, setAttachFile] = React.useState(null);
+    const [showPlaylistPicker, setShowPlaylistPicker] = React.useState(false);
+    const [showCreateGroup, setShowCreateGroup] = React.useState(false);
+    const [newGroupName, setNewGroupName] = React.useState('');
+    const [newGroupMembers, setNewGroupMembers] = React.useState([]);
+    const [newGroupAvatar, setNewGroupAvatar] = React.useState(null);
+    const [showAddFriend, setShowAddFriend] = React.useState(false);
+    const [friendTag, setFriendTag] = React.useState('');
+    const [tagSearchResult, setTagSearchResult] = React.useState(null);
+    const [tagSearchMsg, setTagSearchMsg] = React.useState('');
     const chatRef = React.useRef(null);
+    const fileInputRef = React.useRef(null);
+    const groupAvatarRef = React.useRef(null);
+    const typingTimer = React.useRef(null);
 
-    const appendMsg = (contactId, msg) => {
-        setMsgMap(prev => ({ ...prev, [contactId]: [...(prev[contactId] || []), msg] }));
-    };
+    const appendMsg = (key, msg) => setMsgMap(prev => ({ ...prev, [key]: [...(prev[key] || []), msg] }));
 
-    // Load contacts + history
+    const normalizeDM = (m, myId) => ({
+        id: m.id, from: m.from_user_id === myId ? 'me' : m.from_user_id,
+        text: m.content, content_type: m.content_type || 'text',
+        file_name: m.file_name, file_mime: m.file_mime,
+        name: m.display_name, color: m.avatar_color, avatar: m.avatar_base64,
+        reactions: m.reactions || {}, read_by: m.read_by || [],
+        ts: m.created_at,
+    });
+
+    const normalizeGroup = (m, myId) => ({
+        id: m.id, from: m.from_user_id === myId ? 'me' : m.from_user_id,
+        text: m.content, content_type: m.content_type || 'text',
+        file_name: m.file_name, file_mime: m.file_mime,
+        name: m.display_name, color: m.avatar_color, avatar: m.avatar_base64,
+        reactions: m.reactions || {},
+        ts: m.created_at,
+    });
+
+    // Load data when user logs in / changes
     React.useEffect(() => {
         if (!backendOnline || !currentUser) return;
-        API.get('/api/users').then(users => {
-            setContacts(users);
-            users.forEach(u => setMsgMap(prev => ({ ...prev, [u.id]: prev[u.id] || [] })));
-        }).catch(() => {});
-        API.get('/api/messages').then(msgs => {
-            const global = msgs.map(m => ({
-                id: m.id, from: m.from_user_id === currentUser.id ? 'me' : m.from_user_id,
-                text: m.content, name: m.display_name, color: m.avatar_color,
-            }));
-            setMsgMap(prev => ({ ...prev, global }));
-        }).catch(() => {});
+        API.get('/api/friends').then(f => MacStore.setState({ friends: f })).catch(()=>{});
+        API.get('/api/friends/requests').then(r => MacStore.setState({ friendRequests: r })).catch(()=>{});
+        API.get('/api/groups').then(g => MacStore.setState({ groups: g })).catch(()=>{});
     }, [backendOnline, currentUser]);
 
-    // WebSocket incoming messages
+    // Load messages when switching chat
+    React.useEffect(() => {
+        if (!activeId || !backendOnline || !currentUser) return;
+        if (activeId.startsWith('dm:')) {
+            const uid = parseInt(activeId.slice(3));
+            if (msgMap[activeId]) return; // already loaded
+            API.get('/api/messages?with=' + uid).then(msgs => {
+                setMsgMap(prev => ({ ...prev, [activeId]: msgs.map(m => normalizeDM(m, currentUser.id)) }));
+            }).catch(()=>{});
+        } else if (activeId.startsWith('group:')) {
+            const gid = parseInt(activeId.slice(6));
+            if (msgMap[activeId]) return;
+            API.get('/api/groups/' + gid + '/messages').then(msgs => {
+                setMsgMap(prev => ({ ...prev, [activeId]: msgs.map(m => normalizeGroup(m, currentUser.id)) }));
+            }).catch(()=>{});
+        }
+    }, [activeId, backendOnline, currentUser]);
+
+    // Scroll to bottom
+    React.useEffect(() => {
+        if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }, [msgMap, activeId]);
+
+    // WebSocket handler
     React.useEffect(() => {
         if (!backendOnline) return;
         const off = WSManager.on((msg) => {
             if (msg.type === 'message') {
                 const isMine = msg.from_user_id === currentUser?.id;
-                const entry = {
-                    id: msg.id, from: isMine ? 'me' : msg.from_user_id,
-                    text: msg.content, name: msg.display_name, color: msg.avatar_color,
-                };
-                const contactId = msg.to_user_id ? (isMine ? msg.to_user_id : msg.from_user_id) : 'global';
-                appendMsg(contactId, entry);
-                // Show notification for DMs not in focus
-                if (msg.to_user_id && !isMine) {
-                    MacStore.addNotification('Messages', msg.display_name, msg.content);
+                const key = msg.to_user_id ? 'dm:' + (isMine ? msg.to_user_id : msg.from_user_id) : null;
+                if (!key) return;
+                appendMsg(key, normalizeDM(msg, currentUser?.id));
+                if (!isMine) MacStore.addNotification('Messages', msg.display_name, msg.content);
+            }
+            if (msg.type === 'group_message') {
+                const key = 'group:' + msg.group_id;
+                appendMsg(key, normalizeGroup(msg, currentUser?.id));
+                if (msg.from_user_id !== currentUser?.id) MacStore.addNotification('Messages', msg.display_name, msg.content);
+            }
+            if (msg.type === 'friend_request') {
+                MacStore.setState(s => ({ friendRequests: [...s.friendRequests, msg.request] }));
+                MacStore.addNotification('Messages', msg.request.from_user?.display_name || 'Someone', 'Sent you a friend request');
+            }
+            if (msg.type === 'friend_accepted') {
+                API.get('/api/friends').then(f => MacStore.setState({ friends: f })).catch(()=>{});
+                MacStore.addNotification('Messages', msg.by_user?.display_name || 'Someone', 'Accepted your friend request');
+            }
+            if (msg.type === 'group_added') {
+                MacStore.setState(s => ({ groups: [...s.groups, msg.group] }));
+            }
+            if (msg.type === 'reaction_update') {
+                const key = msg.context === 'group' ? 'group:' + msg.group_id : (msg.context === 'dm' ? null : null);
+                if (key) {
+                    setMsgMap(prev => {
+                        const msgs = (prev[key] || []).map(m => m.id === msg.message_id ? { ...m, reactions: msg.reactions } : m);
+                        return { ...prev, [key]: msgs };
+                    });
                 }
+            }
+            if (msg.type === 'read_receipt') {
+                setReadReceipts(prev => ({ ...prev, [msg.message_id]: true }));
+            }
+            if (msg.type === 'typing') {
+                const key = msg.group_id ? 'group:' + msg.group_id : 'dm:' + msg.from_user_id;
+                setTypingUsers(prev => {
+                    const list = prev[key] || [];
+                    if (msg.is_typing && !list.includes(msg.from_user_id)) return { ...prev, [key]: [...list, msg.from_user_id] };
+                    if (!msg.is_typing) return { ...prev, [key]: list.filter(id => id !== msg.from_user_id) };
+                    return prev;
+                });
             }
             if (msg.type === 'online_users') MacStore.setState({ onlineUserIds: msg.userIds });
             if (msg.type === 'user_online') MacStore.setState(s => ({ onlineUserIds: [...new Set([...s.onlineUserIds, msg.userId])] }));
@@ -4341,199 +4580,603 @@ const MessagesApp = () => {
         return off;
     }, [backendOnline, currentUser]);
 
-    React.useEffect(() => {
-        if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
-    }, [msgMap, activeId]);
-
-    const sendMessage = () => {
-        if (!input.trim()) return;
-        if (backendOnline && currentUser) {
-            WSManager.send({ type: 'message', content: input, to_user_id: activeId === 'global' ? null : activeId });
-        } else {
-            appendMsg(activeId, { id: Date.now(), from: 'me', text: input });
-        }
-        setInput('');
+    const sendTyping = (isTyping) => {
+        if (!activeId || !backendOnline) return;
+        if (activeId.startsWith('dm:')) WSManager.send({ type: 'typing', to_user_id: parseInt(activeId.slice(3)), is_typing: isTyping });
+        else if (activeId.startsWith('group:')) WSManager.send({ type: 'typing', group_id: parseInt(activeId.slice(6)), is_typing: isTyping });
     };
 
-    const activeContact = contacts.find(c => c.id === activeId);
-    const activeName = activeId === 'global' ? '🌐 Global Chat' : activeContact?.display_name || 'Unknown';
-    const messages = msgMap[activeId] || [];
+    const handleInputChange = (val) => {
+        setInput(val);
+        if (!backendOnline) return;
+        sendTyping(true);
+        clearTimeout(typingTimer.current);
+        typingTimer.current = setTimeout(() => sendTyping(false), 3000);
+    };
 
-    const ContactRow = ({ id, name, color, isOnline }) => {
-        const msgs = msgMap[id] || [];
-        const last = msgs[msgs.length - 1];
-        return (
-            <div onClick={() => setActiveId(id)}
-                className={`flex items-center gap-3 px-4 py-2.5 cursor-default border-b border-black/[0.03] ${activeId === id ? 'bg-blue-500 text-white' : 'hover:bg-black/[0.02]'}`}>
-                <div className="relative">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-base font-semibold flex-shrink-0"
-                        style={{ background: color || '#007AFF' }}>
-                        {name[0]?.toUpperCase()}
-                    </div>
-                    {isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white"/>}
-                </div>
-                <div className="flex-1 min-w-0">
-                    <span className="text-[13px] font-semibold">{name}</span>
-                    {last && <div className={`text-[12px] truncate ${activeId === id ? 'text-white/70' : 'text-gray-400'}`}>{last.text}</div>}
-                </div>
-            </div>
-        );
+    const buildPayload = () => {
+        if (attachFile) {
+            return { content: attachFile.base64, content_type: attachFile.mime?.startsWith('image/') ? 'image' : 'file', file_name: attachFile.name, file_mime: attachFile.mime };
+        }
+        return { content: input.trim(), content_type: 'text' };
+    };
+
+    const sendMessage = async () => {
+        const payload = buildPayload();
+        if (!payload.content) return;
+        sendTyping(false);
+        clearTimeout(typingTimer.current);
+        if (backendOnline && currentUser) {
+            if (activeId.startsWith('dm:')) {
+                WSManager.send({ type: 'message', ...payload, to_user_id: parseInt(activeId.slice(3)) });
+            } else if (activeId.startsWith('group:')) {
+                const gid = parseInt(activeId.slice(6));
+                try {
+                    const saved = await API.post('/api/groups/' + gid + '/messages', payload);
+                    appendMsg(activeId, normalizeGroup(saved, currentUser.id));
+                } catch {}
+            }
+        } else if (activeId) {
+            appendMsg(activeId, { id: Date.now(), from: 'me', text: payload.content, content_type: payload.content_type, file_name: payload.file_name, file_mime: payload.file_mime, reactions: {}, ts: Date.now() });
+        }
+        setInput('');
+        setAttachFile(null);
+    };
+
+    const sendPlaylist = async (pl) => {
+        setShowPlaylistPicker(false);
+        const payload = { content: JSON.stringify(pl), content_type: 'playlist_share' };
+        if (!activeId) return;
+        if (backendOnline && currentUser) {
+            if (activeId.startsWith('dm:')) {
+                WSManager.send({ type: 'message', ...payload, to_user_id: parseInt(activeId.slice(3)) });
+            } else if (activeId.startsWith('group:')) {
+                const gid = parseInt(activeId.slice(6));
+                try { const s = await API.post('/api/groups/' + gid + '/messages', payload); appendMsg(activeId, normalizeGroup(s, currentUser.id)); } catch {}
+            }
+        }
+    };
+
+    const addReaction = async (msgId, emoji) => {
+        setReactionTarget(null);
+        if (!backendOnline || !activeId) return;
+        if (activeId.startsWith('group:')) {
+            const gid = parseInt(activeId.slice(6));
+            try { await API.post('/api/groups/' + gid + '/react', { message_id: msgId, emoji }); } catch {}
+        } else if (activeId.startsWith('dm:')) {
+            try {
+                const updated = await API.post('/api/messages/' + msgId + '/react', { emoji });
+                setMsgMap(prev => {
+                    const msgs = (prev[activeId] || []).map(m => m.id === msgId ? { ...m, reactions: updated.reactions } : m);
+                    return { ...prev, [activeId]: msgs };
+                });
+            } catch {}
+        }
+    };
+
+    const searchByTag = async () => {
+        setTagSearchResult(null); setTagSearchMsg('');
+        const tag = friendTag.replace('#', '').trim();
+        if (!tag) return;
+        try { const u = await API.get('/api/users/search?tag=' + tag); setTagSearchResult(u); }
+        catch (e) { setTagSearchMsg(e.error || 'No user found'); }
+    };
+
+    const sendFriendRequest = async (userId) => {
+        try { await API.post('/api/friends/request', { to_user_id: userId }); setTagSearchMsg('Friend request sent!'); setTagSearchResult(null); setFriendTag(''); }
+        catch (e) { setTagSearchMsg(e.error || 'Failed'); }
+    };
+
+    const acceptRequest = async (reqId) => {
+        await API.post('/api/friends/accept', { request_id: reqId });
+        MacStore.setState(s => ({ friendRequests: s.friendRequests.filter(r => r.id !== reqId) }));
+        API.get('/api/friends').then(f => MacStore.setState({ friends: f })).catch(()=>{});
+    };
+
+    const declineRequest = async (reqId) => {
+        await API.post('/api/friends/decline', { request_id: reqId });
+        MacStore.setState(s => ({ friendRequests: s.friendRequests.filter(r => r.id !== reqId) }));
+    };
+
+    const removeFriend = async (friendId) => {
+        await API.del('/api/friends/' + friendId);
+        MacStore.setState(s => ({ friends: s.friends.filter(f => f.id !== friendId) }));
+    };
+
+    const createGroup = async () => {
+        if (!newGroupName.trim()) return;
+        try {
+            const g = await API.post('/api/groups', { name: newGroupName, member_ids: newGroupMembers, avatar_base64: newGroupAvatar });
+            MacStore.setState(s => ({ groups: [...s.groups, g] }));
+            setShowCreateGroup(false); setNewGroupName(''); setNewGroupMembers([]); setNewGroupAvatar(null);
+            setActiveId('group:' + g.id);
+        } catch {}
+    };
+
+    const formatTime = (ts) => {
+        if (!ts) return '';
+        const d = new Date(ts);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    // Sidebar helpers
+    const getLastMsg = (key) => { const msgs = msgMap[key]; return msgs?.[msgs.length - 1]; };
+    const lastText = (m) => {
+        if (!m) return '';
+        if (m.content_type === 'image') return '📷 Image';
+        if (m.content_type === 'file') return '📎 ' + (m.file_name || 'File');
+        if (m.content_type === 'playlist_share') { try { return '🎵 ' + JSON.parse(m.text).name; } catch { return '🎵 Playlist'; } }
+        return m.text;
+    };
+
+    const playlists = (() => { try { return JSON.parse(localStorage.getItem('macos_music_playlists') || '[]'); } catch { return []; } })();
+
+    // Get context info for active chat
+    const getActiveInfo = () => {
+        if (!activeId) return { name: '', user: null };
+        if (activeId.startsWith('dm:')) {
+            const uid = parseInt(activeId.slice(3));
+            const f = friends.find(f => f.id === uid);
+            return { name: f?.display_name || 'Unknown', user: f, isOnline: onlineUserIds.includes(uid) };
+        }
+        if (activeId.startsWith('group:')) {
+            const gid = parseInt(activeId.slice(6));
+            const g = groups.find(g => g.id === gid);
+            return { name: g?.name || 'Group', group: g, members: g?.members || [] };
+        }
+        return { name: '' };
+    };
+    const activeInfo = getActiveInfo();
+    const messages = msgMap[activeId] || [];
+    const typingList = typingUsers[activeId] || [];
+
+    // Message bubble renderer
+    const renderMsgContent = (msg) => {
+        if (msg.content_type === 'image') {
+            return <img src={msg.text} alt="shared" style={{ maxWidth: 240, maxHeight: 200, borderRadius: 10, display: 'block' }} onClick={() => window.open(msg.text)}/>;
+        }
+        if (msg.content_type === 'file') {
+            return <a href={msg.text} download={msg.file_name} style={{ color: 'inherit', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                <span style={{ fontSize: 20 }}>📎</span>
+                <span style={{ fontSize: 13, textDecoration: 'underline' }}>{msg.file_name || 'Download file'}</span>
+            </a>;
+        }
+        if (msg.content_type === 'playlist_share') {
+            try {
+                const pl = JSON.parse(msg.text);
+                return <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 12px', minWidth: 160 }}>
+                    <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>🎵 Shared Playlist</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{pl.name}</div>
+                    <div style={{ fontSize: 12, opacity: 0.7 }}>{pl.songs?.length || 0} songs</div>
+                    <button onClick={() => { MacStore.setState({ pendingPlaylist: pl }); MacStore.openWindow && MacStore.openWindow('music'); }}
+                        style={{ marginTop: 8, padding: '4px 10px', borderRadius: 6, background: 'rgba(255,255,255,0.25)', border: 'none', color: 'inherit', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
+                        Open in Music
+                    </button>
+                </div>;
+            } catch { return <span>{msg.text}</span>; }
+        }
+        return <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.text}</span>;
     };
 
     return (
-        <div className="flex h-full">
-            <div className="w-[280px] min-w-[280px] bg-gray-50/95 border-r border-black/5 flex flex-col">
-                <div className="px-4 py-2 border-b border-black/5 flex items-center gap-2">
-                    <span className="text-[12px] font-semibold text-gray-500 flex-1">Messages</span>
-                    {backendOnline && <span className="text-[10px] text-green-500 font-medium">● Live</span>}
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                    <ContactRow id="global" name="Global Chat" color="#34C759" isOnline={backendOnline}/>
-                    {contacts.map(c => (
-                        <ContactRow key={c.id} id={c.id} name={c.display_name} color={c.avatar_color}
-                            isOnline={onlineUserIds.includes(c.id)}/>
-                    ))}
-                    {!backendOnline && <div className="px-4 py-8 text-center text-[12px] text-gray-400">Start the backend server to chat with real users</div>}
-                </div>
-            </div>
-            <div className="flex-1 flex flex-col bg-white">
-                <div className="px-4 py-2.5 border-b border-black/5 text-center font-semibold text-[14px]">{activeName}</div>
-                <div ref={chatRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-                    {messages.map((msg, i) => (
-                        <div key={msg.id || i} className={`flex flex-col max-w-[65%] ${msg.from === 'me' ? 'self-end items-end' : 'self-start items-start'}`}>
-                            {msg.from !== 'me' && msg.name && (
-                                <span className="text-[11px] text-gray-400 mb-0.5 px-1">{msg.name}</span>
-                            )}
-                            <div className={`px-3.5 py-2 text-[14px] leading-relaxed ${
-                                msg.from === 'me' ? 'bg-blue-500 text-white rounded-2xl rounded-br-md' : 'bg-gray-200 text-gray-900 rounded-2xl rounded-bl-md'
-                            }`}>{msg.text}</div>
-                        </div>
-                    ))}
-                    {messages.length === 0 && (
-                        <div className="flex-1 flex items-center justify-center text-gray-400 text-[13px]">No messages yet. Say hello!</div>
-                    )}
-                </div>
-                <div className="px-4 py-3 border-t border-black/5 flex items-center gap-2">
-                    <input type="text" value={input} onChange={e => setInput(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                        placeholder={backendOnline ? 'iMessage' : 'iMessage (offline)'}
-                        className="flex-1 px-4 py-2 rounded-full border border-black/10 text-[14px] outline-none font-sf"/>
-                    <button onClick={sendMessage} className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center cursor-default">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        <div className="flex h-full" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', position: 'relative' }}>
+            {/* ── Sidebar ── */}
+            <div style={{ width: 280, minWidth: 280, background: '#f5f5f5', borderRight: '1px solid rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column' }}>
+                {/* Tabs */}
+                <div style={{ display: 'flex', borderBottom: '1px solid rgba(0,0,0,0.08)', background: 'white' }}>
+                    <button onClick={() => setSidebarTab('chats')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: sidebarTab === 'chats' ? 600 : 400, color: sidebarTab === 'chats' ? '#007AFF' : '#666', background: 'none', border: 'none', cursor: 'pointer', borderBottom: sidebarTab === 'chats' ? '2px solid #007AFF' : '2px solid transparent' }}>Chats</button>
+                    <button onClick={() => setSidebarTab('requests')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: sidebarTab === 'requests' ? 600 : 400, color: sidebarTab === 'requests' ? '#007AFF' : '#666', background: 'none', border: 'none', cursor: 'pointer', borderBottom: sidebarTab === 'requests' ? '2px solid #007AFF' : '2px solid transparent', position: 'relative' }}>
+                        Requests {friendRequests.length > 0 && <span style={{ background: '#FF3B30', color: 'white', borderRadius: 10, fontSize: 10, fontWeight: 700, padding: '1px 5px', marginLeft: 4 }}>{friendRequests.length}</span>}
                     </button>
                 </div>
+
+                {sidebarTab === 'chats' ? (
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                        {/* Actions row */}
+                        <div style={{ display: 'flex', gap: 6, padding: '8px 12px', background: 'white', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                            <button onClick={() => setShowAddFriend(v => !v)} style={{ flex: 1, padding: '6px 0', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>+ Add Friend</button>
+                            <button onClick={() => setShowCreateGroup(true)} style={{ flex: 1, padding: '6px 0', borderRadius: 8, background: 'rgba(0,0,0,0.07)', color: '#333', border: 'none', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>+ New Group</button>
+                        </div>
+
+                        {/* Add friend by tag */}
+                        {showAddFriend && (
+                            <div style={{ padding: '10px 12px', background: '#f0f7ff', borderBottom: '1px solid rgba(0,122,255,0.2)' }}>
+                                <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#007AFF' }}>Find friend by tag</div>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                    <input value={friendTag} onChange={e => setFriendTag(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchByTag()} placeholder="#tag (e.g. #3eir9)" style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(0,122,255,0.3)', fontSize: 13, outline: 'none' }}/>
+                                    <button onClick={searchByTag} style={{ padding: '6px 12px', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontSize: 12, cursor: 'pointer' }}>Search</button>
+                                </div>
+                                {tagSearchMsg && <div style={{ fontSize: 12, marginTop: 6, color: tagSearchMsg.includes('sent') ? '#34C759' : '#FF3B30' }}>{tagSearchMsg}</div>}
+                                {tagSearchResult && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, padding: '8px 10px', background: 'white', borderRadius: 10, border: '1px solid rgba(0,0,0,0.1)' }}>
+                                        <Avatar user={tagSearchResult} size={32}/>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600 }}>{tagSearchResult.display_name}</div>
+                                            <div style={{ fontSize: 11, color: '#999' }}>#{tagSearchResult.friend_tag}</div>
+                                        </div>
+                                        <button onClick={() => sendFriendRequest(tagSearchResult.id)} style={{ padding: '5px 10px', borderRadius: 8, background: '#34C759', color: 'white', border: 'none', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>Add</button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Friends list */}
+                        {friends.length > 0 && <div style={{ padding: '6px 12px 2px', fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }}>Direct Messages</div>}
+                        {friends.map(f => {
+                            const key = 'dm:' + f.id;
+                            const last = getLastMsg(key);
+                            const isActive = activeId === key;
+                            return (
+                                <div key={f.id} onClick={() => setActiveId(key)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'default', background: isActive ? '#007AFF' : 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)' }}
+                                    onContextMenu={e => { e.preventDefault(); if (window.confirm('Remove ' + f.display_name + ' from friends?')) removeFriend(f.id); }}>
+                                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                                        <Avatar user={f} size={38}/>
+                                        {onlineUserIds.includes(f.id) && <div style={{ position: 'absolute', bottom: 0, right: 0, width: 10, height: 10, background: '#34C759', borderRadius: '50%', border: '2px solid white' }}/>}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? 'white' : '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.display_name}</div>
+                                        {last && <div style={{ fontSize: 12, color: isActive ? 'rgba(255,255,255,0.7)' : '#999', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{lastText(last)}</div>}
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {/* Groups list */}
+                        {groups.length > 0 && <div style={{ padding: '6px 12px 2px', fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }}>Groups</div>}
+                        {groups.map(g => {
+                            const key = 'group:' + g.id;
+                            const last = getLastMsg(key);
+                            const isActive = activeId === key;
+                            return (
+                                <div key={g.id} onClick={() => setActiveId(key)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'default', background: isActive ? '#007AFF' : 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#AF52DE', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                        {g.avatar_base64 ? <img src={g.avatar_base64} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <span style={{ color: 'white', fontWeight: 700, fontSize: 16 }}>{g.name[0]?.toUpperCase()}</span>}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 600, color: isActive ? 'white' : '#111', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</div>
+                                        <div style={{ fontSize: 12, color: isActive ? 'rgba(255,255,255,0.7)' : '#999' }}>{(g.members || []).length} members{last ? ' · ' + lastText(last) : ''}</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {!backendOnline && <div style={{ padding: '20px 16px', textAlign: 'center', color: '#999', fontSize: 12 }}>Backend offline — friends and groups unavailable</div>}
+                        {backendOnline && friends.length === 0 && groups.length === 0 && !showAddFriend && (
+                            <div style={{ padding: '24px 16px', textAlign: 'center', color: '#999', fontSize: 13 }}>
+                                <div style={{ fontSize: 24, marginBottom: 8 }}>👋</div>
+                                <div>No friends yet.</div>
+                                <div style={{ marginTop: 4, fontSize: 12 }}>Click "Add Friend" to get started</div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    /* Requests tab */
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        {friendRequests.length === 0 ? (
+                            <div style={{ padding: '24px 16px', textAlign: 'center', color: '#999', fontSize: 13 }}>
+                                <div style={{ fontSize: 24, marginBottom: 8 }}>🤝</div>
+                                <div>No pending friend requests</div>
+                            </div>
+                        ) : friendRequests.map(req => (
+                            <div key={req.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                                <Avatar user={req.from_user} size={40}/>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 600 }}>{req.from_user?.display_name}</div>
+                                    <div style={{ fontSize: 11, color: '#999' }}>#{req.from_user?.friend_tag}</div>
+                                </div>
+                                <button onClick={() => acceptRequest(req.id)} style={{ padding: '5px 10px', borderRadius: 8, background: '#34C759', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>✓</button>
+                                <button onClick={() => declineRequest(req.id)} style={{ padding: '5px 10px', borderRadius: 8, background: '#FF3B30', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>✗</button>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
+
+            {/* ── Chat Panel ── */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'white' }}>
+                {!activeId ? (
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 14, flexDirection: 'column', gap: 8 }}>
+                        <div style={{ fontSize: 40 }}>💬</div>
+                        <div>Select a chat to start messaging</div>
+                    </div>
+                ) : (<>
+                    {/* Header */}
+                    <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {activeId.startsWith('dm:') && activeInfo.user && <Avatar user={activeInfo.user} size={34}/>}
+                        {activeId.startsWith('group:') && (
+                            <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#AF52DE', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                {activeInfo.group?.avatar_base64 ? <img src={activeInfo.group.avatar_base64} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <span style={{ color: 'white', fontWeight: 700 }}>{activeInfo.name[0]}</span>}
+                            </div>
+                        )}
+                        <div>
+                            <div style={{ fontSize: 14, fontWeight: 600 }}>{activeInfo.name}</div>
+                            {activeId.startsWith('dm:') && <div style={{ fontSize: 11, color: activeInfo.isOnline ? '#34C759' : '#999' }}>{activeInfo.isOnline ? 'Online' : 'Offline'}</div>}
+                            {activeId.startsWith('group:') && activeInfo.members?.length > 0 && <div style={{ fontSize: 11, color: '#999' }}>{activeInfo.members.map(m => m.display_name).join(', ')}</div>}
+                        </div>
+                    </div>
+
+                    {/* Messages */}
+                    <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {messages.map((msg, i) => {
+                            const isMe = msg.from === 'me';
+                            const showAvatar = !isMe && (i === 0 || messages[i-1]?.from === 'me');
+                            const hasReactions = msg.reactions && Object.keys(msg.reactions).length > 0;
+                            const isLastMine = isMe && (i === messages.length - 1 || messages[i+1]?.from !== 'me');
+                            return (
+                                <div key={msg.id || i} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start', marginBottom: hasReactions ? 4 : 0 }}>
+                                    {!isMe && showAvatar && msg.name && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, marginLeft: 6 }}>
+                                            <Avatar user={{ display_name: msg.name, avatar_color: msg.color, avatar_base64: msg.avatar }} size={20}/>
+                                            <span style={{ fontSize: 11, color: '#999' }}>{msg.name}</span>
+                                        </div>
+                                    )}
+                                    <div style={{ maxWidth: '65%', position: 'relative' }}
+                                        onDoubleClick={() => setReactionTarget(reactionTarget === msg.id ? null : msg.id)}>
+                                        <div style={{ padding: msg.content_type === 'image' ? 4 : '8px 12px', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px', background: isMe ? '#007AFF' : '#e9e9eb', color: isMe ? 'white' : '#111', fontSize: 14, wordBreak: 'break-word', cursor: 'default' }}>
+                                            {renderMsgContent(msg)}
+                                        </div>
+                                        <div style={{ fontSize: 10, color: '#bbb', marginTop: 2, textAlign: isMe ? 'right' : 'left', paddingInline: 4 }}>{formatTime(msg.ts)}</div>
+                                        {isLastMine && readReceipts[msg.id] && <div style={{ fontSize: 10, color: '#007AFF', textAlign: 'right', paddingRight: 4 }}>Read</div>}
+                                        {hasReactions && (
+                                            <div style={{ display: 'flex', gap: 4, marginTop: 4, justifyContent: isMe ? 'flex-end' : 'flex-start', flexWrap: 'wrap' }}>
+                                                {Object.entries(msg.reactions).map(([emoji, users]) => users.length > 0 && (
+                                                    <span key={emoji} onClick={() => addReaction(msg.id, emoji)} style={{ background: 'rgba(0,0,0,0.07)', borderRadius: 12, padding: '2px 7px', fontSize: 13, cursor: 'pointer' }}>{emoji} {users.length}</span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {reactionTarget === msg.id && (
+                                            <div style={{ position: 'absolute', bottom: '100%', [isMe ? 'right' : 'left']: 0, background: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 20, padding: '4px 8px', display: 'flex', gap: 4, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', zIndex: 10 }}>
+                                                {['❤️','😂','👍','😮','😢','🔥'].map(emoji => (
+                                                    <span key={emoji} onClick={() => addReaction(msg.id, emoji)} style={{ fontSize: 20, cursor: 'pointer', padding: '2px 4px', borderRadius: 6, transition: 'transform 0.1s' }}
+                                                        onMouseEnter={e => e.target.style.transform='scale(1.3)'}
+                                                        onMouseLeave={e => e.target.style.transform='scale(1)'}>{emoji}</span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {typingList.length > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start', color: '#999', fontSize: 12 }}>
+                                <span style={{ background: '#e9e9eb', borderRadius: 12, padding: '6px 12px' }}>
+                                    <span style={{ display: 'inline-flex', gap: 3 }}>
+                                        {[0,1,2].map(n => <span key={n} style={{ width: 6, height: 6, borderRadius: '50%', background: '#999', display: 'inline-block', animation: `bounce 1s ${n * 0.2}s infinite` }}/>)}
+                                    </span>
+                                </span>
+                            </div>
+                        )}
+                        {messages.length === 0 && <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 13 }}>No messages yet. Say hello!</div>}
+                    </div>
+
+                    {/* Attachment preview */}
+                    {attachFile && (
+                        <div style={{ padding: '8px 16px', background: '#f5f5f5', borderTop: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {attachFile.mime?.startsWith('image/') ? <img src={attachFile.base64} style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }}/> : <span style={{ fontSize: 24 }}>📎</span>}
+                            <span style={{ fontSize: 13, color: '#333', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{attachFile.name}</span>
+                            <button onClick={() => setAttachFile(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#FF3B30' }}>✕</button>
+                        </div>
+                    )}
+
+                    {/* Playlist picker */}
+                    {showPlaylistPicker && playlists.length > 0 && (
+                        <div style={{ position: 'absolute', bottom: 60, right: 20, background: 'white', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, minWidth: 200, overflow: 'hidden' }}>
+                            <div style={{ padding: '8px 12px', fontSize: 12, fontWeight: 600, color: '#666', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>Share Playlist</div>
+                            {playlists.map((pl, i) => (
+                                <div key={i} onClick={() => sendPlaylist(pl)} style={{ padding: '10px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.04)' }}
+                                    onMouseEnter={e => e.currentTarget.style.background='#f5f5f5'}
+                                    onMouseLeave={e => e.currentTarget.style.background='white'}>
+                                    🎵 {pl.name} <span style={{ color: '#999', fontSize: 12 }}>({pl.songs?.length || 0})</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Input bar */}
+                    <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+                        {/* File attach */}
+                        <button onClick={() => fileInputRef.current?.click()} title="Attach file" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#007AFF', padding: 4, lineHeight: 1 }}>📎</button>
+                        <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={e => {
+                            const f = e.target.files?.[0]; if (!f) return;
+                            if (f.size > 5 * 1024 * 1024) { alert('File too large (max 5MB)'); return; }
+                            if (f.type.startsWith('image/')) {
+                                resizeImage(f, 800, 0.8, (b64) => setAttachFile({ base64: b64, name: f.name, mime: f.type }));
+                            } else {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => setAttachFile({ base64: ev.target.result, name: f.name, mime: f.type });
+                                reader.readAsDataURL(f);
+                            }
+                            e.target.value = '';
+                        }}/>
+                        {/* Playlist share */}
+                        <button onClick={() => setShowPlaylistPicker(v => !v)} title="Share playlist" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#007AFF', padding: 4, lineHeight: 1 }}>🎵</button>
+                        {/* Text input */}
+                        <input type="text" value={input} onChange={e => handleInputChange(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                            placeholder="iMessage" disabled={!!attachFile}
+                            style={{ flex: 1, padding: '8px 14px', borderRadius: 20, border: '1px solid rgba(0,0,0,0.12)', fontSize: 14, outline: 'none', background: attachFile ? '#f5f5f5' : 'white' }}/>
+                        <button onClick={sendMessage} disabled={!input.trim() && !attachFile}
+                            style={{ width: 32, height: 32, borderRadius: '50%', background: (input.trim() || attachFile) ? '#007AFF' : '#c7c7cc', border: 'none', cursor: (input.trim() || attachFile) ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        </button>
+                    </div>
+                </>)}
+            </div>
+
+            {/* ── Create Group Modal ── */}
+            {showCreateGroup && (
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}
+                    onClick={e => { if (e.target === e.currentTarget) setShowCreateGroup(false); }}>
+                    <div style={{ background: 'white', borderRadius: 16, padding: 24, width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                        <h3 style={{ margin: '0 0 16px', fontSize: 17, fontWeight: 600 }}>New Group</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                            <div onClick={() => groupAvatarRef.current?.click()} style={{ width: 56, height: 56, borderRadius: '50%', background: '#AF52DE', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', flexShrink: 0 }}>
+                                {newGroupAvatar ? <img src={newGroupAvatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <span style={{ fontSize: 24 }}>👥</span>}
+                            </div>
+                            <input ref={groupAvatarRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) resizeImage(f, 128, 0.8, setNewGroupAvatar); e.target.value = ''; }}/>
+                            <input value={newGroupName} onChange={e => setNewGroupName(e.target.value)} placeholder="Group name" style={{ flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.15)', fontSize: 14, outline: 'none' }}/>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Add Members</div>
+                        <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 10, marginBottom: 16 }}>
+                            {friends.length === 0 ? <div style={{ padding: 16, color: '#999', fontSize: 13, textAlign: 'center' }}>No friends to add</div> : friends.map(f => (
+                                <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                                    <input type="checkbox" checked={newGroupMembers.includes(f.id)} onChange={e => setNewGroupMembers(prev => e.target.checked ? [...prev, f.id] : prev.filter(id => id !== f.id))} style={{ width: 16, height: 16 }}/>
+                                    <Avatar user={f} size={28}/>
+                                    <span style={{ fontSize: 13, fontWeight: 500 }}>{f.display_name}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => setShowCreateGroup(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, background: 'rgba(0,0,0,0.07)', border: 'none', fontSize: 14, cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={createGroup} disabled={!newGroupName.trim()} style={{ flex: 1, padding: '10px', borderRadius: 10, background: newGroupName.trim() ? '#007AFF' : '#c7c7cc', color: 'white', border: 'none', fontSize: 14, fontWeight: 600, cursor: newGroupName.trim() ? 'pointer' : 'default' }}>Create Group</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
-
 
 window.MessagesApp = MessagesApp;
 </script>
 
 <script type="text/babel">
-// ─── Login / Register App ─────────────────────────────────────────────────────
+// ─── Login / Register / Forgot Password App ───────────────────────────────────
 const LoginApp = ({ onLogin }) => {
-    const [mode, setMode] = React.useState('login'); // 'login' | 'register'
-    const [username, setUsername] = React.useState('');
+    // modes: 'login' | 'register' | 'verify-register' | 'forgot' | 'verify-reset'
+    const [mode, setMode] = React.useState('login');
+    const [email, setEmail] = React.useState('');
     const [password, setPassword] = React.useState('');
     const [displayName, setDisplayName] = React.useState('');
+    const [code, setCode] = React.useState('');
+    const [newPassword, setNewPassword] = React.useState('');
     const [error, setError] = React.useState('');
+    const [successMsg, setSuccessMsg] = React.useState('');
     const [loading, setLoading] = React.useState(false);
 
-    const submit = async () => {
-        setError(''); setLoading(true);
-        try {
-            let data;
-            if (mode === 'login') {
-                data = await API.post('/api/auth/login', { username, password });
-            } else {
-                data = await API.post('/api/auth/register', { username, password, display_name: displayName || username });
-            }
-            API.setToken(data.token);
-            WSManager.connect(data.token);
-            MacStore.setState({ currentUser: data.user });
-            onLogin(data.user);
-        } catch (e) {
-            setError(e.error || 'Something went wrong');
-        } finally {
-            setLoading(false);
-        }
+    const inputStyle = { background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 16px', color: 'white', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' };
+    const btnStyle = (disabled) => ({ marginTop: 20, width: '100%', padding: '13px', borderRadius: 12, background: disabled ? 'rgba(255,255,255,0.2)' : '#007AFF', color: 'white', fontWeight: 600, fontSize: 15, border: 'none', cursor: disabled ? 'default' : 'pointer', transition: 'background 0.2s' });
+    const linkStyle = { color: '#007AFF', cursor: 'pointer', fontWeight: 500 };
+
+    const switchMode = (m) => { setMode(m); setError(''); setSuccessMsg(''); setCode(''); };
+
+    const afterLogin = (data) => {
+        API.setToken(data.token);
+        WSManager.connect(data.token);
+        MacStore.setState({ currentUser: data.user });
+        API.get('/api/friends').then(f => MacStore.setState({ friends: f })).catch(()=>{});
+        API.get('/api/friends/requests').then(r => MacStore.setState({ friendRequests: r })).catch(()=>{});
+        API.get('/api/groups').then(g => MacStore.setState({ groups: g })).catch(()=>{});
+        onLogin(data.user);
     };
 
-    const onKey = (e) => { if (e.key === 'Enter') submit(); };
+    const handleLogin = async () => {
+        setError(''); setLoading(true);
+        try { afterLogin(await API.post('/api/auth/login', { email, password })); }
+        catch (e) { setError(e.error || 'Invalid email or password'); }
+        finally { setLoading(false); }
+    };
+
+    const handleSendRegisterCode = async () => {
+        setError(''); setLoading(true);
+        try {
+            await API.post('/api/auth/send-register-code', { email, password, display_name: displayName || email.split('@')[0] });
+            setSuccessMsg('Check your email for a 6-digit code.');
+            setMode('verify-register');
+        } catch (e) { setError(e.error || 'Failed to send code'); }
+        finally { setLoading(false); }
+    };
+
+    const handleVerifyRegister = async () => {
+        setError(''); setLoading(true);
+        try { afterLogin(await API.post('/api/auth/verify-register', { email, code })); }
+        catch (e) { setError(e.error || 'Invalid or expired code'); }
+        finally { setLoading(false); }
+    };
+
+    const handleSendResetCode = async () => {
+        setError(''); setLoading(true);
+        try {
+            await API.post('/api/auth/send-reset-code', { email });
+            setSuccessMsg('If that email exists, a reset code has been sent.');
+            setMode('verify-reset');
+        } catch (e) { setError(e.error || 'Failed to send code'); }
+        finally { setLoading(false); }
+    };
+
+    const handleVerifyReset = async () => {
+        setError(''); setLoading(true);
+        try {
+            await API.post('/api/auth/verify-reset', { email, code, new_password: newPassword });
+            setSuccessMsg('Password updated! Please sign in.');
+            switchMode('login');
+        } catch (e) { setError(e.error || 'Invalid or expired code'); }
+        finally { setLoading(false); }
+    };
+
+    const onKey = (e) => {
+        if (e.key !== 'Enter') return;
+        if (mode === 'login') handleLogin();
+        else if (mode === 'register') handleSendRegisterCode();
+        else if (mode === 'verify-register') handleVerifyRegister();
+        else if (mode === 'forgot') handleSendResetCode();
+        else if (mode === 'verify-reset') handleVerifyReset();
+    };
+
+    const titles = { login: 'Sign In', register: 'Create Account', 'verify-register': 'Verify Email', forgot: 'Forgot Password', 'verify-reset': 'Reset Password' };
+    const subtitles = { login: 'Sign in to your macOS account', register: 'Create your macOS account', 'verify-register': `Enter the code sent to ${email}`, forgot: 'Enter your email to receive a reset code', 'verify-reset': `Enter the code sent to ${email}` };
 
     return (
-        <div style={{
-            position: 'fixed', inset: 0, zIndex: 99999,
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        }}>
-            {/* Apple logo */}
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="60" height="60" viewBox="0 0 814 1000" style={{ marginBottom: 24 }}>
                 <path fill="white" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 268.5-317.3 99.8 0 182.6 66.5 244.9 66.5 59.9 0 154.1-70.1 269.7-70.1zm-174.6-209.5c43.5-53.5 71.7-127.5 71.7-201.5 0-9.9-.9-19.9-2.4-29.3-68.1 2.6-149.6 44.9-199.1 103.7-39 47.6-72.3 121.5-72.3 196.5 0 10.3 1.7 20.6 2.5 23.4 4.4.7 11.4 1.6 18.4 1.6 60.1 0 136.1-40.2 181.2-94.4z"/>
             </svg>
 
-            <div style={{
-                background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(30px)',
-                borderRadius: 20, padding: '40px 48px', width: 360,
-                border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 32px 64px rgba(0,0,0,0.5)',
-            }}>
-                <h2 style={{ color: 'white', fontSize: 24, fontWeight: 600, marginBottom: 6, textAlign: 'center' }}>
-                    {mode === 'login' ? 'Sign In' : 'Create Account'}
-                </h2>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 28 }}>
-                    {mode === 'login' ? 'Sign in to your macOS account' : 'Create your macOS account'}
-                </p>
+            <div style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(30px)', borderRadius: 20, padding: '40px 48px', width: 380, border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 32px 64px rgba(0,0,0,0.5)' }}>
+                <h2 style={{ color: 'white', fontSize: 24, fontWeight: 600, marginBottom: 6, textAlign: 'center' }}>{titles[mode]}</h2>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 24 }}>{subtitles[mode]}</p>
 
-                {error && (
-                    <div style={{ background: 'rgba(255,59,48,0.2)', border: '1px solid rgba(255,59,48,0.4)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: '#FF6B6B', fontSize: 13 }}>
-                        {error}
-                    </div>
-                )}
+                {successMsg && <div style={{ background: 'rgba(52,199,89,0.2)', border: '1px solid rgba(52,199,89,0.4)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: '#4CD964', fontSize: 13 }}>{successMsg}</div>}
+                {error && <div style={{ background: 'rgba(255,59,48,0.2)', border: '1px solid rgba(255,59,48,0.4)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: '#FF6B6B', fontSize: 13 }}>{error}</div>}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {mode === 'register' && (
-                        <input
-                            value={displayName} onChange={e => setDisplayName(e.target.value)} onKeyDown={onKey}
-                            placeholder="Display name (optional)"
-                            style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 16px', color: 'white', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }}
-                        />
+                        <input value={displayName} onChange={e => setDisplayName(e.target.value)} onKeyDown={onKey} placeholder="Display name (optional)" style={inputStyle}/>
                     )}
-                    <input
-                        value={username} onChange={e => setUsername(e.target.value)} onKeyDown={onKey}
-                        placeholder="Username"
-                        style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 16px', color: 'white', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }}
-                    />
-                    <input
-                        type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={onKey}
-                        placeholder="Password"
-                        style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 16px', color: 'white', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }}
-                    />
+                    {(mode === 'login' || mode === 'register' || mode === 'forgot') && (
+                        <input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={onKey} placeholder="Email address" style={inputStyle}/>
+                    )}
+                    {(mode === 'login' || mode === 'register') && (
+                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={onKey} placeholder="Password" style={inputStyle}/>
+                    )}
+                    {(mode === 'verify-register' || mode === 'verify-reset') && (
+                        <input value={code} onChange={e => setCode(e.target.value)} onKeyDown={onKey} placeholder="6-digit code" maxLength={6} style={{ ...inputStyle, fontSize: 22, letterSpacing: 8, textAlign: 'center' }}/>
+                    )}
+                    {mode === 'verify-reset' && (
+                        <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} onKeyDown={onKey} placeholder="New password" style={inputStyle}/>
+                    )}
                 </div>
 
-                <button onClick={submit} disabled={loading || !username || !password}
-                    style={{
-                        marginTop: 20, width: '100%', padding: '13px', borderRadius: 12,
-                        background: loading || !username || !password ? 'rgba(255,255,255,0.2)' : '#007AFF',
-                        color: 'white', fontWeight: 600, fontSize: 15, border: 'none', cursor: loading ? 'wait' : 'pointer',
-                        transition: 'background 0.2s',
-                    }}>
-                    {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
-                </button>
+                {mode === 'login' && (
+                    <div style={{ textAlign: 'right', marginTop: 8 }}>
+                        <span onClick={() => switchMode('forgot')} style={{ ...linkStyle, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Forgot password?</span>
+                    </div>
+                )}
+
+                {mode === 'login' && <button onClick={handleLogin} disabled={loading || !email || !password} style={btnStyle(loading || !email || !password)}>{loading ? 'Signing in...' : 'Sign In'}</button>}
+                {mode === 'register' && <button onClick={handleSendRegisterCode} disabled={loading || !email || !password} style={btnStyle(loading || !email || !password)}>{loading ? 'Sending code...' : 'Send Verification Code'}</button>}
+                {mode === 'verify-register' && <button onClick={handleVerifyRegister} disabled={loading || code.length !== 6} style={btnStyle(loading || code.length !== 6)}>{loading ? 'Verifying...' : 'Verify & Create Account'}</button>}
+                {mode === 'forgot' && <button onClick={handleSendResetCode} disabled={loading || !email} style={btnStyle(loading || !email)}>{loading ? 'Sending...' : 'Send Reset Code'}</button>}
+                {mode === 'verify-reset' && <button onClick={handleVerifyReset} disabled={loading || code.length !== 6 || !newPassword} style={btnStyle(loading || code.length !== 6 || !newPassword)}>{loading ? 'Resetting...' : 'Reset Password'}</button>}
 
                 <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginTop: 20 }}>
-                    {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-                    <span onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
-                        style={{ color: '#007AFF', cursor: 'pointer', fontWeight: 500 }}>
-                        {mode === 'login' ? 'Create one' : 'Sign in'}
-                    </span>
+                    {mode === 'login' && <><span>Don't have an account? </span><span onClick={() => switchMode('register')} style={linkStyle}>Create one</span></>}
+                    {mode === 'register' && <><span>Already have an account? </span><span onClick={() => switchMode('login')} style={linkStyle}>Sign in</span></>}
+                    {(mode === 'verify-register' || mode === 'forgot' || mode === 'verify-reset') && <><span onClick={() => switchMode('login')} style={linkStyle}>← Back to Sign In</span></>}
                 </p>
             </div>
 
-            <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 32 }}>
-                macOS Sonoma Web · Backed by Node.js + SQLite
-            </p>
+            <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 32 }}>macOS Sonoma Web · Backed by Node.js</p>
         </div>
     );
 };
@@ -5726,6 +6369,13 @@ const MusicApp = () => {
         if (saved) { try { setLibrary(JSON.parse(saved)); } catch(e) {} }
         const savedPl = localStorage.getItem('macos_music_playlists');
         if (savedPl) { try { setPlaylists(JSON.parse(savedPl)); } catch(e) {} }
+        // Handle playlist shared from Messages app
+        const pp = MacStore.getState().pendingPlaylist;
+        if (pp) {
+            setViewingPlaylist(pp);
+            setActiveNav('Playlists');
+            MacStore.setState({ pendingPlaylist: null });
+        }
     }, []);
 
     // Get the audio element ref (rendered in JSX below)
@@ -10274,6 +10924,9 @@ const Desktop = () => {
                 API.get('/api/auth/me').then(user => {
                     MacStore.setState({ currentUser: user });
                     WSManager.connect(API.token);
+                    API.get('/api/friends').then(f => MacStore.setState({ friends: f })).catch(()=>{});
+                    API.get('/api/friends/requests').then(r => MacStore.setState({ friendRequests: r })).catch(()=>{});
+                    API.get('/api/groups').then(g => MacStore.setState({ groups: g })).catch(()=>{});
                 }).catch(() => {
                     API.setToken(null);
                     setShowLogin(true);
