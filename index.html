@@ -674,14 +674,25 @@ const API = {
     token: null,
 
     async request(method, path, body) {
-        const res = await fetch(this.BASE + path, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                ...(this.token ? { Authorization: 'Bearer ' + this.token } : {}),
-            },
-            body: body !== undefined ? JSON.stringify(body) : undefined,
-        });
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 15000);
+        let res;
+        try {
+            res = await fetch(this.BASE + path, {
+                method,
+                signal: controller.signal,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(this.token ? { Authorization: 'Bearer ' + this.token } : {}),
+                },
+                body: body !== undefined ? JSON.stringify(body) : undefined,
+            });
+        } catch (e) {
+            clearTimeout(timer);
+            if (e.name === 'AbortError') throw { error: 'Request timed out. Server may be starting up — try again in 30 seconds.' };
+            throw { error: 'Cannot connect to server. Check your internet connection.' };
+        }
+        clearTimeout(timer);
         const data = await res.json();
         if (!res.ok) throw data;
         return data;
