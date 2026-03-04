@@ -25,11 +25,15 @@ const mailer = nodemailer.createTransport({
 });
 
 const sendEmail = async (to, subject, text) => {
-    if (!EMAIL_USER) { console.warn('[email] EMAIL_USER not set, skipping send'); return; }
+    if (!EMAIL_USER) return false; // not configured, skip
     try {
         await mailer.sendMail({ from: `"macOS Sonoma" <${EMAIL_USER}>`, to, subject, text });
         console.log(`[email] Sent "${subject}" to ${to}`);
-    } catch (e) { console.error('[email] Failed:', e.message); }
+        return true;
+    } catch (e) {
+        console.error('[email] Failed:', e.message);
+        throw new Error('Failed to send email: ' + e.message);
+    }
 };
 
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -379,7 +383,15 @@ app.post('/api/auth/send-register-code', async (req, res) => {
         pending_password_hash: hash,
         pending_display_name: display_name || email.split('@')[0],
     });
-    await sendEmail(email, 'Your macOS Sonoma verification code', `Your verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, ignore this email.`);
+    try {
+        const sent = await sendEmail(email, 'Your macOS Sonoma verification code', `Your verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, ignore this email.`);
+        if (sent === false) {
+            // Email not configured — return code directly for local dev
+            return res.json({ success: true, dev_code: code, message: 'Email not configured. Use this code: ' + code });
+        }
+    } catch (e) {
+        return res.status(500).json({ error: 'Could not send email. Check server email configuration. ' + e.message });
+    }
     res.json({ success: true, message: 'Verification code sent to ' + email });
 });
 

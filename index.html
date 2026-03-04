@@ -3878,7 +3878,7 @@ const SettingsApp = () => {
                             <div className="px-4 py-3 border-b border-black/[0.04]">
                                 <div className="flex items-center gap-3">
                                     <span className="text-[16px]">🔈</span>
-                                    <SettingsSlider accentColor={accentColor}value={volume} onChange={v => MacStore.setState({ volume: v })}/>
+                                    <SettingsSlider accentColor={accentColor} value={volume} onChange={v => MacStore.setState({ volume: v })}/>
                                     <span className="text-[16px]">🔊</span>
                                 </div>
                             </div>
@@ -4564,7 +4564,7 @@ const MessagesApp = () => {
                 MacStore.setState(s => ({ groups: [...s.groups, msg.group] }));
             }
             if (msg.type === 'reaction_update') {
-                const key = msg.context === 'group' ? 'group:' + msg.group_id : (msg.context === 'dm' ? null : null);
+                const key = msg.context === 'group' ? 'group:' + msg.group_id : (msg.context === 'dm' ? 'dm:' + msg.from_user_id : null);
                 if (key) {
                     setMsgMap(prev => {
                         const msgs = (prev[key] || []).map(m => m.id === msg.message_id ? { ...m, reactions: msg.reactions } : m);
@@ -4896,7 +4896,7 @@ const MessagesApp = () => {
                         {activeId.startsWith('dm:') && activeInfo.user && <Avatar user={activeInfo.user} size={34}/>}
                         {activeId.startsWith('group:') && (
                             <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#AF52DE', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                                {activeInfo.group?.avatar_base64 ? <img src={activeInfo.group.avatar_base64} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <span style={{ color: 'white', fontWeight: 700 }}>{activeInfo.name[0]}</span>}
+                                {activeInfo.group?.avatar_base64 ? <img src={activeInfo.group.avatar_base64} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <span style={{ color: 'white', fontWeight: 700 }}>{(activeInfo.name || 'G')[0]}</span>}
                             </div>
                         )}
                         <div>
@@ -5091,8 +5091,13 @@ const LoginApp = ({ onLogin }) => {
     const handleSendRegisterCode = async () => {
         setError(''); setLoading(true);
         try {
-            await API.post('/api/auth/send-register-code', { email, password, display_name: displayName || email.split('@')[0] });
-            setSuccessMsg('Check your email for a 6-digit code.');
+            const res = await API.post('/api/auth/send-register-code', { email, password, display_name: displayName || email.split('@')[0] });
+            if (res.dev_code) {
+                setCode(res.dev_code);
+                setSuccessMsg('Dev mode: code is ' + res.dev_code);
+            } else {
+                setSuccessMsg('Check your email for a 6-digit code.');
+            }
             setMode('verify-register');
         } catch (e) { setError(e.error || 'Failed to send code'); }
         finally { setLoading(false); }
