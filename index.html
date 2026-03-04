@@ -665,7 +665,7 @@ const SoundManager = {
 <script>
 // ─── Backend API Service ───────────────────────────────────────────────────────
 const API = {
-    BASE: 'http://localhost:3001',
+    BASE: 'https://macos-sonoma.onrender.com',
     token: null,
 
     async request(method, path, body) {
@@ -709,7 +709,7 @@ const WSManager = {
 
     connect(token) {
         if (this.ws && this.ws.readyState < 2) this.ws.close();
-        this.ws = new WebSocket(`ws://localhost:3001/?token=${token}`);
+        this.ws = new WebSocket(`wss://macos-sonoma.onrender.com/?token=${token}`);
 
         this.ws.onmessage = (e) => {
             try {
@@ -2850,7 +2850,7 @@ const CalculatorApp = () => {
                     {/* Row 5: extras + 0/./= row */}
                     <div className="flex flex-1 gap-0.5">
                         <SciBtn label="x!"/><SciBtn label="Rand"/><SciBtn label="EE"/><SciBtn label="←" fn="←"/>
-                        <button onMouseDown={e => e.stopPropagation()} onClick={() => setIsDeg(d => !d)}
+                        <button onMouseDown={e => e.12stopPropagation()} onClick={() => setIsDeg(d => !d)}
                             className="flex-1 flex items-center justify-center bg-[#4a4a4a] hover:bg-[#606060] text-white text-[13px] font-medium transition-colors cursor-default">
                             {isDeg ? 'Deg' : 'Rad'}
                         </button>
