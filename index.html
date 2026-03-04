@@ -662,6 +662,89 @@ const SoundManager = {
 };
 </script>
 
+<script>
+// ─── Backend API Service ───────────────────────────────────────────────────────
+const API = {
+    BASE: 'http://localhost:3001',
+    token: null,
+
+    async request(method, path, body) {
+        const res = await fetch(this.BASE + path, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.token ? { Authorization: 'Bearer ' + this.token } : {}),
+            },
+            body: body !== undefined ? JSON.stringify(body) : undefined,
+        });
+        const data = await res.json();
+        if (!res.ok) throw data;
+        return data;
+    },
+
+    get(path) { return this.request('GET', path); },
+    post(path, body) { return this.request('POST', path, body); },
+    put(path, body) { return this.request('PUT', path, body); },
+    del(path, body) { return this.request('DELETE', path, body); },
+
+    setToken(token) {
+        this.token = token;
+        if (token) localStorage.setItem('macos_jwt', token);
+        else localStorage.removeItem('macos_jwt');
+    },
+
+    async ping() {
+        try {
+            const r = await fetch(this.BASE + '/api/ping', { signal: AbortSignal.timeout(2000) });
+            return r.ok;
+        } catch { return false; }
+    },
+};
+
+// ─── WebSocket Manager ────────────────────────────────────────────────────────
+const WSManager = {
+    ws: null,
+    handlers: [],
+    reconnectTimer: null,
+
+    connect(token) {
+        if (this.ws && this.ws.readyState < 2) this.ws.close();
+        this.ws = new WebSocket(`ws://localhost:3001/?token=${token}`);
+
+        this.ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                this.handlers.forEach(fn => fn(msg));
+            } catch {}
+        };
+
+        this.ws.onclose = () => {
+            clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = setTimeout(() => {
+                if (API.token) this.connect(API.token);
+            }, 3000);
+        };
+    },
+
+    on(fn) { this.handlers.push(fn); return () => { this.handlers = this.handlers.filter(h => h !== fn); }; },
+
+    send(data) {
+        if (this.ws && this.ws.readyState === 1) {
+            this.ws.send(JSON.stringify(data));
+        }
+    },
+
+    disconnect() {
+        clearTimeout(this.reconnectTimer);
+        this.handlers = [];
+        if (this.ws) { this.ws.onclose = null; this.ws.close(); this.ws = null; }
+    },
+};
+
+// Try to restore session from localStorage
+API.token = localStorage.getItem('macos_jwt') || null;
+</script>
+
 <script type="text/babel">
 // Global state store for macOS Sonoma
 const { useState: _useState, useCallback: _useCallback, useEffect: _useEffect, useRef: _useRef, createContext: _createContext, useContext: _useContext, useMemo: _useMemo } = React;
@@ -754,6 +837,9 @@ const VFS = {
         }
         this.save();
         MacStore.setState(s => ({ vfsVersion: (s.vfsVersion || 0) + 1 }));
+        if (MacStore.getState().backendOnline) {
+            API.post('/api/files', { path, name, type: 'folder' }).catch(() => {});
+        }
         return true;
     },
 
@@ -761,13 +847,18 @@ const VFS = {
         const filePath = path + '/' + name;
         const ext = name.split('.').pop().toLowerCase();
         const icons = { txt: '📝', md: '📝', pdf: '📄', doc: '📄', docx: '📄', xls: '📊', xlsx: '📊', png: '🖼️', jpg: '🖼️', jpeg: '🖼️', gif: '🖼️', zip: '📦', dmg: '💿', app: '📦' };
-        this._fs[filePath] = { type: 'file', icon: icons[ext] || icon, size: content.length > 0 ? (content.length > 1024 ? Math.floor(content.length/1024) + ' KB' : content.length + ' B') : '0 KB', content: content };
+        const fileIcon = icons[ext] || icon;
+        const size = content.length > 0 ? (content.length > 1024 ? Math.floor(content.length/1024) + ' KB' : content.length + ' B') : '0 KB';
+        this._fs[filePath] = { type: 'file', icon: fileIcon, size, content };
         const parent = this._fs[path];
         if (parent && parent.type === 'dir' && !parent.children.includes(name)) {
             parent.children.push(name);
         }
         this.save();
         MacStore.setState(s => ({ vfsVersion: (s.vfsVersion || 0) + 1 }));
+        if (MacStore.getState().backendOnline) {
+            API.post('/api/files', { path, name, type: 'file', content, icon: fileIcon, size }).catch(() => {});
+        }
         return true;
     },
 
@@ -777,6 +868,12 @@ const VFS = {
             this._fs[path].size = content.length > 1024 ? Math.floor(content.length/1024) + ' KB' : content.length + ' B';
             this.save();
             MacStore.setState(s => ({ vfsVersion: (s.vfsVersion || 0) + 1 }));
+            if (MacStore.getState().backendOnline) {
+                const parts = path.split('/');
+                const name = parts.pop();
+                const dir = parts.join('/');
+                API.post('/api/files', { path: dir, name, type: 'file', content, size: this._fs[path].size }).catch(() => {});
+            }
             return true;
         }
         return false;
@@ -802,6 +899,9 @@ const VFS = {
         delete this._fs[fullPath];
         this.save();
         MacStore.setState(s => ({ vfsVersion: (s.vfsVersion || 0) + 1 }));
+        if (MacStore.getState().backendOnline) {
+            API.del('/api/files', { path, name }).catch(() => {});
+        }
         return true;
     },
 
@@ -1062,6 +1162,10 @@ const MacStore = {
         // Navigation helpers
         settingsOpenTab: null,
         pendingFinderAction: null,
+        // Backend / auth
+        currentUser: null,
+        backendOnline: false,
+        onlineUserIds: [],
     },
 
     getState() {
@@ -2793,16 +2897,18 @@ window.CalculatorApp = CalculatorApp;
 <script type="text/babel">
 // Notes App - macOS-style with persistence, folders, save to desktop
 const NotesApp = () => {
+    const backendOnline = useStore(s => s.backendOnline);
+    const defaultNotes = [
+        { id: 1, folder: 'All iCloud', title: 'Meeting Notes', body: 'Discussed Q1 roadmap and priorities for the team.\n\n• Focus on performance improvements\n• Ship v2.0 by end of March\n• Hire two more engineers\n• Weekly design reviews starting next Monday\n\nAction items:\n- Set up project board\n- Schedule kickoff meeting\n- Review technical spec document', date: Date.now() - 3600000, pinned: false },
+        { id: 2, folder: 'All iCloud', title: 'Shopping List', body: '• Milk\n• Eggs\n• Bread\n• Butter\n• Apples\n• Chicken breast\n• Olive oil\n• Rice\n• Avocados', date: Date.now() - 86400000, pinned: false },
+        { id: 3, folder: 'All iCloud', title: 'Project Ideas', body: '1. Build a macOS web replica with React\n2. Create a CLI tool for git workflows\n3. Design a personal portfolio site\n4. Develop a Markdown editor\n5. Build a real-time chat app', date: Date.now() - 172800000, pinned: true },
+        { id: 4, folder: 'All iCloud', title: 'Book Recommendations', body: '• The Design of Everyday Things - Don Norman\n• Clean Code - Robert C. Martin\n• Atomic Habits - James Clear\n• Deep Work - Cal Newport\n• The Pragmatic Programmer - Dave Thomas', date: Date.now() - 259200000, pinned: false },
+    ];
     const [notes, setNotes] = React.useState(() => {
         try { const s = localStorage.getItem('macos_notes'); if (s) return JSON.parse(s); } catch(e) {}
-        return [
-            { id: 1, folder: 'All iCloud', title: 'Meeting Notes', body: 'Discussed Q1 roadmap and priorities for the team.\n\n• Focus on performance improvements\n• Ship v2.0 by end of March\n• Hire two more engineers\n• Weekly design reviews starting next Monday\n\nAction items:\n- Set up project board\n- Schedule kickoff meeting\n- Review technical spec document', date: Date.now() - 3600000, pinned: false },
-            { id: 2, folder: 'All iCloud', title: 'Shopping List', body: '• Milk\n• Eggs\n• Bread\n• Butter\n• Apples\n• Chicken breast\n• Olive oil\n• Rice\n• Avocados', date: Date.now() - 86400000, pinned: false },
-            { id: 3, folder: 'All iCloud', title: 'Project Ideas', body: '1. Build a macOS web replica with React\n2. Create a CLI tool for git workflows\n3. Design a personal portfolio site\n4. Develop a Markdown editor\n5. Build a real-time chat app', date: Date.now() - 172800000, pinned: true },
-            { id: 4, folder: 'All iCloud', title: 'Book Recommendations', body: '• The Design of Everyday Things - Don Norman\n• Clean Code - Robert C. Martin\n• Atomic Habits - James Clear\n• Deep Work - Cal Newport\n• The Pragmatic Programmer - Dave Thomas', date: Date.now() - 259200000, pinned: false },
-        ];
+        return defaultNotes;
     });
-    const [activeId, setActiveId] = React.useState(1);
+    const [activeId, setActiveId] = React.useState(notes[0]?.id || 1);
     const [activeFolder, setActiveFolder] = React.useState('All iCloud');
     const [searchQuery, setSearchQuery] = React.useState('');
     const [showFolderInput, setShowFolderInput] = React.useState(false);
@@ -2811,6 +2917,22 @@ const NotesApp = () => {
         try { const s = localStorage.getItem('macos_notes_folders'); if (s) return JSON.parse(s); } catch(e) {}
         return ['All iCloud', 'Personal', 'Work'];
     });
+
+    // Load notes from backend when online
+    React.useEffect(() => {
+        if (!backendOnline) return;
+        API.get('/api/notes').then(serverNotes => {
+            if (serverNotes.length > 0) {
+                const mapped = serverNotes.map(n => ({
+                    id: n.id, folder: n.folder, title: n.title, body: n.body,
+                    date: n.updated_at, pinned: !!n.pinned,
+                }));
+                setNotes(mapped);
+                setActiveId(mapped[0].id);
+                localStorage.setItem('macos_notes', JSON.stringify(mapped));
+            }
+        }).catch(() => {});
+    }, [backendOnline]);
 
     const saveNotes = (n) => { setNotes(n); localStorage.setItem('macos_notes', JSON.stringify(n)); };
     const saveFolders = (f) => { setFolders(f); localStorage.setItem('macos_notes_folders', JSON.stringify(f)); };
@@ -2822,20 +2944,38 @@ const NotesApp = () => {
         .filter(n => !searchQuery || n.title.toLowerCase().includes(searchQuery.toLowerCase()) || n.body.toLowerCase().includes(searchQuery.toLowerCase()))
         .sort((a, b) => { if (a.pinned !== b.pinned) return b.pinned ? 1 : -1; return b.date - a.date; });
 
+    const syncTimer = React.useRef(null);
     const updateNote = (field, value) => {
         const updated = notes.map(n => n.id === activeId ? { ...n, [field]: value, date: Date.now() } : n);
         saveNotes(updated);
+        if (backendOnline) {
+            clearTimeout(syncTimer.current);
+            syncTimer.current = setTimeout(() => {
+                const n = updated.find(x => x.id === activeId);
+                if (n) API.put(`/api/notes/${activeId}`, { title: n.title, body: n.body, folder: n.folder, pinned: n.pinned }).catch(() => {});
+            }, 800);
+        }
     };
 
-    const addNote = () => {
+    const addNote = async () => {
+        const newNote = { folder: activeFolder === 'All iCloud' ? 'All iCloud' : activeFolder, title: '', body: '', date: Date.now(), pinned: false };
+        if (backendOnline) {
+            try {
+                const saved = await API.post('/api/notes', newNote);
+                const mapped = { id: saved.id, ...newNote };
+                saveNotes([mapped, ...notes]);
+                setActiveId(saved.id);
+                return;
+            } catch {}
+        }
         const newId = Date.now();
-        const newNote = { id: newId, folder: activeFolder === 'All iCloud' ? 'All iCloud' : activeFolder, title: '', body: '', date: Date.now(), pinned: false };
-        saveNotes([newNote, ...notes]);
+        saveNotes([{ id: newId, ...newNote }, ...notes]);
         setActiveId(newId);
     };
 
     const deleteNote = () => {
         if (notes.length <= 1) return;
+        if (backendOnline) API.del(`/api/notes/${activeId}`).catch(() => {});
         const newNotes = notes.filter(n => n.id !== activeId);
         saveNotes(newNotes);
         const remaining = newNotes.filter(n => activeFolder === 'All iCloud' || n.folder === activeFolder);
@@ -2845,6 +2985,10 @@ const NotesApp = () => {
     const togglePin = () => {
         const updated = notes.map(n => n.id === activeId ? { ...n, pinned: !n.pinned } : n);
         saveNotes(updated);
+        if (backendOnline) {
+            const n = updated.find(x => x.id === activeId);
+            if (n) API.put(`/api/notes/${activeId}`, { title: n.title, body: n.body, folder: n.folder, pinned: n.pinned }).catch(() => {});
+        }
     };
 
     const saveToDesktop = () => {
@@ -4139,114 +4283,142 @@ window.SettingsRow = SettingsRow;
 </script>
 
 <script type="text/babel">
-// Messages App - Interactive chat
+// Messages App - Real WebSocket chat (falls back to local mock if backend offline)
 const MessagesApp = () => {
-    const [conversations, setConversations] = React.useState([
-        { id: 1, name: 'John', initial: 'J', color: '#007AFF', messages: [
-            { from: 'them', text: 'Hey! How\'s the project going?' },
-            { from: 'me', text: 'Going really well! Almost done with the frontend.' },
-            { from: 'them', text: 'That\'s awesome! Can\'t wait to see it.' },
-            { from: 'me', text: 'I\'ll send you a preview tonight 🎉' },
-            { from: 'them', text: 'Hey, are we still on for tomorrow?' },
-        ], time: '9:30 AM' },
-        { id: 2, name: 'Sarah', initial: 'S', color: '#FF3B30', messages: [
-            { from: 'me', text: 'Just sent the files over' },
-            { from: 'them', text: 'Thanks for sending that over!' },
-        ], time: 'Yesterday' },
-        { id: 3, name: 'Team Chat', initial: 'T', color: '#34C759', messages: [
-            { from: 'them', text: 'The project is looking great 👍' },
-            { from: 'me', text: 'Thanks! The team did an amazing job' },
-        ], time: 'Tuesday' },
-        { id: 4, name: 'Emma', initial: 'E', color: '#FF9500', messages: [
-            { from: 'them', text: 'Can you review the PR?' },
-            { from: 'me', text: 'Sure, I\'ll take a look' },
-        ], time: 'Monday' },
-    ]);
-    const [activeId, setActiveId] = React.useState(1);
+    const currentUser = useStore(s => s.currentUser);
+    const backendOnline = useStore(s => s.backendOnline);
+    const onlineUserIds = useStore(s => s.onlineUserIds);
+
+    // Contacts sidebar: 'global' channel + DM contacts
+    const [contacts, setContacts] = React.useState([]);
+    // messages keyed by contact id ('global' or user id)
+    const [msgMap, setMsgMap] = React.useState({ global: [] });
+    const [activeId, setActiveId] = React.useState('global');
     const [input, setInput] = React.useState('');
     const chatRef = React.useRef(null);
 
-    const active = conversations.find(c => c.id === activeId);
-
-    const sendMessage = () => {
-        if (!input.trim()) return;
-        setConversations(prev => prev.map(c =>
-            c.id === activeId ? {
-                ...c,
-                messages: [...c.messages, { from: 'me', text: input }],
-                time: 'Just now'
-            } : c
-        ));
-        setInput('');
-
-        // Auto-reply after delay
-        setTimeout(() => {
-            const replies = ['That sounds great!', 'Got it 👍', 'Thanks!', 'Let me think about that...', 'Awesome!', '😂', 'Perfect!'];
-            setConversations(prev => prev.map(c =>
-                c.id === activeId ? {
-                    ...c,
-                    messages: [...c.messages, { from: 'them', text: replies[Math.floor(Math.random() * replies.length)] }]
-                } : c
-            ));
-        }, 1000 + Math.random() * 2000);
+    const appendMsg = (contactId, msg) => {
+        setMsgMap(prev => ({ ...prev, [contactId]: [...(prev[contactId] || []), msg] }));
     };
+
+    // Load contacts + history
+    React.useEffect(() => {
+        if (!backendOnline || !currentUser) return;
+        API.get('/api/users').then(users => {
+            setContacts(users);
+            users.forEach(u => setMsgMap(prev => ({ ...prev, [u.id]: prev[u.id] || [] })));
+        }).catch(() => {});
+        API.get('/api/messages').then(msgs => {
+            const global = msgs.map(m => ({
+                id: m.id, from: m.from_user_id === currentUser.id ? 'me' : m.from_user_id,
+                text: m.content, name: m.display_name, color: m.avatar_color,
+            }));
+            setMsgMap(prev => ({ ...prev, global }));
+        }).catch(() => {});
+    }, [backendOnline, currentUser]);
+
+    // WebSocket incoming messages
+    React.useEffect(() => {
+        if (!backendOnline) return;
+        const off = WSManager.on((msg) => {
+            if (msg.type === 'message') {
+                const isMine = msg.from_user_id === currentUser?.id;
+                const entry = {
+                    id: msg.id, from: isMine ? 'me' : msg.from_user_id,
+                    text: msg.content, name: msg.display_name, color: msg.avatar_color,
+                };
+                const contactId = msg.to_user_id ? (isMine ? msg.to_user_id : msg.from_user_id) : 'global';
+                appendMsg(contactId, entry);
+                // Show notification for DMs not in focus
+                if (msg.to_user_id && !isMine) {
+                    MacStore.addNotification('Messages', msg.display_name, msg.content);
+                }
+            }
+            if (msg.type === 'online_users') MacStore.setState({ onlineUserIds: msg.userIds });
+            if (msg.type === 'user_online') MacStore.setState(s => ({ onlineUserIds: [...new Set([...s.onlineUserIds, msg.userId])] }));
+            if (msg.type === 'user_offline') MacStore.setState(s => ({ onlineUserIds: s.onlineUserIds.filter(id => id !== msg.userId) }));
+        });
+        return off;
+    }, [backendOnline, currentUser]);
 
     React.useEffect(() => {
         if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
-    }, [conversations, activeId]);
+    }, [msgMap, activeId]);
+
+    const sendMessage = () => {
+        if (!input.trim()) return;
+        if (backendOnline && currentUser) {
+            WSManager.send({ type: 'message', content: input, to_user_id: activeId === 'global' ? null : activeId });
+        } else {
+            appendMsg(activeId, { id: Date.now(), from: 'me', text: input });
+        }
+        setInput('');
+    };
+
+    const activeContact = contacts.find(c => c.id === activeId);
+    const activeName = activeId === 'global' ? '🌐 Global Chat' : activeContact?.display_name || 'Unknown';
+    const messages = msgMap[activeId] || [];
+
+    const ContactRow = ({ id, name, color, isOnline }) => {
+        const msgs = msgMap[id] || [];
+        const last = msgs[msgs.length - 1];
+        return (
+            <div onClick={() => setActiveId(id)}
+                className={`flex items-center gap-3 px-4 py-2.5 cursor-default border-b border-black/[0.03] ${activeId === id ? 'bg-blue-500 text-white' : 'hover:bg-black/[0.02]'}`}>
+                <div className="relative">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-base font-semibold flex-shrink-0"
+                        style={{ background: color || '#007AFF' }}>
+                        {name[0]?.toUpperCase()}
+                    </div>
+                    {isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white"/>}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <span className="text-[13px] font-semibold">{name}</span>
+                    {last && <div className={`text-[12px] truncate ${activeId === id ? 'text-white/70' : 'text-gray-400'}`}>{last.text}</div>}
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="flex h-full">
             <div className="w-[280px] min-w-[280px] bg-gray-50/95 border-r border-black/5 flex flex-col">
-                <div className="p-3 border-b border-black/5">
-                    <input type="text" placeholder="Search" className="w-full px-3 py-1.5 rounded-lg border border-black/5 bg-white/80 text-[13px] outline-none font-sf"/>
+                <div className="px-4 py-2 border-b border-black/5 flex items-center gap-2">
+                    <span className="text-[12px] font-semibold text-gray-500 flex-1">Messages</span>
+                    {backendOnline && <span className="text-[10px] text-green-500 font-medium">● Live</span>}
                 </div>
                 <div className="flex-1 overflow-y-auto">
-                    {conversations.map(c => (
-                        <div key={c.id}
-                            className={`flex items-center gap-3 px-4 py-2.5 cursor-default border-b border-black/[0.03] ${activeId === c.id ? 'bg-blue-500 text-white' : 'hover:bg-black/[0.02]'}`}
-                            onClick={() => setActiveId(c.id)}
-                        >
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-base font-semibold flex-shrink-0"
-                                style={{ background: c.color }}>{c.initial}</div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[13px] font-semibold">{c.name}</span>
-                                    <span className={`text-[11px] ${activeId === c.id ? 'text-white/70' : 'text-gray-400'}`}>{c.time}</span>
-                                </div>
-                                <div className={`text-[12px] truncate ${activeId === c.id ? 'text-white/70' : 'text-gray-400'}`}>
-                                    {c.messages[c.messages.length - 1]?.text}
-                                </div>
-                            </div>
-                        </div>
+                    <ContactRow id="global" name="Global Chat" color="#34C759" isOnline={backendOnline}/>
+                    {contacts.map(c => (
+                        <ContactRow key={c.id} id={c.id} name={c.display_name} color={c.avatar_color}
+                            isOnline={onlineUserIds.includes(c.id)}/>
                     ))}
+                    {!backendOnline && <div className="px-4 py-8 text-center text-[12px] text-gray-400">Start the backend server to chat with real users</div>}
                 </div>
             </div>
             <div className="flex-1 flex flex-col bg-white">
-                <div className="px-4 py-2.5 border-b border-black/5 text-center font-semibold text-[14px]">
-                    {active?.name}
-                </div>
+                <div className="px-4 py-2.5 border-b border-black/5 text-center font-semibold text-[14px]">{activeName}</div>
                 <div ref={chatRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-                    {active?.messages.map((msg, i) => (
-                        <div key={i} className={`max-w-[65%] px-3.5 py-2 text-[14px] leading-relaxed ${
-                            msg.from === 'me'
-                                ? 'bg-blue-500 text-white self-end rounded-2xl rounded-br-md'
-                                : 'bg-gray-200 text-gray-900 self-start rounded-2xl rounded-bl-md'
-                        }`}>
-                            {msg.text}
+                    {messages.map((msg, i) => (
+                        <div key={msg.id || i} className={`flex flex-col max-w-[65%] ${msg.from === 'me' ? 'self-end items-end' : 'self-start items-start'}`}>
+                            {msg.from !== 'me' && msg.name && (
+                                <span className="text-[11px] text-gray-400 mb-0.5 px-1">{msg.name}</span>
+                            )}
+                            <div className={`px-3.5 py-2 text-[14px] leading-relaxed ${
+                                msg.from === 'me' ? 'bg-blue-500 text-white rounded-2xl rounded-br-md' : 'bg-gray-200 text-gray-900 rounded-2xl rounded-bl-md'
+                            }`}>{msg.text}</div>
                         </div>
                     ))}
+                    {messages.length === 0 && (
+                        <div className="flex-1 flex items-center justify-center text-gray-400 text-[13px]">No messages yet. Say hello!</div>
+                    )}
                 </div>
                 <div className="px-4 py-3 border-t border-black/5 flex items-center gap-2">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
+                    <input type="text" value={input} onChange={e => setInput(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                        placeholder="iMessage"
-                        className="flex-1 px-4 py-2 rounded-full border border-black/10 text-[14px] outline-none font-sf"
-                    />
-                    <button onClick={sendMessage} className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                        placeholder={backendOnline ? 'iMessage' : 'iMessage (offline)'}
+                        className="flex-1 px-4 py-2 rounded-full border border-black/10 text-[14px] outline-none font-sf"/>
+                    <button onClick={sendMessage} className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center cursor-default">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     </button>
                 </div>
@@ -4257,6 +4429,115 @@ const MessagesApp = () => {
 
 
 window.MessagesApp = MessagesApp;
+</script>
+
+<script type="text/babel">
+// ─── Login / Register App ─────────────────────────────────────────────────────
+const LoginApp = ({ onLogin }) => {
+    const [mode, setMode] = React.useState('login'); // 'login' | 'register'
+    const [username, setUsername] = React.useState('');
+    const [password, setPassword] = React.useState('');
+    const [displayName, setDisplayName] = React.useState('');
+    const [error, setError] = React.useState('');
+    const [loading, setLoading] = React.useState(false);
+
+    const submit = async () => {
+        setError(''); setLoading(true);
+        try {
+            let data;
+            if (mode === 'login') {
+                data = await API.post('/api/auth/login', { username, password });
+            } else {
+                data = await API.post('/api/auth/register', { username, password, display_name: displayName || username });
+            }
+            API.setToken(data.token);
+            WSManager.connect(data.token);
+            MacStore.setState({ currentUser: data.user });
+            onLogin(data.user);
+        } catch (e) {
+            setError(e.error || 'Something went wrong');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const onKey = (e) => { if (e.key === 'Enter') submit(); };
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 99999,
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        }}>
+            {/* Apple logo */}
+            <svg width="60" height="60" viewBox="0 0 814 1000" style={{ marginBottom: 24 }}>
+                <path fill="white" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 268.5-317.3 99.8 0 182.6 66.5 244.9 66.5 59.9 0 154.1-70.1 269.7-70.1zm-174.6-209.5c43.5-53.5 71.7-127.5 71.7-201.5 0-9.9-.9-19.9-2.4-29.3-68.1 2.6-149.6 44.9-199.1 103.7-39 47.6-72.3 121.5-72.3 196.5 0 10.3 1.7 20.6 2.5 23.4 4.4.7 11.4 1.6 18.4 1.6 60.1 0 136.1-40.2 181.2-94.4z"/>
+            </svg>
+
+            <div style={{
+                background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(30px)',
+                borderRadius: 20, padding: '40px 48px', width: 360,
+                border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 32px 64px rgba(0,0,0,0.5)',
+            }}>
+                <h2 style={{ color: 'white', fontSize: 24, fontWeight: 600, marginBottom: 6, textAlign: 'center' }}>
+                    {mode === 'login' ? 'Sign In' : 'Create Account'}
+                </h2>
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginBottom: 28 }}>
+                    {mode === 'login' ? 'Sign in to your macOS account' : 'Create your macOS account'}
+                </p>
+
+                {error && (
+                    <div style={{ background: 'rgba(255,59,48,0.2)', border: '1px solid rgba(255,59,48,0.4)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, color: '#FF6B6B', fontSize: 13 }}>
+                        {error}
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {mode === 'register' && (
+                        <input
+                            value={displayName} onChange={e => setDisplayName(e.target.value)} onKeyDown={onKey}
+                            placeholder="Display name (optional)"
+                            style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 16px', color: 'white', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                        />
+                    )}
+                    <input
+                        value={username} onChange={e => setUsername(e.target.value)} onKeyDown={onKey}
+                        placeholder="Username"
+                        style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 16px', color: 'white', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                    />
+                    <input
+                        type="password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={onKey}
+                        placeholder="Password"
+                        style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '12px 16px', color: 'white', fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' }}
+                    />
+                </div>
+
+                <button onClick={submit} disabled={loading || !username || !password}
+                    style={{
+                        marginTop: 20, width: '100%', padding: '13px', borderRadius: 12,
+                        background: loading || !username || !password ? 'rgba(255,255,255,0.2)' : '#007AFF',
+                        color: 'white', fontWeight: 600, fontSize: 15, border: 'none', cursor: loading ? 'wait' : 'pointer',
+                        transition: 'background 0.2s',
+                    }}>
+                    {loading ? 'Please wait...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+                </button>
+
+                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, textAlign: 'center', marginTop: 20 }}>
+                    {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
+                    <span onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+                        style={{ color: '#007AFF', cursor: 'pointer', fontWeight: 500 }}>
+                        {mode === 'login' ? 'Create one' : 'Sign in'}
+                    </span>
+                </p>
+            </div>
+
+            <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, marginTop: 32 }}>
+                macOS Sonoma Web · Backed by Node.js + SQLite
+            </p>
+        </div>
+    );
+};
+window.LoginApp = LoginApp;
 </script>
 
 <script type="text/babel">
@@ -9868,16 +10149,50 @@ const ClockWidget = () => {
 };
 
 const WeatherWidget = () => {
-    const weather = { city: 'San Francisco', temp: 68, condition: 'Partly Cloudy', high: 72, low: 58, icon: '⛅' };
+    const backendOnline = useStore(s => s.backendOnline);
+    const [weather, setWeather] = React.useState(null);
+    const [loading, setLoading] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!backendOnline) return;
+        setLoading(true);
+        API.get('/api/weather').then(data => {
+            setWeather(data);
+            setLoading(false);
+        }).catch(() => setLoading(false));
+    }, [backendOnline]);
+
+    const weatherIcon = (code) => {
+        if (!code) return '🌡️';
+        if (code <= 113) return '☀️';
+        if (code <= 116) return '⛅';
+        if (code <= 119) return '☁️';
+        if (code <= 143) return '🌫️';
+        if (code <= 176) return '🌦️';
+        if (code <= 200) return '⛈️';
+        if (code <= 260) return '🌨️';
+        if (code <= 296) return '🌧️';
+        if (code <= 314) return '🌧️';
+        return '❄️';
+    };
+
+    const fallback = { city: 'San Francisco', temp_f: 68, condition: 'Partly Cloudy', high_f: 72, low_f: 58 };
+    const w = weather || fallback;
+    const icon = weather ? weatherIcon(weather.weather_code) : '⛅';
+
     return (
-        <div style={{ background: 'rgba(0,120,200,0.5)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '16px', padding: '14px 18px', minWidth: '180px', border: '1px solid rgba(255,255,255,0.15)', color: 'white', userSelect: 'none', boxShadow: '0 4px 30px rgba(0,0,0,0.3)' }}>
-            <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9 }}>{weather.city}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                <span style={{ fontSize: '32px' }}>{weather.icon}</span>
-                <span style={{ fontSize: '36px', fontWeight: '300', lineHeight: 1 }}>{weather.temp}°</span>
+        <div style={{ background: 'rgba(0,120,200,0.5)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '16px', padding: '14px 18px', minWidth: '190px', border: '1px solid rgba(255,255,255,0.15)', color: 'white', userSelect: 'none', boxShadow: '0 4px 30px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9 }}>{w.city}</div>
+                {backendOnline && !loading && <div style={{ fontSize: '9px', opacity: 0.6 }}>Live</div>}
+                {loading && <div style={{ fontSize: '9px', opacity: 0.6 }}>...</div>}
             </div>
-            <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '2px' }}>{weather.condition}</div>
-            <div style={{ fontSize: '11px', opacity: 0.65, marginTop: '2px' }}>H:{weather.high}° L:{weather.low}°</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                <span style={{ fontSize: '32px' }}>{icon}</span>
+                <span style={{ fontSize: '36px', fontWeight: '300', lineHeight: 1 }}>{w.temp_f}°</span>
+            </div>
+            <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '2px' }}>{w.condition}</div>
+            <div style={{ fontSize: '11px', opacity: 0.65, marginTop: '2px' }}>H:{w.high_f}° L:{w.low_f}°</div>
         </div>
     );
 };
@@ -9945,6 +10260,29 @@ const Desktop = () => {
     const screenshotRegionMode = useStore(s => s.screenshotRegionMode);
     const desktopWidgets = useStore(s => s.desktopWidgets);
     const hotCorners = useStore(s => s.hotCorners);
+    const currentUser = useStore(s => s.currentUser);
+    const backendOnline = useStore(s => s.backendOnline);
+    const [showLogin, setShowLogin] = React.useState(false);
+
+    // Check backend availability + restore session on mount
+    React.useEffect(() => {
+        API.ping().then(online => {
+            MacStore.setState({ backendOnline: online });
+            if (!online) return;
+            // Try to restore session from stored JWT
+            if (API.token) {
+                API.get('/api/auth/me').then(user => {
+                    MacStore.setState({ currentUser: user });
+                    WSManager.connect(API.token);
+                }).catch(() => {
+                    API.setToken(null);
+                    setShowLogin(true);
+                });
+            } else {
+                setShowLogin(true);
+            }
+        });
+    }, []);
 
     // Hot corners: trigger actions when mouse reaches screen corners
     const hotCornerTimer = React.useRef(null);
@@ -10460,6 +10798,13 @@ const Desktop = () => {
 
     return (
         <div id="desktop-bg" className="fixed inset-0 overflow-hidden" style={wallpaperStyle} onMouseDown={handleDesktopClick}>
+            {/* Login overlay — shown when backend is online but not yet authenticated */}
+            {showLogin && backendOnline && !currentUser && (
+                <LoginApp onLogin={(user) => {
+                    MacStore.setState({ currentUser: user });
+                    setShowLogin(false);
+                }}/>
+            )}
             <MenuBar />
 
             {/* Desktop Icons */}
