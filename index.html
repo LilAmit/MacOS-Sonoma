@@ -2850,7 +2850,7 @@ const CalculatorApp = () => {
                     {/* Row 5: extras + 0/./= row */}
                     <div className="flex flex-1 gap-0.5">
                         <SciBtn label="x!"/><SciBtn label="Rand"/><SciBtn label="EE"/><SciBtn label="←" fn="←"/>
-                        <button onMouseDown={e => e.12stopPropagation()} onClick={() => setIsDeg(d => !d)}
+                        <button onMouseDown={e => e.stopPropagation()} onClick={() => setIsDeg(d => !d)}
                             className="flex-1 flex items-center justify-center bg-[#4a4a4a] hover:bg-[#606060] text-white text-[13px] font-medium transition-colors cursor-default">
                             {isDeg ? 'Deg' : 'Rad'}
                         </button>
