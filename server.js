@@ -19,6 +19,9 @@ const EMAIL_PASS = process.env.EMAIL_PASS || '';
 const mailer = nodemailer.createTransport({
     host: 'smtp.gmail.com', port: 465, secure: true,
     auth: { user: EMAIL_USER, pass: EMAIL_PASS },
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000,
 });
 
 const sendEmail = async (to, subject, text) => {
