@@ -7,33 +7,37 @@ const cors = require('cors');
 const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
-const nodemailer = require('nodemailer');
+// nodemailer removed — using Resend API over HTTPS instead (Render blocks SMTP)
 
 const JWT_SECRET = process.env.JWT_SECRET || 'macos-sonoma-secret-key-2024';
 const PORT = process.env.PORT || 3001;
 const DB_DIR = path.join(__dirname, 'db');
-const EMAIL_USER = process.env.EMAIL_USER || '';
-const EMAIL_PASS = process.env.EMAIL_PASS || '';
 
-// ─── Email ────────────────────────────────────────────────────────────────────
-const mailer = nodemailer.createTransport({
-    host: 'smtp.gmail.com', port: 587, secure: false,
-    auth: { user: EMAIL_USER, pass: EMAIL_PASS },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-});
+// ─── Email (Resend API — works on Render, no SMTP ports needed) ───────────────
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 
 const sendEmail = async (to, subject, text) => {
-    if (!EMAIL_USER) return false; // not configured, skip
-    try {
-        await mailer.sendMail({ from: `"macOS Sonoma" <${EMAIL_USER}>`, to, subject, text });
-        console.log(`[email] Sent "${subject}" to ${to}`);
-        return true;
-    } catch (e) {
-        console.error('[email] Failed:', e.message);
-        throw new Error('Failed to send email: ' + e.message);
+    if (!RESEND_API_KEY) return false; // not configured, skip
+    const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Bearer ' + RESEND_API_KEY,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            from: 'macOS Sonoma <onboarding@resend.dev>',
+            to,
+            subject,
+            text,
+        }),
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        console.error('[email] Resend failed:', err);
+        throw new Error('Failed to send email: ' + err);
     }
+    console.log(`[email] Sent "${subject}" to ${to}`);
+    return true;
 };
 
 const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -434,7 +438,8 @@ app.post('/api/auth/send-reset-code', async (req, res) => {
     if (user) {
         const code = generateCode();
         db.saveVerificationCode(email.toLowerCase(), code, 'reset_password');
-        await sendEmail(email, 'Reset your macOS Sonoma password', `Your password reset code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, ignore this email.`);
+        try { await sendEmail(email, 'Reset your macOS Sonoma password', `Your password reset code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, ignore this email.`); }
+        catch (e) { console.error('[reset] email failed:', e.message); }
     }
     res.json({ success: true, message: 'If that email is registered, a reset code has been sent.' });
 });
@@ -481,7 +486,8 @@ app.put('/api/auth/change-email', auth, async (req, res) => {
     const currentUser = db.getUser(req.user.id);
     const code = generateCode();
     db.saveVerificationCode(currentUser.email, code, 'change_email', { new_email: new_email.toLowerCase() });
-    await sendEmail(new_email, 'Confirm your new email address', `Your email change code is: ${code}\n\nThis code expires in 10 minutes.`);
+    try { await sendEmail(new_email, 'Confirm your new email address', `Your email change code is: ${code}\n\nThis code expires in 10 minutes.`); }
+    catch (e) { return res.status(500).json({ error: 'Could not send confirmation email: ' + e.message }); }
     res.json({ success: true });
 });
 
@@ -882,5 +888,5 @@ server.listen(PORT, () => {
     console.log(`\n🖥️  macOS Sonoma backend v2.0 running at http://localhost:${PORT}`);
     console.log(`📡  WebSocket ready at ws://localhost:${PORT}`);
     console.log(`💾  Database stored in: ${DB_DIR}`);
-    console.log(`📧  Email: ${EMAIL_USER ? EMAIL_USER : 'NOT CONFIGURED (set EMAIL_USER + EMAIL_PASS env vars)'}\n`);
+    console.log(`📧  Email: ${RESEND_API_KEY ? 'Resend configured' : 'NOT CONFIGURED (set RESEND_API_KEY env var)'}\n`);
 });
