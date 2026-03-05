@@ -3551,21 +3551,51 @@ const SettingsApp = () => {
     const [profileName, setProfileName] = React.useState('');
     const [profileAvatar, setProfileAvatar] = React.useState(null);
     const [profileLoading, setProfileLoading] = React.useState(false);
+    const [profileSaved, setProfileSaved] = React.useState(false);
     const [profileMsg, setProfileMsg] = React.useState('');
+    const [tagCopied, setTagCopied] = React.useState(false);
     const avatarFileRef = React.useRef(null);
+    const friendRequests = useStore(s => s.friendRequests);
+    const friends = useStore(s => s.friends);
+    const [sfTag, setSfTag] = React.useState('');
+    const [sfResult, setSfResult] = React.useState(null);
+    const [sfMsg, setSfMsg] = React.useState('');
 
     React.useEffect(() => {
         if (currentUser) { setProfileName(currentUser.display_name || ''); setProfileAvatar(currentUser.avatar_base64 || null); }
     }, [currentUser]);
 
     const saveProfile = async () => {
-        setProfileLoading(true); setProfileMsg('');
+        setProfileLoading(true); setProfileMsg(''); setProfileSaved(false);
         try {
             const updated = await API.put('/api/auth/profile', { display_name: profileName, avatar_base64: profileAvatar });
             MacStore.setState({ currentUser: updated });
-            setProfileMsg('Saved!');
-        } catch (e) { setProfileMsg(e.error || 'Failed to save'); }
-        finally { setProfileLoading(false); setTimeout(() => setProfileMsg(''), 3000); }
+            setProfileSaved(true);
+            setTimeout(() => setProfileSaved(false), 3000);
+        } catch (e) { setProfileMsg(e.error || 'Failed to save'); setTimeout(() => setProfileMsg(''), 3000); }
+        finally { setProfileLoading(false); }
+    };
+
+    const sfSearchByTag = async () => {
+        setSfResult(null); setSfMsg('');
+        const tag = sfTag.replace('#', '').trim();
+        if (!tag) return;
+        try { const u = await API.get('/api/users/search?tag=' + tag); setSfResult(u); }
+        catch (e) { setSfMsg(e.error || 'No user found'); }
+    };
+    const sfSendRequest = async (userId) => {
+        try { await API.post('/api/friends/request', { to_user_id: userId }); setSfMsg('Request sent!'); setSfResult(null); setSfTag(''); }
+        catch (e) { setSfMsg(e.error || 'Failed'); }
+        setTimeout(() => setSfMsg(''), 3000);
+    };
+    const sfAccept = async (reqId) => {
+        await API.post('/api/friends/accept', { request_id: reqId });
+        MacStore.setState(s => ({ friendRequests: s.friendRequests.filter(r => r.id !== reqId) }));
+        API.get('/api/friends').then(f => MacStore.setState({ friends: f })).catch(()=>{});
+    };
+    const sfDecline = async (reqId) => {
+        await API.post('/api/friends/decline', { request_id: reqId });
+        MacStore.setState(s => ({ friendRequests: s.friendRequests.filter(r => r.id !== reqId) }));
     };
 
     const wifiOn = useStore(s => s.wifiOn);
@@ -3694,10 +3724,11 @@ const SettingsApp = () => {
                                 </div>
                             </div>
                             <div style={{ padding: '0 16px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <button onClick={saveProfile} disabled={profileLoading} style={{ padding: '8px 20px', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-                                    {profileLoading ? 'Saving...' : 'Save Profile'}
+                                <button onClick={saveProfile} disabled={profileLoading || profileSaved} style={{ padding: '8px 20px', borderRadius: 8, background: profileSaved ? '#34C759' : '#007AFF', color: 'white', border: 'none', fontWeight: 600, fontSize: 13, cursor: profileLoading || profileSaved ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 7, transition: 'background 0.3s' }}>
+                                    {profileLoading && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" style={{ animation: 'spin 0.7s linear infinite' }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>}
+                                    {profileSaved ? '✓ Changes Saved' : profileLoading ? 'Saving...' : 'Save Changes'}
                                 </button>
-                                {profileMsg && <span style={{ fontSize: 13, color: profileMsg === 'Saved!' ? '#34C759' : '#FF3B30' }}>{profileMsg}</span>}
+                                {profileMsg && <span style={{ fontSize: 13, color: '#FF3B30' }}>{profileMsg}</span>}
                             </div>
                         </SettingsGroup>
 
@@ -3708,9 +3739,47 @@ const SettingsApp = () => {
                                     <div style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>Your unique friend tag — share it to receive friend requests</div>
                                     <div style={{ fontFamily: 'monospace', fontSize: 20, fontWeight: 700, color: '#007AFF', letterSpacing: 2 }}>#{currentUser?.friend_tag || '—'}</div>
                                 </div>
-                                <button onClick={() => { navigator.clipboard?.writeText('#' + (currentUser?.friend_tag || '')); }} style={{ padding: '6px 14px', borderRadius: 8, background: 'rgba(0,122,255,0.1)', color: '#007AFF', border: 'none', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>Copy</button>
+                                <button onClick={() => { navigator.clipboard?.writeText('#' + (currentUser?.friend_tag || '')); setTagCopied(true); setTimeout(() => setTagCopied(false), 2000); }} style={{ padding: '6px 14px', borderRadius: 8, background: tagCopied ? 'rgba(52,199,89,0.12)' : 'rgba(0,122,255,0.1)', color: tagCopied ? '#34C759' : '#007AFF', border: 'none', fontSize: 12, cursor: 'pointer', fontWeight: 500, transition: 'all 0.2s' }}>{tagCopied ? '✓ Copied!' : 'Copy'}</button>
                             </div>
                         </SettingsGroup>
+
+                        {/* Add Friend */}
+                        <SettingsGroup title="Add Friend">
+                            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <input value={sfTag} onChange={e => setSfTag(e.target.value)} onKeyDown={e => e.key === 'Enter' && sfSearchByTag()} placeholder="#tag (e.g. #abc123)" style={{ ...pfInStyle, flex: 1 }}/>
+                                    <button onClick={sfSearchByTag} style={{ padding: '8px 14px', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>Search</button>
+                                </div>
+                                {sfMsg && <div style={{ fontSize: 13, color: sfMsg.includes('sent') || sfMsg.includes('Request') ? '#34C759' : '#FF3B30' }}>{sfMsg}</div>}
+                                {sfResult && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: 10, border: '1px solid rgba(0,0,0,0.08)' }}>
+                                        <Avatar user={sfResult} size={36}/>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600 }}>{sfResult.display_name}</div>
+                                            <div style={{ fontSize: 11, color: '#999' }}>#{sfResult.friend_tag}</div>
+                                        </div>
+                                        <button onClick={() => sfSendRequest(sfResult.id)} style={{ padding: '6px 14px', borderRadius: 8, background: '#34C759', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>Add</button>
+                                    </div>
+                                )}
+                            </div>
+                        </SettingsGroup>
+
+                        {/* Friend Requests */}
+                        {friendRequests.length > 0 && (
+                            <SettingsGroup title={`Friend Requests (${friendRequests.length})`}>
+                                {friendRequests.map(req => (
+                                    <div key={req.id} style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                                        <Avatar user={req.from_user} size={36}/>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600 }}>{req.from_user?.display_name}</div>
+                                            <div style={{ fontSize: 11, color: '#999' }}>#{req.from_user?.friend_tag}</div>
+                                        </div>
+                                        <button onClick={() => sfAccept(req.id)} style={{ padding: '5px 12px', borderRadius: 8, background: '#34C759', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>✓</button>
+                                        <button onClick={() => sfDecline(req.id)} style={{ padding: '5px 12px', borderRadius: 8, background: '#FF3B30', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>✗</button>
+                                    </div>
+                                ))}
+                            </SettingsGroup>
+                        )}
 
                     </div>
                 );
@@ -4360,10 +4429,13 @@ window.SettingsRow = SettingsRow;
 <script type="text/babel">
 // ── Shared Avatar component & image resize helper ─────────────────────────────
 const Avatar = ({ user, size = 36 }) => (
-    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: user?.avatar_color || '#007AFF', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: user?.avatar_color || '#8E8E93', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {user?.avatar_base64
             ? <img src={user.avatar_base64} style={{ width: '100%', height: '100%', objectFit: 'cover' }} draggable="false"/>
-            : <span style={{ color: 'white', fontWeight: 700, fontSize: Math.round(size * 0.4) }}>{(user?.display_name || '?')[0]?.toUpperCase()}</span>
+            : <svg viewBox="0 0 100 100" width={size} height={size} xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="36" r="21" fill="white" opacity="0.92"/>
+                <ellipse cx="50" cy="88" rx="33" ry="23" fill="white" opacity="0.92"/>
+              </svg>
         }
     </div>
 );
@@ -4454,6 +4526,13 @@ const MessagesApp = () => {
     // Load messages when switching chat
     React.useEffect(() => {
         if (!activeId || !backendOnline || !currentUser) return;
+        if (activeId === 'global') {
+            if (msgMap['global']) return;
+            API.get('/api/messages').then(msgs => {
+                setMsgMap(prev => ({ ...prev, global: msgs.map(m => normalizeDM(m, currentUser.id)) }));
+            }).catch(()=>{});
+            return;
+        }
         if (activeId.startsWith('dm:')) {
             const uid = parseInt(activeId.slice(3));
             if (msgMap[activeId]) return; // already loaded
@@ -4480,8 +4559,7 @@ const MessagesApp = () => {
         const off = WSManager.on((msg) => {
             if (msg.type === 'message') {
                 const isMine = msg.from_user_id === currentUser?.id;
-                const key = msg.to_user_id ? 'dm:' + (isMine ? msg.to_user_id : msg.from_user_id) : null;
-                if (!key) return;
+                const key = msg.to_user_id ? 'dm:' + (isMine ? msg.to_user_id : msg.from_user_id) : 'global';
                 appendMsg(key, normalizeDM(msg, currentUser?.id));
                 if (!isMine) MacStore.addNotification('Messages', msg.display_name, msg.content);
             }
@@ -4556,7 +4634,9 @@ const MessagesApp = () => {
         sendTyping(false);
         clearTimeout(typingTimer.current);
         if (backendOnline && currentUser) {
-            if (activeId.startsWith('dm:')) {
+            if (activeId === 'global') {
+                WSManager.send({ type: 'message', ...payload });
+            } else if (activeId.startsWith('dm:')) {
                 WSManager.send({ type: 'message', ...payload, to_user_id: parseInt(activeId.slice(3)) });
             } else if (activeId.startsWith('group:')) {
                 const gid = parseInt(activeId.slice(6));
@@ -4663,6 +4743,7 @@ const MessagesApp = () => {
     // Get context info for active chat
     const getActiveInfo = () => {
         if (!activeId) return { name: '', user: null };
+        if (activeId === 'global') return { name: 'Global Chat', isGlobal: true };
         if (activeId.startsWith('dm:')) {
             const uid = parseInt(activeId.slice(3));
             const f = friends.find(f => f.id === uid);
@@ -4749,6 +4830,16 @@ const MessagesApp = () => {
                             </div>
                         )}
 
+                        {/* Global Chat */}
+                        <div style={{ padding: '6px 12px 2px', fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }}>Global</div>
+                        <div onClick={() => setActiveId('global')} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', cursor: 'default', background: activeId === 'global' ? '#007AFF' : 'transparent', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                            <div style={{ width: 38, height: 38, borderRadius: '50%', background: activeId === 'global' ? 'rgba(255,255,255,0.2)' : '#e0f0ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🌐</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: activeId === 'global' ? 'white' : '#111' }}>Global Chat</div>
+                                <div style={{ fontSize: 12, color: activeId === 'global' ? 'rgba(255,255,255,0.7)' : '#999' }}>Everyone can see this</div>
+                            </div>
+                        </div>
+
                         {/* Friends list */}
                         {friends.length > 0 && <div style={{ padding: '6px 12px 2px', fontSize: 11, fontWeight: 600, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 }}>Direct Messages</div>}
                         {friends.map(f => {
@@ -4831,6 +4922,7 @@ const MessagesApp = () => {
                 ) : (<>
                     {/* Header */}
                     <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {activeId === 'global' && <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#e0f0ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🌐</div>}
                         {activeId.startsWith('dm:') && activeInfo.user && <Avatar user={activeInfo.user} size={34}/>}
                         {activeId.startsWith('group:') && (
                             <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#AF52DE', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
@@ -4839,13 +4931,27 @@ const MessagesApp = () => {
                         )}
                         <div>
                             <div style={{ fontSize: 14, fontWeight: 600 }}>{activeInfo.name}</div>
+                            {activeId === 'global' && <div style={{ fontSize: 11, color: '#999' }}>Public · visible to all users</div>}
                             {activeId.startsWith('dm:') && <div style={{ fontSize: 11, color: activeInfo.isOnline ? '#34C759' : '#999' }}>{activeInfo.isOnline ? 'Online' : 'Offline'}</div>}
                             {activeId.startsWith('group:') && activeInfo.members?.length > 0 && <div style={{ fontSize: 11, color: '#999' }}>{activeInfo.members.map(m => m.display_name).join(', ')}</div>}
                         </div>
                     </div>
 
                     {/* Messages */}
-                    <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}
+                        onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+                        onDrop={e => {
+                            e.preventDefault();
+                            const f = e.dataTransfer.files?.[0]; if (!f) return;
+                            if (f.size > 10 * 1024 * 1024) { alert('File too large (max 10MB)'); return; }
+                            if (f.type.startsWith('image/')) {
+                                resizeImage(f, 800, 0.8, (b64) => setAttachFile({ base64: b64, name: f.name, mime: f.type }));
+                            } else {
+                                const reader = new FileReader();
+                                reader.onload = ev => setAttachFile({ base64: ev.target.result, name: f.name, mime: f.type });
+                                reader.readAsDataURL(f);
+                            }
+                        }}>
                         {messages.map((msg, i) => {
                             const isMe = msg.from === 'me';
                             const showAvatar = !isMe && (i === 0 || messages[i-1]?.from === 'me');
@@ -4857,6 +4963,9 @@ const MessagesApp = () => {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, marginLeft: 6 }}>
                                             <Avatar user={{ display_name: msg.name, avatar_color: msg.color, avatar_base64: msg.avatar }} size={20}/>
                                             <span style={{ fontSize: 11, color: '#999' }}>{msg.name}</span>
+                                            {activeId === 'global' && !friends.find(f => f.id === msg.from) && (
+                                                <button onClick={() => sendFriendRequest(msg.from)} style={{ padding: '1px 7px', borderRadius: 8, background: '#34C759', color: 'white', border: 'none', fontSize: 10, cursor: 'pointer', fontWeight: 600, lineHeight: '16px' }}>+ Add</button>
+                                            )}
                                         </div>
                                     )}
                                     <div style={{ maxWidth: '65%', position: 'relative' }}
@@ -4927,7 +5036,7 @@ const MessagesApp = () => {
                         <button onClick={() => fileInputRef.current?.click()} title="Attach file" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#007AFF', padding: 4, lineHeight: 1 }}>📎</button>
                         <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={e => {
                             const f = e.target.files?.[0]; if (!f) return;
-                            if (f.size > 5 * 1024 * 1024) { alert('File too large (max 5MB)'); return; }
+                            if (f.size > 10 * 1024 * 1024) { alert('File too large (max 10MB)'); return; }
                             if (f.type.startsWith('image/')) {
                                 resizeImage(f, 800, 0.8, (b64) => setAttachFile({ base64: b64, name: f.name, mime: f.type }));
                             } else {
