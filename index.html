@@ -11041,7 +11041,7 @@ const Desktop = () => {
     const screenshotThumb = useStore(s => s.screenshotThumb);
     const screenshotRegionMode = useStore(s => s.screenshotRegionMode);
     const desktopWidgets = useStore(s => s.desktopWidgets);
-    const desktopFiles = useStore(s => s.desktopFiles);
+    const savedFiles = useStore(s => s.desktopFiles);
     const hotCorners = useStore(s => s.hotCorners);
     const currentUser = useStore(s => s.currentUser);
     const backendOnline = useStore(s => s.backendOnline);
@@ -11697,7 +11697,7 @@ const Desktop = () => {
             ))}
 
             {/* Desktop Files (saved from Messages) */}
-            {desktopFiles && desktopFiles.map((f, i) => (
+            {savedFiles && savedFiles.map((f, i) => (
                 <DesktopFileIcon key={f.id} file={f} index={i} />
             ))}
 
