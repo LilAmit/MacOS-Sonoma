@@ -1173,6 +1173,11 @@ const MacStore = {
                 { id: 'weather', type: 'weather', x: 20, y: 210, visible: true },
             ];
         })(),
+        // Desktop files (saved from Messages)
+        desktopFiles: (() => {
+            try { const s = localStorage.getItem('macos_desktop_files'); if (s) { const f = JSON.parse(s); if (Array.isArray(f)) return f; } } catch(e) {}
+            return [];
+        })(),
         // Hot corners: tl/tr/bl/br → action string or null
         hotCorners: (() => {
             try { const s = localStorage.getItem('macos_hot_corners'); if (s) return JSON.parse(s); } catch(e) {}
@@ -1894,7 +1899,7 @@ const Window = ({ windowData, children }) => {
     if (minimized && !minimizing) return null;
 
     const windowStyle = maximized
-        ? { top: 0, left: 0, width: '100vw', height: 'calc(100vh - 25px)', zIndex, borderRadius: 0 }
+        ? { top: 25, left: 0, width: '100vw', height: 'calc(100vh - 25px)', zIndex, borderRadius: 0 }
         : { top: y, left: x, width, height, zIndex };
 
     const animClass = opening ? 'animate-window-open'
@@ -4491,7 +4496,7 @@ const MessagesApp = () => {
     const [tagSearchResult, setTagSearchResult] = React.useState(null);
     const [tagSearchMsg, setTagSearchMsg] = React.useState('');
     const chatRef = React.useRef(null);
-    const fileInputRef = React.useRef(null);
+
     const groupAvatarRef = React.useRef(null);
     const typingTimer = React.useRef(null);
 
@@ -4766,10 +4771,23 @@ const MessagesApp = () => {
             return <img src={msg.text} alt="shared" style={{ maxWidth: 240, maxHeight: 200, borderRadius: 10, display: 'block' }} onClick={() => window.open(msg.text)}/>;
         }
         if (msg.content_type === 'file') {
-            return <a href={msg.text} download={msg.file_name} style={{ color: 'inherit', display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-                <span style={{ fontSize: 20 }}>📎</span>
-                <span style={{ fontSize: 13, textDecoration: 'underline' }}>{msg.file_name || 'Download file'}</span>
-            </a>;
+            const saveToDesktop = () => {
+                const fileData = { id: Date.now(), name: msg.file_name || 'file', base64: msg.text, mime: msg.file_mime, savedAt: Date.now() };
+                const files = [...(MacStore.getState().desktopFiles || []), fileData];
+                MacStore.setState({ desktopFiles: files });
+                try { localStorage.setItem('macos_desktop_files', JSON.stringify(files)); } catch {}
+            };
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 20 }}>📎</span>
+                        <span style={{ fontSize: 13 }}>{msg.file_name || 'File'}</span>
+                    </div>
+                    <button onClick={saveToDesktop} style={{ fontSize: 11, color: 'inherit', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer', alignSelf: 'flex-start' }}>
+                        Save to Desktop
+                    </button>
+                </div>
+            );
         }
         if (msg.content_type === 'playlist_share') {
             try {
@@ -4939,18 +4957,11 @@ const MessagesApp = () => {
 
                     {/* Messages */}
                     <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}
-                        onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }}
+                        onDragOver={e => { if (e.dataTransfer.types.includes('macos-file')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } }}
                         onDrop={e => {
                             e.preventDefault();
-                            const f = e.dataTransfer.files?.[0]; if (!f) return;
-                            if (f.size > 10 * 1024 * 1024) { alert('File too large (max 10MB)'); return; }
-                            if (f.type.startsWith('image/')) {
-                                resizeImage(f, 800, 0.8, (b64) => setAttachFile({ base64: b64, name: f.name, mime: f.type }));
-                            } else {
-                                const reader = new FileReader();
-                                reader.onload = ev => setAttachFile({ base64: ev.target.result, name: f.name, mime: f.type });
-                                reader.readAsDataURL(f);
-                            }
+                            const raw = e.dataTransfer.getData('macos-file'); if (!raw) return;
+                            try { const f = JSON.parse(raw); setAttachFile({ base64: f.base64, name: f.name, mime: f.mime }); } catch {}
                         }}>
                         {messages.map((msg, i) => {
                             const isMe = msg.from === 'me';
@@ -5032,20 +5043,8 @@ const MessagesApp = () => {
 
                     {/* Input bar */}
                     <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
-                        {/* File attach */}
-                        <button onClick={() => fileInputRef.current?.click()} title="Attach file" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#007AFF', padding: 4, lineHeight: 1 }}>📎</button>
-                        <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={e => {
-                            const f = e.target.files?.[0]; if (!f) return;
-                            if (f.size > 10 * 1024 * 1024) { alert('File too large (max 10MB)'); return; }
-                            if (f.type.startsWith('image/')) {
-                                resizeImage(f, 800, 0.8, (b64) => setAttachFile({ base64: b64, name: f.name, mime: f.type }));
-                            } else {
-                                const reader = new FileReader();
-                                reader.onload = (ev) => setAttachFile({ base64: ev.target.result, name: f.name, mime: f.type });
-                                reader.readAsDataURL(f);
-                            }
-                            e.target.value = '';
-                        }}/>
+                        {/* Attach hint — drag files from macOS desktop */}
+                        <span title="Drag files from the desktop to share" style={{ fontSize: 18, opacity: 0.35, cursor: 'default', padding: 4, lineHeight: 1, userSelect: 'none' }}>📎</span>
                         {/* Playlist share */}
                         <button onClick={() => setShowPlaylistPicker(v => !v)} title="Share playlist" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#007AFF', padding: 4, lineHeight: 1 }}>🎵</button>
                         {/* Text input */}
@@ -10862,50 +10861,120 @@ const ClockWidget = () => {
 };
 
 const WeatherWidget = () => {
-    const backendOnline = useStore(s => s.backendOnline);
     const [weather, setWeather] = React.useState(null);
-    const [loading, setLoading] = React.useState(false);
+    const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
-        if (!backendOnline) return;
-        setLoading(true);
-        API.get('/api/weather').then(data => {
-            setWeather(data);
-            setLoading(false);
-        }).catch(() => setLoading(false));
-    }, [backendOnline]);
+        const fahrenheitCountries = ['US','LR','MM','BS','BZ','PW','FM','MH','KY','VG','AS','GU','PR','VI'];
+        const wmoIcon = (code) => {
+            if (code === 0) return '☀️';
+            if (code === 1) return '🌤️';
+            if (code === 2) return '⛅';
+            if (code === 3) return '☁️';
+            if (code <= 48) return '🌫️';
+            if (code <= 57) return '🌦️';
+            if (code <= 67) return '🌧️';
+            if (code <= 77) return '❄️';
+            if (code <= 82) return '🌧️';
+            if (code <= 86) return '🌨️';
+            return '⛈️';
+        };
+        const wmoCondition = (code) => {
+            if (code === 0) return 'Clear Sky';
+            if (code === 1) return 'Mainly Clear';
+            if (code === 2) return 'Partly Cloudy';
+            if (code === 3) return 'Overcast';
+            if (code <= 48) return 'Foggy';
+            if (code <= 57) return 'Drizzle';
+            if (code <= 67) return 'Rain';
+            if (code <= 77) return 'Snow';
+            if (code <= 82) return 'Rain Showers';
+            if (code <= 86) return 'Snow Showers';
+            return 'Thunderstorm';
+        };
+        fetch('https://ipapi.co/json/')
+            .then(r => r.json())
+            .then(loc => {
+                const useF = fahrenheitCountries.includes(loc.country_code);
+                const unit = useF ? 'fahrenheit' : 'celsius';
+                const params = `latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&timezone=auto&temperature_unit=${unit}`;
+                return fetch(`https://api.open-meteo.com/v1/forecast?${params}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        setWeather({
+                            city: loc.city || loc.region || 'Your Location',
+                            temp: Math.round(d.current.temperature_2m),
+                            high: Math.round(d.daily.temperature_2m_max[0]),
+                            low: Math.round(d.daily.temperature_2m_min[0]),
+                            unit: useF ? 'F' : 'C',
+                            icon: wmoIcon(d.current.weather_code),
+                            condition: wmoCondition(d.current.weather_code),
+                        });
+                        setLoading(false);
+                    });
+            })
+            .catch(() => setLoading(false));
+    }, []);
 
-    const weatherIcon = (code) => {
-        if (!code) return '🌡️';
-        if (code <= 113) return '☀️';
-        if (code <= 116) return '⛅';
-        if (code <= 119) return '☁️';
-        if (code <= 143) return '🌫️';
-        if (code <= 176) return '🌦️';
-        if (code <= 200) return '⛈️';
-        if (code <= 260) return '🌨️';
-        if (code <= 296) return '🌧️';
-        if (code <= 314) return '🌧️';
-        return '❄️';
-    };
-
-    const fallback = { city: 'San Francisco', temp_f: 68, condition: 'Partly Cloudy', high_f: 72, low_f: 58 };
-    const w = weather || fallback;
-    const icon = weather ? weatherIcon(weather.weather_code) : '⛅';
+    const w = weather || { city: 'Loading...', temp: '--', high: '--', low: '--', unit: '', icon: '🌡️', condition: '' };
 
     return (
         <div style={{ background: 'rgba(0,120,200,0.5)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '16px', padding: '14px 18px', minWidth: '190px', border: '1px solid rgba(255,255,255,0.15)', color: 'white', userSelect: 'none', boxShadow: '0 4px 30px rgba(0,0,0,0.3)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ fontSize: '13px', fontWeight: '600', opacity: 0.9 }}>{w.city}</div>
-                {backendOnline && !loading && <div style={{ fontSize: '9px', opacity: 0.6 }}>Live</div>}
                 {loading && <div style={{ fontSize: '9px', opacity: 0.6 }}>...</div>}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                <span style={{ fontSize: '32px' }}>{icon}</span>
-                <span style={{ fontSize: '36px', fontWeight: '300', lineHeight: 1 }}>{w.temp_f}°</span>
+                <span style={{ fontSize: '32px' }}>{w.icon}</span>
+                <span style={{ fontSize: '36px', fontWeight: '300', lineHeight: 1 }}>{w.temp}{w.unit ? `°${w.unit}` : ''}</span>
             </div>
             <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '2px' }}>{w.condition}</div>
-            <div style={{ fontSize: '11px', opacity: 0.65, marginTop: '2px' }}>H:{w.high_f}° L:{w.low_f}°</div>
+            {weather && <div style={{ fontSize: '11px', opacity: 0.65, marginTop: '2px' }}>H:{w.high}°{w.unit} L:{w.low}°{w.unit}</div>}
+        </div>
+    );
+};
+
+const DesktopFileIcon = ({ file, index }) => {
+    const fileIcon = (mime) => {
+        if (!mime) return '📎';
+        if (mime.startsWith('image/')) return '🖼️';
+        if (mime.includes('pdf')) return '📄';
+        if (mime.includes('word') || mime.includes('document') || mime.includes('msword')) return '📝';
+        if (mime.includes('sheet') || mime.includes('excel') || mime.includes('csv')) return '📊';
+        if (mime.includes('zip') || mime.includes('tar') || mime.includes('gz') || mime.includes('rar')) return '🗜️';
+        if (mime.includes('audio')) return '🎵';
+        if (mime.includes('video')) return '🎬';
+        if (mime.includes('python') || mime.includes('javascript') || mime.includes('text/')) return '📃';
+        return '📎';
+    };
+    const shortName = (name) => name && name.length > 14 ? name.slice(0, 11) + '…' : (name || 'file');
+
+    const onDragStart = (e) => {
+        e.dataTransfer.setData('macos-file', JSON.stringify({ base64: file.base64, name: file.name, mime: file.mime }));
+        e.dataTransfer.effectAllowed = 'copy';
+    };
+
+    // Stack along right side of desktop
+    const col = Math.floor(index / 8);
+    const row = index % 8;
+    const right = 24 + col * 90;
+    const top = 50 + row * 90;
+
+    return (
+        <div
+            draggable={true}
+            onDragStart={onDragStart}
+            onDoubleClick={() => {
+                const a = document.createElement('a');
+                a.href = file.base64;
+                a.download = file.name;
+                a.click();
+            }}
+            style={{ position: 'fixed', right, top, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'default', userSelect: 'none', width: 72, zIndex: 100 }}
+            title={`${file.name}\nDouble-click to download\nDrag to Messages to share`}
+        >
+            <div style={{ fontSize: 40, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))' }}>{fileIcon(file.mime)}</div>
+            <div style={{ fontSize: 11, color: 'white', textAlign: 'center', textShadow: '0 1px 4px rgba(0,0,0,0.9)', wordBreak: 'break-word', maxWidth: 72, lineHeight: 1.2 }}>{shortName(file.name)}</div>
         </div>
     );
 };
@@ -10972,6 +11041,7 @@ const Desktop = () => {
     const screenshotThumb = useStore(s => s.screenshotThumb);
     const screenshotRegionMode = useStore(s => s.screenshotRegionMode);
     const desktopWidgets = useStore(s => s.desktopWidgets);
+    const desktopFiles = useStore(s => s.desktopFiles);
     const hotCorners = useStore(s => s.hotCorners);
     const currentUser = useStore(s => s.currentUser);
     const backendOnline = useStore(s => s.backendOnline);
@@ -11624,6 +11694,11 @@ const Desktop = () => {
                 <DesktopWidget key={w.id} widget={w}>
                     {w.type === 'clock' ? <ClockWidget /> : <WeatherWidget />}
                 </DesktopWidget>
+            ))}
+
+            {/* Desktop Files (saved from Messages) */}
+            {desktopFiles && desktopFiles.map((f, i) => (
+                <DesktopFileIcon key={f.id} file={f} index={i} />
             ))}
 
             {/* Stage Manager - side thumbnails */}
