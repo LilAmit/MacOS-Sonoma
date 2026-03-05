@@ -56,6 +56,14 @@ const makeUniqueTag = () => {
     return tag;
 };
 
+const makeUniqueTag6 = () => {
+    const c = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    const used = new Set(readTable('users').map(u => u.friend_tag).filter(Boolean));
+    let tag;
+    do { tag = Array.from({length: 6}, () => c[Math.floor(Math.random() * 36)]).join(''); } while (used.has(tag));
+    return tag;
+};
+
 // ─── JSON File Database ───────────────────────────────────────────────────────
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR);
 
@@ -513,6 +521,36 @@ app.put('/api/auth/change-password', auth, (req, res) => {
         return res.status(401).json({ error: 'Current password is incorrect' });
     db.updateUser(req.user.id, { password_hash: bcrypt.hashSync(new_password, 10) });
     res.json({ success: true });
+});
+
+// ─── Auth: Local identity (no email/password required) ────────────────────────
+// Each device auto-generates a local_tag + local_secret on first visit.
+// local_tag becomes the friend_tag; local_secret is stored as password_hash.
+app.post('/api/auth/local-register', (req, res) => {
+    let { local_tag, local_secret, display_name } = req.body;
+    if (!local_tag || !local_secret) return res.status(400).json({ error: 'local_tag and local_secret required' });
+    if (!/^[a-z0-9]{4,8}$/.test(local_tag)) return res.status(400).json({ error: 'Invalid local_tag' });
+    // If tag is taken, generate a unique one server-side
+    if (db.getUsers().find(u => u.friend_tag === local_tag)) local_tag = makeUniqueTag6();
+    const user = db.createUser({
+        friend_tag: local_tag,
+        password_hash: bcrypt.hashSync(local_secret, 10),
+        display_name: ((display_name || 'User') + '').trim().slice(0, 40) || 'User',
+        email: null,
+        email_verified: true,
+    });
+    const token = issueToken(user);
+    res.json({ token, user: safeUser(user), actual_tag: local_tag });
+});
+
+app.post('/api/auth/local-login', (req, res) => {
+    const { local_tag, local_secret } = req.body;
+    if (!local_tag || !local_secret) return res.status(400).json({ error: 'local_tag and local_secret required' });
+    const user = db.getUsers().find(u => u.friend_tag === local_tag);
+    if (!user || !bcrypt.compareSync(local_secret, user.password_hash))
+        return res.status(401).json({ error: 'Invalid credentials' });
+    const token = issueToken(user);
+    res.json({ token, user: safeUser(user) });
 });
 
 // ─── Users ────────────────────────────────────────────────────────────────────

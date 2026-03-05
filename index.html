@@ -670,7 +670,7 @@ const SoundManager = {
 <script>
 // ─── Backend API Service ───────────────────────────────────────────────────────
 const API = {
-    BASE: 'https://macos-sonoma.onrender.com',
+    BASE: ['localhost', '127.0.0.1'].includes(window.location.hostname) ? '' : 'https://macos-sonoma.onrender.com',
     token: null,
 
     async request(method, path, body) {
@@ -725,7 +725,10 @@ const WSManager = {
 
     connect(token) {
         if (this.ws && this.ws.readyState < 2) this.ws.close();
-        this.ws = new WebSocket(`wss://macos-sonoma.onrender.com/?token=${token}`);
+        const wsBase = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+            ? `ws://${window.location.host}`
+            : 'wss://macos-sonoma.onrender.com';
+        this.ws = new WebSocket(`${wsBase}/?token=${token}`);
 
         this.ws.onmessage = (e) => {
             try {
@@ -1117,7 +1120,7 @@ const MacStore = {
         activeDropdown: null,
         notifications: [],
         volume: 60,
-        brightness: 80,
+        brightness: 100,
         wifiOn: true,
         bluetoothOn: true,
         focusOn: false,
@@ -3549,13 +3552,6 @@ const SettingsApp = () => {
     const [profileAvatar, setProfileAvatar] = React.useState(null);
     const [profileLoading, setProfileLoading] = React.useState(false);
     const [profileMsg, setProfileMsg] = React.useState('');
-    const [emailStep, setEmailStep] = React.useState('input'); // 'input' | 'verify'
-    const [newEmail, setNewEmail] = React.useState('');
-    const [emailCode, setEmailCode] = React.useState('');
-    const [emailMsg, setEmailMsg] = React.useState('');
-    const [currentPw, setCurrentPw] = React.useState('');
-    const [newPw, setNewPw] = React.useState('');
-    const [pwMsg, setPwMsg] = React.useState('');
     const avatarFileRef = React.useRef(null);
 
     React.useEffect(() => {
@@ -3570,28 +3566,6 @@ const SettingsApp = () => {
             setProfileMsg('Saved!');
         } catch (e) { setProfileMsg(e.error || 'Failed to save'); }
         finally { setProfileLoading(false); setTimeout(() => setProfileMsg(''), 3000); }
-    };
-
-    const sendEmailCode = async () => {
-        setEmailMsg('');
-        try { await API.put('/api/auth/change-email', { new_email: newEmail }); setEmailStep('verify'); setEmailMsg('Code sent to ' + newEmail); }
-        catch (e) { setEmailMsg(e.error || 'Failed'); }
-    };
-
-    const verifyEmailCode = async () => {
-        setEmailMsg('');
-        try {
-            const { token, user } = await API.post('/api/auth/verify-change-email', { code: emailCode });
-            API.setToken(token); MacStore.setState({ currentUser: user });
-            setEmailStep('input'); setNewEmail(''); setEmailCode(''); setEmailMsg('Email updated!');
-        } catch (e) { setEmailMsg(e.error || 'Invalid code'); }
-    };
-
-    const changePassword = async () => {
-        setPwMsg('');
-        try { await API.put('/api/auth/change-password', { current_password: currentPw, new_password: newPw }); setCurrentPw(''); setNewPw(''); setPwMsg('Password changed!'); }
-        catch (e) { setPwMsg(e.error || 'Failed'); }
-        setTimeout(() => setPwMsg(''), 3000);
     };
 
     const wifiOn = useStore(s => s.wifiOn);
@@ -3738,42 +3712,6 @@ const SettingsApp = () => {
                             </div>
                         </SettingsGroup>
 
-                        {/* Change Email */}
-                        <SettingsGroup title="Change Email">
-                            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <div style={{ fontSize: 13, color: '#666' }}>Current: <b>{currentUser?.email}</b></div>
-                                {emailStep === 'input' ? (<>
-                                    <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="New email address" style={pfInStyle}/>
-                                    <button onClick={sendEmailCode} disabled={!newEmail} style={{ padding: '8px 16px', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 500, alignSelf: 'flex-start' }}>Send Verification Code</button>
-                                </>) : (<>
-                                    <input value={emailCode} onChange={e => setEmailCode(e.target.value)} placeholder="6-digit code" maxLength={6} style={{ ...pfInStyle, letterSpacing: 4, fontSize: 18, textAlign: 'center' }}/>
-                                    <div style={{ display: 'flex', gap: 8 }}>
-                                        <button onClick={verifyEmailCode} disabled={emailCode.length !== 6} style={{ padding: '8px 16px', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>Verify</button>
-                                        <button onClick={() => { setEmailStep('input'); setEmailMsg(''); }} style={{ padding: '8px 16px', borderRadius: 8, background: 'rgba(0,0,0,0.07)', color: '#333', border: 'none', fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-                                    </div>
-                                </>)}
-                                {emailMsg && <div style={{ fontSize: 13, color: emailMsg.includes('sent') || emailMsg.includes('updated') ? '#34C759' : '#FF3B30' }}>{emailMsg}</div>}
-                            </div>
-                        </SettingsGroup>
-
-                        {/* Change Password */}
-                        <SettingsGroup title="Change Password">
-                            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                <input type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="Current password" style={pfInStyle}/>
-                                <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="New password (min 6 chars)" style={pfInStyle}/>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <button onClick={changePassword} disabled={!currentPw || newPw.length < 6} style={{ padding: '8px 16px', borderRadius: 8, background: '#007AFF', color: 'white', border: 'none', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>Change Password</button>
-                                    {pwMsg && <span style={{ fontSize: 13, color: pwMsg.includes('changed') ? '#34C759' : '#FF3B30' }}>{pwMsg}</span>}
-                                </div>
-                            </div>
-                        </SettingsGroup>
-
-                        {/* Sign Out */}
-                        <SettingsGroup>
-                            <div className="flex items-center justify-between px-4 py-2.5 text-[13px] cursor-pointer" onClick={() => { API.setToken(null); WSManager.disconnect(); MacStore.setState({ currentUser: null, friends: [], friendRequests: [], groups: [] }); window.location.reload(); }}>
-                                <span style={{ color: '#FF3B30', fontWeight: 500 }}>Sign Out</span>
-                            </div>
-                        </SettingsGroup>
                     </div>
                 );
 
@@ -4372,7 +4310,7 @@ const SettingsApp = () => {
                             <Avatar user={currentUser} size={48}/>
                             <div>
                                 <div className="text-[14px] font-semibold">{currentUser?.display_name || 'User'}</div>
-                                <div className={`text-[11px] ${activeSection === s.id ? 'text-white/70' : 'text-gray-400'}`}>{currentUser?.email || 'Apple ID, iCloud+'}</div>
+                                <div className={`text-[11px] ${activeSection === s.id ? 'text-white/70' : 'text-gray-400'}`}>#{currentUser?.friend_tag || '——'}</div>
                             </div>
                         </div>
                     );
@@ -4425,7 +4363,7 @@ const Avatar = ({ user, size = 36 }) => (
     <div style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden', background: user?.avatar_color || '#007AFF', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {user?.avatar_base64
             ? <img src={user.avatar_base64} style={{ width: '100%', height: '100%', objectFit: 'cover' }} draggable="false"/>
-            : <span style={{ color: 'white', fontWeight: 700, fontSize: Math.round(size * 0.4) }}>{(user?.display_name || user?.email || '?')[0]?.toUpperCase()}</span>
+            : <span style={{ color: 'white', fontWeight: 700, fontSize: Math.round(size * 0.4) }}>{(user?.display_name || '?')[0]?.toUpperCase()}</span>
         }
     </div>
 );
@@ -10928,29 +10866,72 @@ const Desktop = () => {
     const hotCorners = useStore(s => s.hotCorners);
     const currentUser = useStore(s => s.currentUser);
     const backendOnline = useStore(s => s.backendOnline);
-    const [showLogin, setShowLogin] = React.useState(false);
-
-    // Check backend availability + restore session on mount
+    // Auto-auth on mount — no login screen, identity is local to device
     React.useEffect(() => {
-        API.ping().then(online => {
-            MacStore.setState({ backendOnline: online });
-            if (!online) return;
-            // Try to restore session from stored JWT
+        const loadSocial = () => {
+            API.get('/api/friends').then(f => MacStore.setState({ friends: f })).catch(()=>{});
+            API.get('/api/friends/requests').then(r => MacStore.setState({ friendRequests: r })).catch(()=>{});
+            API.get('/api/groups').then(g => MacStore.setState({ groups: g })).catch(()=>{});
+        };
+
+        const doAuth = async () => {
+            // Step 1: Try to restore an existing JWT immediately (no ping needed)
             if (API.token) {
-                API.get('/api/auth/me').then(user => {
-                    MacStore.setState({ currentUser: user });
+                try {
+                    const user = await API.get('/api/auth/me');
+                    MacStore.setState({ currentUser: user, backendOnline: true });
                     WSManager.connect(API.token);
-                    API.get('/api/friends').then(f => MacStore.setState({ friends: f })).catch(()=>{});
-                    API.get('/api/friends/requests').then(r => MacStore.setState({ friendRequests: r })).catch(()=>{});
-                    API.get('/api/groups').then(g => MacStore.setState({ groups: g })).catch(()=>{});
-                }).catch(() => {
-                    API.setToken(null);
-                    setShowLogin(true);
-                });
-            } else {
-                setShowLogin(true);
+                    loadSocial();
+                    return true;
+                } catch { API.setToken(null); }
             }
-        });
+
+            // Step 2: Check if server is reachable
+            const online = await API.ping();
+            MacStore.setState({ backendOnline: online });
+            if (!online) return false;
+
+            // Step 3: Get/generate local device identity
+            let localId = localStorage.getItem('macos_local_id');
+            let localSecret = localStorage.getItem('macos_local_secret');
+            if (!localId) {
+                const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+                localId = Array.from({length: 6}, () => chars[Math.floor(Math.random() * 36)]).join('');
+                localSecret = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                    ? crypto.randomUUID()
+                    : Math.random().toString(36).slice(2) + Date.now().toString(36);
+                localStorage.setItem('macos_local_id', localId);
+                localStorage.setItem('macos_local_secret', localSecret);
+            }
+
+            // Step 4: Try login (returning visitor), then register (new device)
+            for (const endpoint of ['/api/auth/local-login', '/api/auth/local-register']) {
+                try {
+                    const data = await API.post(endpoint, {
+                        local_tag: localId,
+                        local_secret: localSecret,
+                        display_name: 'User#' + localId,
+                    });
+                    // If server assigned a different tag due to collision, persist it
+                    const actualTag = data.actual_tag || localId;
+                    if (data.actual_tag && data.actual_tag !== localId) {
+                        localStorage.setItem('macos_local_id', actualTag);
+                    }
+                    API.setToken(data.token);
+                    MacStore.setState({ currentUser: data.user, backendOnline: true });
+                    WSManager.connect(data.token);
+                    loadSocial();
+                    return true;
+                } catch {}
+            }
+            return false;
+        };
+
+        // Retry every 6s if server isn't ready (Render cold start can take ~30s)
+        const tryAuth = () => {
+            doAuth().then(ok => { if (!ok) setTimeout(tryAuth, 6000); });
+        };
+        tryAuth();
     }, []);
 
     // Hot corners: trigger actions when mouse reaches screen corners
@@ -11467,13 +11448,6 @@ const Desktop = () => {
 
     return (
         <div id="desktop-bg" className="fixed inset-0 overflow-hidden" style={wallpaperStyle} onMouseDown={handleDesktopClick}>
-            {/* Login overlay — shown when backend is online but not yet authenticated */}
-            {showLogin && backendOnline && !currentUser && (
-                <LoginApp onLogin={(user) => {
-                    MacStore.setState({ currentUser: user });
-                    setShowLogin(false);
-                }}/>
-            )}
             <MenuBar />
 
             {/* Desktop Icons */}
