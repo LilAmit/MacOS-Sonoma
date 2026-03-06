@@ -17,6 +17,7 @@ const SettingsApp = () => {
     const darkMode = useStore(s => s.darkMode);
     const wallpaperIndex = useStore(s => s.wallpaperIndex);
     const accentColor = useStore(s => s.accentColor);
+    const authUser = useStore(s => s.authUser);
 
     // Keys that sync to global store (affect other components)
     const globalKeys = {
@@ -104,6 +105,8 @@ const SettingsApp = () => {
         { id: 'battery', label: 'Battery', icon: '🔋', color: '#34C759' },
         { id: 'keyboard', label: 'Keyboard', icon: '⌨️', color: '#8E8E93' },
         { id: 'trackpad', label: 'Trackpad', icon: '🖱️', color: '#8E8E93' },
+        { sep: true },
+        { id: 'friends', label: 'Friends', icon: '👥', color: '#007AFF' },
     ];
 
     const renderContent = () => {
@@ -671,6 +674,9 @@ const SettingsApp = () => {
                     </div>
                 );
 
+            case 'friends':
+                return <SettingsFriendsPanel authUser={authUser} accentColor={accentColor}/>;
+
             default:
                 return (
                     <div>
@@ -736,5 +742,220 @@ const SettingsRow = ({ label, detail, hasArrow, right }) => (
         </div>
     </div>
 );
+
+const SettingsFriendsPanel = ({ authUser, accentColor }) => {
+    const [friends, setFriends] = React.useState([]);
+    const [requests, setRequests] = React.useState([]);
+    const [searchTag, setSearchTag] = React.useState('');
+    const [searchResult, setSearchResult] = React.useState(null);
+    const [searchError, setSearchError] = React.useState('');
+    const [searchLoading, setSearchLoading] = React.useState(false);
+    const [displayName, setDisplayName] = React.useState('');
+    const [nameSaved, setNameSaved] = React.useState(false);
+    const [copied, setCopied] = React.useState(false);
+
+    React.useEffect(() => {
+        if (authUser) setDisplayName(authUser.display_name || '');
+        loadFriends();
+    }, [authUser]);
+
+    const loadFriends = async () => {
+        try {
+            const [fr, rq] = await Promise.all([
+                MacAuth.api('GET', '/api/friends'),
+                MacAuth.api('GET', '/api/friends/requests'),
+            ]);
+            if (fr.friends) setFriends(fr.friends);
+            if (rq.requests) setRequests(rq.requests);
+        } catch(e) {}
+    };
+
+    const searchUser = async () => {
+        const tag = searchTag.trim().toLowerCase().replace(/^#/, '');
+        if (!tag) return;
+        setSearchLoading(true); setSearchError(''); setSearchResult(null);
+        try {
+            const res = await MacAuth.api('GET', '/api/users/search?tag=' + encodeURIComponent(tag));
+            if (res.user) setSearchResult(res.user);
+            else setSearchError('User not found.');
+        } catch(e) { setSearchError('User not found.'); }
+        setSearchLoading(false);
+    };
+
+    const sendRequest = async (userId) => {
+        try {
+            await MacAuth.api('POST', '/api/friends/request', { to_user_id: userId });
+            setSearchResult(null); setSearchTag('');
+        } catch(e) {}
+    };
+
+    const acceptRequest = async (userId) => {
+        try {
+            await MacAuth.api('POST', '/api/friends/accept', { from_user_id: userId });
+            loadFriends();
+        } catch(e) {}
+    };
+
+    const declineRequest = async (userId) => {
+        try {
+            await MacAuth.api('POST', '/api/friends/decline', { from_user_id: userId });
+            setRequests(prev => prev.filter(r => r.id !== userId));
+        } catch(e) {}
+    };
+
+    const removeFriend = async (userId) => {
+        try {
+            await MacAuth.api('DELETE', '/api/friends/' + userId);
+            setFriends(prev => prev.filter(f => f.id !== userId));
+        } catch(e) {}
+    };
+
+    const saveName = async () => {
+        try {
+            await MacAuth.api('PATCH', '/api/users/me', { display_name: displayName });
+            MacStore.setState(s => ({ authUser: { ...s.authUser, display_name: displayName } }));
+            setNameSaved(true);
+            setTimeout(() => setNameSaved(false), 2000);
+        } catch(e) {}
+    };
+
+    const copyTag = () => {
+        if (authUser?.friend_tag) {
+            navigator.clipboard.writeText('#' + authUser.friend_tag);
+            setCopied(true); setTimeout(() => setCopied(false), 1500);
+        }
+    };
+
+    const openMessages = () => MacStore.openWindow('messages', 'Messages', 800, 550);
+
+    if (!authUser) return (
+        <div>
+            <h2 className="text-[22px] font-bold mb-5">Friends</h2>
+            <SettingsGroup><SettingsRow label="Connecting to server..." /></SettingsGroup>
+        </div>
+    );
+
+    return (
+        <div>
+            <h2 className="text-[22px] font-bold mb-5">Friends</h2>
+
+            {/* Identity Card */}
+            <SettingsGroup title="Your Identity">
+                <div className="px-4 py-3 border-b border-black/[0.04]">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+                            <svg viewBox="0 0 100 100" width="48" height="48"><circle cx="50" cy="50" r="50" fill="#c7c7cc"/><circle cx="50" cy="38" r="18" fill="#e5e5ea"/><ellipse cx="50" cy="80" rx="30" ry="22" fill="#e5e5ea"/></svg>
+                        </div>
+                        <div className="flex-1">
+                            <div className="text-[13px] text-gray-400 mb-1">Display Name</div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    value={displayName}
+                                    onChange={e => setDisplayName(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && saveName()}
+                                    className="flex-1 px-2 py-1 rounded-md border border-black/10 bg-white text-[13px] outline-none"
+                                    placeholder="Your name"
+                                />
+                                <button onClick={saveName}
+                                    className="px-3 py-1 rounded-md text-white text-[12px] font-medium"
+                                    style={{ background: accentColor }}>
+                                    {nameSaved ? 'Saved!' : 'Save'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-[12px] text-gray-400">Your Friend Tag</div>
+                            <div className="text-[15px] font-semibold text-gray-800">#{authUser.friend_tag}</div>
+                        </div>
+                        <button onClick={copyTag}
+                            className="px-3 py-1 rounded-md text-[12px] border border-black/10 bg-white hover:bg-gray-50">
+                            {copied ? 'Copied!' : 'Copy'}
+                        </button>
+                    </div>
+                </div>
+            </SettingsGroup>
+
+            {/* Add Friend */}
+            <SettingsGroup title="Add Friend">
+                <div className="px-4 py-3">
+                    <div className="flex items-center gap-2 mb-2">
+                        <input
+                            type="text"
+                            value={searchTag}
+                            onChange={e => { setSearchTag(e.target.value); setSearchResult(null); setSearchError(''); }}
+                            onKeyDown={e => e.key === 'Enter' && searchUser()}
+                            placeholder="Enter friend tag (e.g. abc123)"
+                            className="flex-1 px-3 py-1.5 rounded-md border border-black/10 bg-white text-[13px] outline-none"
+                        />
+                        <button onClick={searchUser} disabled={searchLoading}
+                            className="px-3 py-1.5 rounded-md text-white text-[12px] font-medium"
+                            style={{ background: accentColor }}>
+                            {searchLoading ? '...' : 'Search'}
+                        </button>
+                    </div>
+                    {searchError && <div className="text-[12px] text-red-500">{searchError}</div>}
+                    {searchResult && (
+                        <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                            <div>
+                                <div className="text-[13px] font-medium">{searchResult.display_name || searchResult.friend_tag}</div>
+                                <div className="text-[11px] text-gray-400">#{searchResult.friend_tag}</div>
+                            </div>
+                            <button onClick={() => sendRequest(searchResult.id)}
+                                className="px-3 py-1 rounded-md text-white text-[12px] font-medium"
+                                style={{ background: accentColor }}>
+                                Add Friend
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </SettingsGroup>
+
+            {/* Pending Requests */}
+            {requests.length > 0 && (
+                <SettingsGroup title={`Pending Requests (${requests.length})`}>
+                    {requests.map(r => (
+                        <div key={r.id} className="flex items-center justify-between px-4 py-2.5 border-b border-black/[0.04] last:border-0">
+                            <div>
+                                <div className="text-[13px] font-medium">{r.display_name || r.friend_tag}</div>
+                                <div className="text-[11px] text-gray-400">#{r.friend_tag}</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => acceptRequest(r.id)}
+                                    className="px-3 py-1 rounded-md text-white text-[12px] font-medium"
+                                    style={{ background: '#34C759' }}>Accept</button>
+                                <button onClick={() => declineRequest(r.id)}
+                                    className="px-3 py-1 rounded-md text-[12px] font-medium bg-gray-100 hover:bg-gray-200">Decline</button>
+                            </div>
+                        </div>
+                    ))}
+                </SettingsGroup>
+            )}
+
+            {/* Friends List */}
+            <SettingsGroup title={`Friends (${friends.length})`}>
+                {friends.length === 0 ? (
+                    <div className="px-4 py-3 text-[13px] text-gray-400">No friends yet. Add someone by their tag!</div>
+                ) : friends.map(f => (
+                    <div key={f.id} className="flex items-center justify-between px-4 py-2.5 border-b border-black/[0.04] last:border-0">
+                        <div>
+                            <div className="text-[13px] font-medium">{f.display_name || f.friend_tag}</div>
+                            <div className="text-[11px] text-gray-400">#{f.friend_tag}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button onClick={openMessages}
+                                className="px-3 py-1 rounded-md text-white text-[12px] font-medium"
+                                style={{ background: accentColor }}>Message</button>
+                            <button onClick={() => removeFriend(f.id)}
+                                className="px-3 py-1 rounded-md text-[12px] font-medium text-red-500 hover:bg-red-50">Remove</button>
+                        </div>
+                    </div>
+                ))}
+            </SettingsGroup>
+        </div>
+    );
+};
 
 window.SettingsApp = SettingsApp;

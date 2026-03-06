@@ -371,6 +371,8 @@ const MacStore = {
         appSwitcherIndex: 0,
         quickLookFile: null, // { name, icon, content, type, size }
         windowSnapPreview: null, // 'left' | 'right' | null
+        authUser: null,
+        authToken: null,
     },
 
     getState() {
@@ -655,3 +657,118 @@ window.useStore = useStore;
 window.useAnimatedVisibility = useAnimatedVisibility;
 window.WALLPAPERS = WALLPAPERS;
 window.VFS = VFS;
+
+// Device-identity auth + WebSocket helper
+const MacAuth = {
+    _token: null,
+    _user: null,
+    _ws: null,
+    _wsReady: false,
+    _wsQueue: [],
+    _listeners: new Set(),
+
+    getToken() { return this._token; },
+    getUser() { return this._user; },
+
+    getHeaders() {
+        const h = { 'Content-Type': 'application/json' };
+        if (this._token) h['Authorization'] = 'Bearer ' + this._token;
+        return h;
+    },
+
+    async api(method, path, body) {
+        const opts = { method, headers: this.getHeaders() };
+        if (body) opts.body = JSON.stringify(body);
+        const res = await fetch(path, opts);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: 'Request failed' }));
+            throw new Error(err.error || 'Request failed');
+        }
+        return res.json();
+    },
+
+    send(data) {
+        const str = JSON.stringify(data);
+        if (this._ws && this._ws.readyState === 1) {
+            this._ws.send(str);
+        } else {
+            this._wsQueue.push(str);
+        }
+    },
+
+    subscribe(listener) {
+        this._listeners.add(listener);
+        return () => this._listeners.delete(listener);
+    },
+
+    _notify(msg) {
+        this._listeners.forEach(l => { try { l(msg); } catch(e) {} });
+    },
+
+    _initWS() {
+        if (!this._token) return;
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = proto + '//' + window.location.host + '?token=' + encodeURIComponent(this._token);
+        try {
+            this._ws = new WebSocket(wsUrl);
+            this._ws.onopen = () => {
+                this._wsReady = true;
+                const q = [...this._wsQueue];
+                this._wsQueue = [];
+                q.forEach(m => this._ws.send(m));
+            };
+            this._ws.onmessage = (e) => {
+                try { this._notify(JSON.parse(e.data)); } catch(e) {}
+            };
+            this._ws.onclose = () => {
+                this._wsReady = false;
+                setTimeout(() => { if (this._token) this._initWS(); }, 4000);
+            };
+            this._ws.onerror = () => {};
+        } catch(e) {}
+    },
+
+    async init() {
+        let creds = null;
+        try { creds = JSON.parse(localStorage.getItem('macos_local_identity') || 'null'); } catch(e) {}
+        if (!creds) {
+            const c = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            const rand = (n) => Array.from({length: n}, () => c[Math.floor(Math.random() * 36)]).join('');
+            creds = { local_tag: rand(6), local_secret: rand(32), display_name: 'User' };
+        }
+
+        // Try login, then register on failure
+        let data = null;
+        try {
+            const r = await fetch('/api/auth/local-login', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ local_tag: creds.local_tag, local_secret: creds.local_secret }),
+            });
+            if (r.ok) data = await r.json();
+        } catch(e) {}
+
+        if (!data) {
+            try {
+                const r = await fetch('/api/auth/local-register', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ local_tag: creds.local_tag, local_secret: creds.local_secret, display_name: creds.display_name }),
+                });
+                if (r.ok) {
+                    data = await r.json();
+                    if (data.actual_tag) creds.local_tag = data.actual_tag;
+                }
+            } catch(e) {}
+        }
+
+        if (data && data.token) {
+            this._token = data.token;
+            this._user = data.user;
+            localStorage.setItem('macos_local_identity', JSON.stringify(creds));
+            MacStore.setState({ authUser: data.user, authToken: data.token });
+            this._initWS();
+        }
+    },
+};
+
+MacAuth.init().catch(() => {});
+window.MacAuth = MacAuth;
