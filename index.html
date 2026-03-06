@@ -3575,6 +3575,8 @@ const SettingsApp = () => {
         try {
             const updated = await API.put('/api/auth/profile', { display_name: profileName, avatar_base64: profileAvatar });
             MacStore.setState({ currentUser: updated });
+            // Persist profile locally so it survives server restarts
+            try { localStorage.setItem('macos_saved_profile', JSON.stringify({ display_name: profileName, avatar_base64: profileAvatar })); } catch {}
             setProfileSaved(true);
             setTimeout(() => setProfileSaved(false), 3000);
         } catch (e) { setProfileMsg(e.error || 'Failed to save'); setTimeout(() => setProfileMsg(''), 3000); }
@@ -4487,6 +4489,8 @@ const MessagesApp = () => {
     const [reactionTarget, setReactionTarget] = React.useState(null);
     const [attachFile, setAttachFile] = React.useState(null);
     const [showPlaylistPicker, setShowPlaylistPicker] = React.useState(false);
+    const [showFilePicker, setShowFilePicker] = React.useState(false);
+    const [vfsPickerPath, setVfsPickerPath] = React.useState('/Users/user');
     const [showCreateGroup, setShowCreateGroup] = React.useState(false);
     const [newGroupName, setNewGroupName] = React.useState('');
     const [newGroupMembers, setNewGroupMembers] = React.useState([]);
@@ -4739,7 +4743,7 @@ const MessagesApp = () => {
         if (!m) return '';
         if (m.content_type === 'image') return '📷 Image';
         if (m.content_type === 'file') return '📎 ' + (m.file_name || 'File');
-        if (m.content_type === 'playlist_share') { try { return '🎵 ' + JSON.parse(m.text).name; } catch { return '🎵 Playlist'; } }
+        if (m.content_type === 'playlist_share') { try { const p = JSON.parse(m.text); return p.type === 'song' ? '🎵 ' + p.title : '🎵 ' + p.name; } catch { return '🎵 Music'; } }
         return m.text;
     };
 
@@ -4792,6 +4796,16 @@ const MessagesApp = () => {
         if (msg.content_type === 'playlist_share') {
             try {
                 const pl = JSON.parse(msg.text);
+                if (pl.type === 'song') {
+                    return <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 12px', minWidth: 160, display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 24 }}>🎵</span>
+                        <div>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>{pl.title}</div>
+                            <div style={{ fontSize: 12, opacity: 0.7 }}>{pl.artist}</div>
+                            {pl.album && <div style={{ fontSize: 11, opacity: 0.5 }}>{pl.album}</div>}
+                        </div>
+                    </div>;
+                }
                 return <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 12px', minWidth: 160 }}>
                     <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 2 }}>🎵 Shared Playlist</div>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{pl.name}</div>
@@ -4931,7 +4945,7 @@ const MessagesApp = () => {
             </div>
 
             {/* ── Chat Panel ── */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'white' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'white', position: 'relative' }}>
                 {!activeId ? (
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999', fontSize: 14, flexDirection: 'column', gap: 8 }}>
                         <div style={{ fontSize: 40 }}>💬</div>
@@ -5027,26 +5041,108 @@ const MessagesApp = () => {
                         </div>
                     )}
 
-                    {/* Playlist picker */}
-                    {showPlaylistPicker && playlists.length > 0 && (
-                        <div style={{ position: 'absolute', bottom: 60, right: 20, background: 'white', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, minWidth: 200, overflow: 'hidden' }}>
-                            <div style={{ padding: '8px 12px', fontSize: 12, fontWeight: 600, color: '#666', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>Share Playlist</div>
-                            {playlists.map((pl, i) => (
-                                <div key={i} onClick={() => sendPlaylist(pl)} style={{ padding: '10px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.04)' }}
-                                    onMouseEnter={e => e.currentTarget.style.background='#f5f5f5'}
-                                    onMouseLeave={e => e.currentTarget.style.background='white'}>
-                                    🎵 {pl.name} <span style={{ color: '#999', fontSize: 12 }}>({pl.songs?.length || 0})</span>
-                                </div>
-                            ))}
+                    {/* Playlist / Music picker */}
+                    {showPlaylistPicker && (
+                        <div style={{ position: 'absolute', bottom: 60, right: 20, background: 'white', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, width: 260, overflow: 'hidden', maxHeight: 340 }}>
+                            <div style={{ padding: '8px 12px', fontSize: 12, fontWeight: 600, color: '#666', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                                {playlists.length > 0 ? 'Share Playlist' : 'Share Music'}
+                            </div>
+                            <div style={{ overflowY: 'auto', maxHeight: 290 }}>
+                                {playlists.length > 0 ? playlists.map((pl, i) => (
+                                    <div key={i} onClick={() => sendPlaylist(pl)} style={{ padding: '10px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.04)' }}
+                                        onMouseEnter={e => e.currentTarget.style.background='#f5f5f5'}
+                                        onMouseLeave={e => e.currentTarget.style.background='white'}>
+                                        🎵 {pl.name} <span style={{ color: '#999', fontSize: 12 }}>({pl.songs?.length || 0})</span>
+                                    </div>
+                                )) : (typeof _defaultSongs !== 'undefined' ? _defaultSongs : []).map((song, i) => (
+                                    <div key={i} onClick={() => {
+                                        setShowPlaylistPicker(false);
+                                        const payload = { content: JSON.stringify({ type: 'song', title: song.title, artist: song.artist, album: song.album }), content_type: 'playlist_share' };
+                                        if (!activeId) return;
+                                        if (backendOnline && currentUser) {
+                                            if (activeId === 'global') WSManager.send({ type: 'message', ...payload });
+                                            else if (activeId.startsWith('dm:')) WSManager.send({ type: 'message', ...payload, to_user_id: parseInt(activeId.slice(3)) });
+                                            else if (activeId.startsWith('group:')) {
+                                                const gid = parseInt(activeId.slice(6));
+                                                API.post('/api/groups/' + gid + '/messages', payload).then(s => appendMsg(activeId, normalizeGroup(s, currentUser.id))).catch(() => {});
+                                            }
+                                        }
+                                    }} style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 8 }}
+                                        onMouseEnter={e => e.currentTarget.style.background='#f5f5f5'}
+                                        onMouseLeave={e => e.currentTarget.style.background='white'}>
+                                        <span style={{ fontSize: 16 }}>🎵</span>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</div>
+                                            <div style={{ fontSize: 11, color: '#999' }}>{song.artist}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
 
+                    {/* VFS File picker */}
+                    {showFilePicker && (() => {
+                        const vfsItems = VFS.ls(vfsPickerPath);
+                        const crumbs = vfsPickerPath === '/Users/user' ? [] : vfsPickerPath.replace('/Users/user/', '').split('/');
+                        return (
+                            <div style={{ position: 'absolute', bottom: 60, left: 20, background: 'white', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 100, width: 300, overflow: 'hidden', maxHeight: 380, display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ padding: '8px 12px', fontSize: 12, fontWeight: 600, color: '#666', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                                    <span>Send File from Finder</span>
+                                    <button onClick={() => setShowFilePicker(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#999', lineHeight: 1 }}>✕</button>
+                                </div>
+                                <div style={{ padding: '4px 10px', background: '#f9f9f9', borderBottom: '1px solid rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, flexShrink: 0, overflowX: 'auto' }}>
+                                    <span onClick={() => setVfsPickerPath('/Users/user')} style={{ color: '#007AFF', cursor: 'pointer' }}>~</span>
+                                    {crumbs.map((part, i) => (
+                                        <React.Fragment key={i}>
+                                            <span style={{ color: '#999' }}>/</span>
+                                            <span onClick={() => setVfsPickerPath('/Users/user/' + crumbs.slice(0, i + 1).join('/'))}
+                                                style={{ color: i === crumbs.length - 1 ? '#333' : '#007AFF', cursor: 'pointer', fontWeight: i === crumbs.length - 1 ? 500 : 400, whiteSpace: 'nowrap' }}>{part}</span>
+                                        </React.Fragment>
+                                    ))}
+                                </div>
+                                <div style={{ overflowY: 'auto', flex: 1 }}>
+                                    {vfsPickerPath !== '/Users/user' && (
+                                        <div onClick={() => setVfsPickerPath(vfsPickerPath.split('/').slice(0, -1).join('/'))}
+                                            style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 8, color: '#999' }}
+                                            onMouseEnter={e => e.currentTarget.style.background='#f5f5f5'} onMouseLeave={e => e.currentTarget.style.background='white'}>
+                                            📂 ..
+                                        </div>
+                                    )}
+                                    {vfsItems.length === 0 && <div style={{ padding: '20px 12px', textAlign: 'center', color: '#ccc', fontSize: 13 }}>Empty folder</div>}
+                                    {vfsItems.map((item, i) => (
+                                        <div key={i} onClick={() => {
+                                            if (item.type === 'folder') { setVfsPickerPath(vfsPickerPath + '/' + item.name); }
+                                            else {
+                                                const node = VFS._fs[vfsPickerPath + '/' + item.name];
+                                                const content = node?.content || '';
+                                                const base64 = 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(content)));
+                                                setAttachFile({ name: item.name, base64, mime: 'text/plain' });
+                                                setShowFilePicker(false);
+                                            }
+                                        }} style={{ padding: '8px 12px', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', gap: 8 }}
+                                            onMouseEnter={e => e.currentTarget.style.background='#f5f5f5'} onMouseLeave={e => e.currentTarget.style.background='white'}>
+                                            <span style={{ fontSize: 16 }}>{item.icon || (item.type === 'folder' ? '📁' : '📄')}</span>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                                                {item.type !== 'folder' && <div style={{ fontSize: 11, color: '#999' }}>{item.size}</div>}
+                                            </div>
+                                            {item.type === 'folder'
+                                                ? <span style={{ color: '#c7c7cc', fontSize: 14 }}>›</span>
+                                                : <span style={{ fontSize: 11, color: '#007AFF', fontWeight: 500 }}>Send</span>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* Input bar */}
                     <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
-                        {/* Attach hint — drag files from macOS desktop */}
-                        <span title="Drag files from the desktop to share" style={{ fontSize: 18, opacity: 0.35, cursor: 'default', padding: 4, lineHeight: 1, userSelect: 'none' }}>📎</span>
+                        {/* Attach file from Finder */}
+                        <button onClick={() => { setShowFilePicker(v => !v); setShowPlaylistPicker(false); setVfsPickerPath('/Users/user'); }} title="Send file from Finder" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#007AFF', padding: 4, lineHeight: 1 }}>📎</button>
                         {/* Playlist share */}
-                        <button onClick={() => setShowPlaylistPicker(v => !v)} title="Share playlist" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#007AFF', padding: 4, lineHeight: 1 }}>🎵</button>
+                        <button onClick={() => { setShowPlaylistPicker(v => !v); setShowFilePicker(false); }} title="Share music" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#007AFF', padding: 4, lineHeight: 1 }}>🎵</button>
                         {/* Text input */}
                         <input type="text" value={input} onChange={e => handleInputChange(e.target.value)}
                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
@@ -11084,12 +11180,17 @@ const Desktop = () => {
             }
 
             // Step 4: Try login (returning visitor), then register (new device)
+            // Use locally saved profile for registration fallback
+            let savedProfile = null;
+            try { savedProfile = JSON.parse(localStorage.getItem('macos_saved_profile') || 'null'); } catch {}
+            const regDisplayName = savedProfile?.display_name || 'User#' + localId;
+
             for (const endpoint of ['/api/auth/local-login', '/api/auth/local-register']) {
                 try {
                     const data = await API.post(endpoint, {
                         local_tag: localId,
                         local_secret: localSecret,
-                        display_name: 'User#' + localId,
+                        display_name: regDisplayName,
                     });
                     // If server assigned a different tag due to collision, persist it
                     const actualTag = data.actual_tag || localId;
@@ -11100,6 +11201,23 @@ const Desktop = () => {
                     MacStore.setState({ currentUser: data.user, backendOnline: true });
                     WSManager.connect(data.token);
                     loadSocial();
+
+                    // Restore locally saved profile if server data was reset
+                    if (savedProfile) {
+                        const u = data.user;
+                        const needsSync = (savedProfile.display_name && savedProfile.display_name !== u.display_name)
+                            || (savedProfile.avatar_base64 && savedProfile.avatar_base64 !== u.avatar_base64);
+                        if (needsSync) {
+                            try {
+                                const restored = await API.put('/api/auth/profile', {
+                                    display_name: savedProfile.display_name,
+                                    avatar_base64: savedProfile.avatar_base64,
+                                });
+                                MacStore.setState({ currentUser: restored });
+                            } catch {}
+                        }
+                    }
+
                     return true;
                 } catch {}
             }

@@ -373,11 +373,11 @@ const MessagesApp = () => {
 
     return (
         <div className="flex h-full">
-            {/* Playlist picker overlay */}
-            {playlistFor && <PlaylistPicker target={playlistFor}/>}
+            {/* Playlist picker overlay - portal to body to escape window overflow clipping */}
+            {playlistFor && ReactDOM.createPortal(<PlaylistPicker target={playlistFor}/>, document.body)}
 
-            {/* VFS file picker overlay */}
-            {vfsPickerFor && <VFSPicker target={vfsPickerFor}/>}
+            {/* VFS file picker overlay - portal to body to escape window overflow clipping */}
+            {vfsPickerFor && ReactDOM.createPortal(<VFSPicker target={vfsPickerFor}/>, document.body)}
 
             {/* Close attach menu on outside click */}
             {attachMenuFor && <div className="fixed inset-0 z-10" onClick={() => setAttachMenuFor(null)}/>}

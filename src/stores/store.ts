@@ -737,6 +737,11 @@ const MacAuth = {
             creds = { local_tag: rand(6), local_secret: rand(32), display_name: 'User' };
         }
 
+        // Load locally saved profile (survives server restarts)
+        let savedProfile = null;
+        try { savedProfile = JSON.parse(localStorage.getItem('macos_saved_profile') || 'null'); } catch(e) {}
+        const regDisplayName = savedProfile?.display_name || creds.display_name;
+
         // Try login, then register on failure
         let data = null;
         try {
@@ -751,7 +756,7 @@ const MacAuth = {
             try {
                 const r = await fetch('/api/auth/local-register', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ local_tag: creds.local_tag, local_secret: creds.local_secret, display_name: creds.display_name }),
+                    body: JSON.stringify({ local_tag: creds.local_tag, local_secret: creds.local_secret, display_name: regDisplayName }),
                 });
                 if (r.ok) {
                     data = await r.json();
@@ -766,6 +771,27 @@ const MacAuth = {
             localStorage.setItem('macos_local_identity', JSON.stringify(creds));
             MacStore.setState({ authUser: data.user, authToken: data.token });
             this._initWS();
+
+            // Restore locally saved profile if server data was reset
+            if (savedProfile) {
+                const u = data.user;
+                const needsSync = (savedProfile.display_name && savedProfile.display_name !== u.display_name)
+                    || (savedProfile.avatar_base64 && savedProfile.avatar_base64 !== u.avatar_base64);
+                if (needsSync) {
+                    try {
+                        const r = await fetch('/api/auth/profile', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + data.token },
+                            body: JSON.stringify({ display_name: savedProfile.display_name, avatar_base64: savedProfile.avatar_base64 }),
+                        });
+                        if (r.ok) {
+                            const restored = await r.json();
+                            this._user = restored;
+                            MacStore.setState({ authUser: restored });
+                        }
+                    } catch(e) {}
+                }
+            }
         }
     },
 };

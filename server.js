@@ -379,7 +379,7 @@ const auth = (req, res, next) => {
     catch { res.status(401).json({ error: 'Invalid or expired token' }); }
 };
 
-const issueToken = (user) => jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+const issueToken = (user) => jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '365d' });
 
 // ─── Auth: Registration (2-step email verification) ───────────────────────────
 app.post('/api/auth/send-register-code', async (req, res) => {

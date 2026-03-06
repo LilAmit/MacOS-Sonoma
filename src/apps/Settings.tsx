@@ -814,6 +814,11 @@ const SettingsFriendsPanel = ({ authUser, accentColor }) => {
         try {
             await MacAuth.api('PATCH', '/api/users/me', { display_name: displayName });
             MacStore.setState(s => ({ authUser: { ...s.authUser, display_name: displayName } }));
+            // Persist profile locally so it survives server restarts
+            try {
+                const prev = JSON.parse(localStorage.getItem('macos_saved_profile') || '{}');
+                localStorage.setItem('macos_saved_profile', JSON.stringify({ ...prev, display_name: displayName }));
+            } catch(e) {}
             setNameSaved(true);
             setTimeout(() => setNameSaved(false), 2000);
         } catch(e) {}
