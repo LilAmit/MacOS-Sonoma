@@ -1194,6 +1194,7 @@ const MacStore = {
         friendRequests: [],
         groups: [],
         pendingPlaylist: null,
+        pendingPaintImage: null,
     },
 
     getState() {
@@ -4779,16 +4780,31 @@ const MessagesApp = () => {
             const mime = msg.file_mime || '';
             const icon = mime.startsWith('image/') ? '🖼️' : mime.includes('pdf') ? '📄' : mime.startsWith('audio/') ? '🎵' : mime.startsWith('video/') ? '🎬' : '📎';
             const openFile = () => {
-                if (mime.startsWith('image/') || mime.startsWith('audio/') || mime.startsWith('video/') || mime.includes('pdf')) {
-                    MacStore.setState({ quickLookFile: { name: fname, icon, base64: msg.text, mime, size: fname } });
-                } else if (mime.startsWith('text/') || mime.includes('json') || mime.includes('javascript') || mime.includes('xml') || mime.includes('python') || mime.includes('csv')) {
-                    try {
-                        const text = atob(msg.text.split(',')[1] || '');
-                        MacStore.setState({ quickLookFile: { name: fname, icon, content: text, size: fname } });
-                    } catch { MacStore.setState({ quickLookFile: { name: fname, icon, size: fname } }); }
-                } else {
-                    MacStore.setState({ quickLookFile: { name: fname, icon, size: fname } });
+                const ext = fname.split('.').pop().toLowerCase();
+                const downloads = JSON.parse(localStorage.getItem('macos_appstore_downloads') || '{}');
+                const hasVSCode = Object.values(downloads).includes('vscode');
+                const hasPaint = Object.values(downloads).includes('paint');
+                const decodeText = () => { try { return atob(msg.text.split(',')[1] || ''); } catch { return ''; } };
+                const writeAndOpen = (appType, appName, w, h) => {
+                    const content = decodeText();
+                    if (!VFS.exists('/Users/user/Desktop/' + fname)) VFS.touch('/Users/user/Desktop', fname, content);
+                    else VFS.writeFile('/Users/user/Desktop/' + fname, content);
+                    MacStore.setState({ pendingOpenFile: { path: '/Users/user/Desktop', name: fname } });
+                    MacStore.openWindow(appType, appName, w, h);
+                };
+                if (['txt', 'md', 'doc', 'docx', 'rtf'].includes(ext)) { writeAndOpen('word', 'Word', 900, 700); }
+                else if (['py', 'js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'xml', 'yaml', 'yml', 'sh', 'bash', 'c', 'cpp', 'h', 'java', 'rb', 'go', 'rs', 'php', 'sql', 'csv', 'ini', 'toml', 'env', 'log', 'swift', 'kt'].includes(ext)) {
+                    if (hasVSCode) { writeAndOpen('vscode', 'VS Code', 950, 650); }
+                    else { MacStore.addNotification('System', 'Cannot open file', 'VS Code is not installed. Download it from the App Store to open .' + ext + ' files.'); }
                 }
+                else if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico'].includes(ext) || mime.startsWith('image/')) {
+                    if (hasPaint) { MacStore.setState({ pendingPaintImage: msg.text }); MacStore.openWindow('paint', 'Paint', 1000, 700); }
+                    else { MacStore.addNotification('System', 'Cannot open file', 'Paint is not installed. Download it from the App Store to open image files.'); }
+                }
+                else if (['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a'].includes(ext) || mime.startsWith('audio/')) { MacStore.setState({ quickLookFile: { name: fname, icon, base64: msg.text, mime, size: fname } }); }
+                else if (['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext) || mime.startsWith('video/')) { MacStore.setState({ quickLookFile: { name: fname, icon, base64: msg.text, mime, size: fname } }); }
+                else if (ext === 'pdf' || mime.includes('pdf')) { MacStore.setState({ quickLookFile: { name: fname, icon, base64: msg.text, mime, size: fname } }); }
+                else { MacStore.setState({ quickLookFile: { name: fname, icon, size: fname } }); }
             };
             const saveToDesktop = () => {
                 const fileData = { id: Date.now(), name: fname, base64: msg.text, mime: msg.file_mime, savedAt: Date.now() };
@@ -8734,7 +8750,19 @@ const PaintApp = () => {
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        saveState();
+        const pending = MacStore.getState().pendingPaintImage;
+        if (pending) {
+            MacStore.setState({ pendingPaintImage: null });
+            const img = new Image();
+            img.onload = () => {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                saveState();
+            };
+            img.onerror = () => saveState();
+            img.src = pending;
+        } else {
+            saveState();
+        }
     }, []);
 
     const saveState = () => {
@@ -11605,6 +11633,11 @@ const Desktop = () => {
     desktopFiles.forEach(file => {
         allDesktopItems.push({ key: 'file-' + file.name, type: 'file', file });
     });
+    if (savedFiles) savedFiles.forEach(sf => {
+        const mime = sf.mime || '';
+        const icon = mime.startsWith('image/') ? '🖼️' : mime.includes('pdf') ? '📄' : mime.startsWith('audio/') ? '🎵' : mime.startsWith('video/') ? '🎬' : mime.includes('text/') || mime.includes('python') || mime.includes('javascript') ? '📃' : '📎';
+        allDesktopItems.push({ key: 'saved-' + sf.id, type: 'saved', savedFile: sf, file: { name: sf.name, type: 'file', icon } });
+    });
 
     // Clean up stale icon positions for files no longer on desktop
     React.useEffect(() => {
@@ -11800,6 +11833,84 @@ const Desktop = () => {
                                 <span className="text-[10px] text-white text-center leading-tight drop-shadow-md truncate w-full">{item.name}</span>
                             </div>
                         );
+                    } else if (item.type === 'saved') {
+                        const sf = item.savedFile;
+                        const file = item.file;
+                        const openSavedFile = () => {
+                            const mime = sf.mime || '';
+                            const icon = file.icon;
+                            const ext = (sf.name || '').split('.').pop().toLowerCase();
+                            const downloads = JSON.parse(localStorage.getItem('macos_appstore_downloads') || '{}');
+                            const hasVSCode = Object.values(downloads).includes('vscode');
+                            const hasPaint = Object.values(downloads).includes('paint');
+
+                            // Helper: decode base64 to text content
+                            const decodeText = () => { try { return atob(sf.base64.split(',')[1] || ''); } catch { return ''; } };
+
+                            // Helper: write file to VFS and open in app
+                            const writeAndOpen = (appType, appName, w, h) => {
+                                const content = decodeText();
+                                if (!VFS.exists('/Users/user/Desktop/' + sf.name)) VFS.touch('/Users/user/Desktop', sf.name, content);
+                                else VFS.writeFile('/Users/user/Desktop/' + sf.name, content);
+                                MacStore.setState({ pendingOpenFile: { path: '/Users/user/Desktop', name: sf.name } });
+                                MacStore.openWindow(appType, appName, w, h);
+                            };
+
+                            // Text/document files → Word
+                            if (['txt', 'md', 'doc', 'docx', 'rtf'].includes(ext)) {
+                                writeAndOpen('word', 'Word', 900, 700);
+                            }
+                            // Code files → VS Code
+                            else if (['py', 'js', 'ts', 'jsx', 'tsx', 'html', 'css', 'json', 'xml', 'yaml', 'yml', 'sh', 'bash', 'c', 'cpp', 'h', 'java', 'rb', 'go', 'rs', 'php', 'sql', 'csv', 'ini', 'toml', 'env', 'log', 'swift', 'kt'].includes(ext)) {
+                                if (hasVSCode) {
+                                    writeAndOpen('vscode', 'VS Code', 950, 650);
+                                } else {
+                                    MacStore.addNotification('System', 'Cannot open file', 'VS Code is not installed. Download it from the App Store to open .' + ext + ' files.');
+                                }
+                            }
+                            // Image files → Paint
+                            else if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico'].includes(ext) || mime.startsWith('image/')) {
+                                if (hasPaint) {
+                                    MacStore.setState({ pendingPaintImage: sf.base64 });
+                                    MacStore.openWindow('paint', 'Paint', 1000, 700);
+                                } else {
+                                    MacStore.addNotification('System', 'Cannot open file', 'Paint is not installed. Download it from the App Store to open image files.');
+                                }
+                            }
+                            // Audio files → QuickLook with player
+                            else if (['mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a'].includes(ext) || mime.startsWith('audio/')) {
+                                MacStore.setState({ quickLookFile: { name: sf.name, icon, base64: sf.base64, mime, size: sf.name } });
+                            }
+                            // Video files → QuickLook with player
+                            else if (['mp4', 'webm', 'mov', 'avi', 'mkv'].includes(ext) || mime.startsWith('video/')) {
+                                MacStore.setState({ quickLookFile: { name: sf.name, icon, base64: sf.base64, mime, size: sf.name } });
+                            }
+                            // PDF → QuickLook
+                            else if (ext === 'pdf' || mime.includes('pdf')) {
+                                MacStore.setState({ quickLookFile: { name: sf.name, icon, base64: sf.base64, mime, size: sf.name } });
+                            }
+                            // Fallback → QuickLook
+                            else {
+                                MacStore.setState({ quickLookFile: { name: sf.name, icon, size: sf.name } });
+                            }
+                        };
+                        return (
+                            <div key={item.key}
+                                data-desktop-file={sf.name} data-file-type="file"
+                                draggable={true}
+                                onDragStart={(e) => { e.dataTransfer.setData('macos-file', JSON.stringify({ base64: sf.base64, name: sf.name, mime: sf.mime })); e.dataTransfer.effectAllowed = 'copy'; }}
+                                className={`absolute flex flex-col items-center gap-0.5 p-1 rounded-lg cursor-default w-[80px] transition-all
+                                    ${isSelected ? 'bg-white/25' : 'hover:bg-white/10'}
+                                    ${isDrag ? 'z-50 opacity-80' : ''}`}
+                                style={{ left: pos.x, top: pos.y }}
+                                onMouseDown={(e) => { e.stopPropagation(); setSelectedDesktopItem(item.key); handleIconMouseDown(e, item.key, index, item); }}
+                                onDoubleClick={() => { if (!dragRef.current.moved) openSavedFile(); }}>
+                                <div className="w-[48px] h-[48px] flex items-center justify-center">
+                                    <span className="text-[32px]">{file.icon}</span>
+                                </div>
+                                <span className="text-[10px] text-white text-center leading-tight drop-shadow-md truncate w-full">{sf.name}</span>
+                            </div>
+                        );
                     } else {
                         const file = item.file;
                         const isFolderDropTarget = dropTargetFolder === file.name && file.type === 'folder';
@@ -11846,10 +11957,7 @@ const Desktop = () => {
                 </DesktopWidget>
             ))}
 
-            {/* Desktop Files (saved from Messages) */}
-            {savedFiles && savedFiles.map((f, i) => (
-                <DesktopFileIcon key={f.id} file={f} index={i} />
-            ))}
+            {/* Desktop Files (saved from Messages) — now rendered in allDesktopItems grid above */}
 
             {/* Stage Manager - side thumbnails */}
             {stageManagerOn && windows.filter(w => !w.minimized && !w.focused).length > 0 && (
