@@ -1615,6 +1615,21 @@ const MacIcons = {
             <rect x="53" y="70" width="14" height="10" rx="2" fill="#8B5E3C"/>
         </svg>
     ),
+    Racing: ({ size = 54 }) => (
+        <svg viewBox="0 0 120 120" width={size} height={size}>
+            <rect x="2" y="2" width="116" height="116" rx="26" fill="#1a1a2e"/>
+            <rect x="2" y="2" width="116" height="116" rx="26" fill="url(#racingGrad)" opacity="0.8"/>
+            <defs><linearGradient id="racingGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#00d4ff"/><stop offset="50%" stopColor="#7b2ff7"/><stop offset="100%" stopColor="#ff6b35"/></linearGradient></defs>
+            <path d="M30 72 L42 52 L48 52 L52 48 L68 48 L72 52 L78 52 L90 72Z" fill="white" opacity="0.95"/>
+            <circle cx="42" cy="76" r="8" fill="#333" stroke="white" strokeWidth="2"/>
+            <circle cx="78" cy="76" r="8" fill="#333" stroke="white" strokeWidth="2"/>
+            <circle cx="42" cy="76" r="3" fill="#999"/>
+            <circle cx="78" cy="76" r="3" fill="#999"/>
+            <rect x="46" y="54" width="28" height="12" rx="3" fill="#88ccff" opacity="0.5"/>
+            <path d="M52 44 L60 34 L68 44Z" fill="#ff3333" opacity="0.8"/>
+            <text x="60" y="100" textAnchor="middle" fontSize="11" fill="white" fontWeight="800" fontFamily="sans-serif" opacity="0.7">VELOCITY</text>
+        </svg>
+    ),
     AboutDev: ({ size = 54 }) => (
         <svg viewBox="0 0 120 120" width={size} height={size}>
             <defs>
@@ -9111,6 +9126,52 @@ const PaintApp = () => {
 
 
 window.PaintApp = PaintApp;
+
+// Racing Game — embedded 3D game via iframe
+const RacingApp = () => {
+    const [gameUrl, setGameUrl] = React.useState('http://localhost:3000');
+    const [loaded, setLoaded] = React.useState(false);
+    const [error, setError] = React.useState(false);
+    const iframeRef = React.useRef(null);
+
+    React.useEffect(() => {
+        // Check if the game dev server is running
+        fetch(gameUrl, { mode: 'no-cors' }).then(() => {
+            setLoaded(true);
+        }).catch(() => {
+            setError(true);
+        });
+    }, []);
+
+    if (error) {
+        return (
+            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#1a1a2e', color: 'white', fontFamily: '-apple-system, sans-serif', gap: 16, padding: 40, textAlign: 'center' }}>
+                <div style={{ fontSize: 64 }}>🏎️</div>
+                <div style={{ fontSize: 22, fontWeight: 700 }}>Velocity — 3D Racing Game</div>
+                <div style={{ fontSize: 14, opacity: 0.7, maxWidth: 400, lineHeight: 1.6 }}>
+                    The game server is not running. To play, open a terminal and run:
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 20px', fontFamily: 'monospace', fontSize: 13 }}>
+                    cd ~/Desktop/3D-Racing-Game && npm run dev
+                </div>
+                <div style={{ fontSize: 13, opacity: 0.5, marginTop: 8 }}>Then close and reopen this app.</div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
+            <iframe
+                ref={iframeRef}
+                src={gameUrl}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                allow="autoplay; fullscreen; pointer-lock"
+                sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-popups"
+            />
+        </div>
+    );
+};
+window.RacingApp = RacingApp;
 </script>
 
 <script type="text/babel">
@@ -9143,6 +9204,9 @@ const AppStoreApp = () => {
         { name: 'Paint', subtitle: 'Drawing & Art Studio', category: 'productivity', rating: 4.5, size: '5 MB', color: '#FF3B30', appType: 'paint',
             desc: 'A full-featured drawing app with brush, eraser, shapes (line, rectangle, circle), flood fill, text tool, undo/redo, and color picker. Save your art as PNG!',
             icon: null, emoji: '🎨' },
+        { name: 'Velocity', subtitle: '3D Open World Racing', category: 'games', rating: 4.9, size: '25 MB', color: '#7b2ff7', appType: 'racing',
+            desc: 'A 3D open world racing game with cannon-es physics! Drive racing cars through a city, race against bots, earn coins, buy cars, and explore. Features engine sounds, background music, drifting, nitro boost, minimap, and full settings.',
+            icon: null, emoji: '🏎️' },
     ];
 
     const stars = (rating) => (
@@ -9204,6 +9268,7 @@ const AppStoreApp = () => {
             game2048: { w: 430, h: 550 },
             vscode: { w: 950, h: 650 },
             paint: { w: 1000, h: 700 },
+            racing: { w: 1050, h: 700 },
         };
         const s = sizes[app.appType] || { w: 800, h: 500 };
         MacStore.openWindow(app.appType, app.name, s.w, s.h);
@@ -9281,12 +9346,12 @@ const AppStoreApp = () => {
                             <div className="absolute inset-0 flex items-center p-8">
                                 <div className="text-white">
                                     <div className="text-[12px] font-semibold uppercase tracking-wider opacity-70">App Store</div>
-                                    <div className="text-[28px] font-bold mt-1">5 Apps, All Functional</div>
-                                    <div className="text-[14px] opacity-80 mt-1">Download and use real games, a code editor, and a paint app</div>
+                                    <div className="text-[28px] font-bold mt-1">6 Apps, All Functional</div>
+                                    <div className="text-[14px] opacity-80 mt-1">Download and use real games, a code editor, and creative tools</div>
                                 </div>
                             </div>
                             <div className="absolute right-8 top-1/2 -translate-y-1/2 flex gap-3 text-[40px]">
-                                🐍 🧱 🔢 💻 🎨
+                                🐍 🧱 🔢 💻 🎨 🏎️
                             </div>
                         </div>
                         <h3 className="text-[20px] font-bold mb-4">All Apps</h3>
@@ -10068,7 +10133,7 @@ const Dock = () => {
         const recentApps = [];
         windows.forEach(w => {
             if (!dockApps.find(a => a.type === w.appType) && !utilApps.find(a => a.type === w.appType) && w.appType !== 'trash') {
-                const iconMap = { snake: MacIcons.Snake, tetris: MacIcons.Tetris, game2048: MacIcons.Game2048, vscode: MacIcons.VSCode, paint: MacIcons.Paint };
+                const iconMap = { snake: MacIcons.Snake, tetris: MacIcons.Tetris, game2048: MacIcons.Game2048, vscode: MacIcons.VSCode, paint: MacIcons.Paint, racing: MacIcons.Racing };
                 if (iconMap[w.appType] && !recentApps.find(r => r.type === w.appType)) {
                     recentApps.push({ type: w.appType, name: w.title, Icon: iconMap[w.appType] });
                 }
@@ -10757,7 +10822,7 @@ const ContextMenuComponent = () => {
             case 'desktop-app':
                 return (<>
                     <CtxItem label="Open" onClick={() => {
-                        const sizes = { finder:{w:900,h:550}, safari:{w:1000,h:650}, calculator:{w:250,h:400}, notes:{w:800,h:550}, terminal:{w:650,h:420}, settings:{w:920,h:600}, messages:{w:800,h:550}, mail:{w:1000,h:600}, maps:{w:850,h:550}, photos:{w:900,h:600}, word:{w:900,h:700}, trash:{w:700,h:450}, calendar:{w:800,h:600}, music:{w:950,h:600}, appstore:{w:950,h:650}, snake:{w:530,h:500}, tetris:{w:480,h:560}, game2048:{w:430,h:550}, vscode:{w:950,h:650}, paint:{w:1000,h:700} };
+                        const sizes = { finder:{w:900,h:550}, safari:{w:1000,h:650}, calculator:{w:250,h:400}, notes:{w:800,h:550}, terminal:{w:650,h:420}, settings:{w:920,h:600}, messages:{w:800,h:550}, mail:{w:1000,h:600}, maps:{w:850,h:550}, photos:{w:900,h:600}, word:{w:900,h:700}, trash:{w:700,h:450}, calendar:{w:800,h:600}, music:{w:950,h:600}, appstore:{w:950,h:650}, snake:{w:530,h:500}, tetris:{w:480,h:560}, game2048:{w:430,h:550}, vscode:{w:950,h:650}, paint:{w:1000,h:700}, racing:{w:1050,h:700} };
                         const s = sizes[menu.data.appType] || { w: 800, h: 500 };
                         MacStore.openWindow(menu.data.appType, menu.data.appName, s.w, s.h);
                     }}/>
@@ -11388,7 +11453,7 @@ const Desktop = () => {
         terminal: TerminalApp, settings: SettingsApp, messages: MessagesApp, mail: MailApp,
         calendar: CalendarApp, photos: PhotosApp, word: WordApp, trash: TrashApp,
         maps: MapsApp, music: MusicApp, appstore: AppStoreApp, snake: SnakeGameApp,
-        tetris: TetrisGameApp, game2048: Game2048App, vscode: VSCodeApp, paint: PaintApp,
+        tetris: TetrisGameApp, game2048: Game2048App, vscode: VSCodeApp, paint: PaintApp, racing: RacingApp,
         aboutdev: AboutDeveloperApp,
     };
 
@@ -11567,7 +11632,7 @@ const Desktop = () => {
         terminal: MacIcons.Terminal, word: MacIcons.Word, trash: MacIcons.Trash, settings: MacIcons.Settings,
         music: MacIcons.Music, appstore: MacIcons.AppStore,
         snake: MacIcons.Snake, tetris: MacIcons.Tetris, game2048: MacIcons.Game2048,
-        vscode: MacIcons.VSCode, paint: MacIcons.Paint, aboutdev: MacIcons.AboutDev,
+        vscode: MacIcons.VSCode, paint: MacIcons.Paint, racing: MacIcons.Racing, aboutdev: MacIcons.AboutDev,
     };
 
     const launchpadApps = [
@@ -11591,7 +11656,7 @@ const Desktop = () => {
     // Add downloaded apps to launchpad
     try {
         const downloaded = JSON.parse(localStorage.getItem('macos_appstore_downloads') || '{}');
-        const downloadedIconMap = { snake: MacIcons.Snake, tetris: MacIcons.Tetris, game2048: MacIcons.Game2048, vscode: MacIcons.VSCode, paint: MacIcons.Paint };
+        const downloadedIconMap = { snake: MacIcons.Snake, tetris: MacIcons.Tetris, game2048: MacIcons.Game2048, vscode: MacIcons.VSCode, paint: MacIcons.Paint, racing: MacIcons.Racing };
         Object.entries(downloaded).forEach(([name, appType]) => {
             if (downloadedIconMap[appType] && !launchpadApps.find(a => a.type === appType)) {
                 launchpadApps.push({ type: appType, name, Icon: downloadedIconMap[appType] });
@@ -11606,7 +11671,7 @@ const Desktop = () => {
         photos: { w: 900, h: 600 }, word: { w: 900, h: 700 }, trash: { w: 700, h: 450 },
         calendar: { w: 800, h: 600 }, music: { w: 950, h: 600 }, appstore: { w: 950, h: 650 },
         snake: { w: 530, h: 500 }, tetris: { w: 480, h: 560 }, game2048: { w: 430, h: 550 },
-        vscode: { w: 950, h: 650 }, paint: { w: 1000, h: 700 }, aboutdev: { w: 550, h: 580 },
+        vscode: { w: 950, h: 650 }, paint: { w: 1000, h: 700 }, racing: { w: 1050, h: 700 }, aboutdev: { w: 550, h: 580 },
     };
 
     const openApp = (type, name) => {
