@@ -23,7 +23,7 @@
                     },
                     colors: {
                         'macos': { 'bg': 'rgba(246,246,246,0.92)', 'dark': 'rgba(30,30,30,0.35)', 'accent': '#007AFF', 'red': '#FF5F57', 'yellow': '#FFBD2E', 'green': '#28C840', 'text': '#1d1d1f', 'secondary': '#86868b', 'border': 'rgba(0,0,0,0.12)', 'sidebar': 'rgba(236,236,236,0.5)' }
-                    },
+                    },22
                     animation: {
                         'wallpaper': 'wallpaper 120s ease infinite',
                         'spotlight-in': 'spotlight-in 0.15s ease-out',
@@ -9127,42 +9127,13 @@ const PaintApp = () => {
 
 window.PaintApp = PaintApp;
 
-// Racing Game — embedded 3D game via iframe
+// Racing Game — served from /velocity/ on the same server
 const RacingApp = () => {
-    const [gameUrl, setGameUrl] = React.useState('http://localhost:3000');
-    const [loaded, setLoaded] = React.useState(false);
-    const [error, setError] = React.useState(false);
-    const iframeRef = React.useRef(null);
-
-    React.useEffect(() => {
-        // Check if the game dev server is running
-        fetch(gameUrl, { mode: 'no-cors' }).then(() => {
-            setLoaded(true);
-        }).catch(() => {
-            setError(true);
-        });
-    }, []);
-
-    if (error) {
-        return (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#1a1a2e', color: 'white', fontFamily: '-apple-system, sans-serif', gap: 16, padding: 40, textAlign: 'center' }}>
-                <div style={{ fontSize: 64 }}>🏎️</div>
-                <div style={{ fontSize: 22, fontWeight: 700 }}>Velocity — 3D Racing Game</div>
-                <div style={{ fontSize: 14, opacity: 0.7, maxWidth: 400, lineHeight: 1.6 }}>
-                    The game server is not running. To play, open a terminal and run:
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 20px', fontFamily: 'monospace', fontSize: 13 }}>
-                    cd ~/Desktop/3D-Racing-Game && npm run dev
-                </div>
-                <div style={{ fontSize: 13, opacity: 0.5, marginTop: 8 }}>Then close and reopen this app.</div>
-            </div>
-        );
-    }
+    const gameUrl = window.location.origin + '/velocity/';
 
     return (
         <div style={{ width: '100%', height: '100%', position: 'relative', background: '#000' }}>
             <iframe
-                ref={iframeRef}
                 src={gameUrl}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 allow="autoplay; fullscreen; pointer-lock"
