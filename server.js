@@ -818,8 +818,65 @@ function broadcast(data, excludeId) {
 // Typing debounce timers: Map<`${userId}-${contextKey}`, timeout>
 const typingTimers = new Map();
 
+// ─── Velocity Racing Game — multiplayer rooms (no auth required) ─────────────
+const velocityRooms = new Map(); // roomId → Map<tag, { ws, data }>
+
+function velocityBroadcast(roomId, data, excludeTag) {
+    const room = velocityRooms.get(roomId);
+    if (!room) return;
+    const msg = JSON.stringify(data);
+    room.forEach((peer, tag) => {
+        if (tag !== excludeTag && peer.ws.readyState === 1) peer.ws.send(msg);
+    });
+}
+
+function handleVelocityConnection(ws, url) {
+    const tag = url.searchParams.get('tag') || '#unknown';
+    let roomId = url.searchParams.get('room') || 'freeroam';
+
+    if (!velocityRooms.has(roomId)) velocityRooms.set(roomId, new Map());
+    const room = velocityRooms.get(roomId);
+
+    room.set(tag, { ws, data: { x: 0, y: 0, z: 0, r: 0 } });
+
+    // Send current peer list
+    const tags = [...room.keys()].filter(t => t !== tag);
+    ws.send(JSON.stringify({ type: 'peer_list', tags }));
+
+    // Notify others
+    velocityBroadcast(roomId, { type: 'peer_join', tag }, tag);
+
+    ws.on('message', (raw) => {
+        try {
+            const msg = JSON.parse(raw);
+            if (msg.type === 'update') {
+                const peer = room.get(tag);
+                if (peer) peer.data = msg.data;
+                velocityBroadcast(roomId, { type: 'peer_update', tag, data: msg.data }, tag);
+            }
+            if (msg.type === 'race_event') {
+                // Relay race events (countdown, finish, etc.) to all in room
+                velocityBroadcast(roomId, { type: 'race_event', tag, event: msg.event, payload: msg.payload }, tag);
+            }
+        } catch {}
+    });
+
+    ws.on('close', () => {
+        room.delete(tag);
+        velocityBroadcast(roomId, { type: 'peer_leave', tag }, tag);
+        if (room.size === 0) velocityRooms.delete(roomId);
+    });
+}
+
 wss.on('connection', (ws, req) => {
     const url = new URL(req.url, 'http://localhost');
+
+    // Route Velocity game connections to the game room system
+    if (url.pathname === '/velocity') {
+        handleVelocityConnection(ws, url);
+        return;
+    }
+
     const token = url.searchParams.get('token');
     let userId = null;
     try { userId = jwt.verify(token, JWT_SECRET).id; }
