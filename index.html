@@ -2431,8 +2431,29 @@ const SafariApp = () => {
     const [history, setHistory] = React.useState([]); // back stack per current tab
     const [forwardStack, setForwardStack] = React.useState([]);
     const [proxyKey, setProxyKey] = React.useState(0); // bump to force iframe reload
+    const [proxyAvailable, setProxyAvailable] = React.useState(null); // null=probing, true/false
+    const [loadMode, setLoadMode] = React.useState('direct'); // 'proxy' | 'direct' (for current page)
     const iframeRef = React.useRef(null);
     const suggestTimer = React.useRef(null);
+
+    // Probe backend proxy availability (Render may still be deploying)
+    React.useEffect(() => {
+        let cancelled = false;
+        const probe = async () => {
+            try {
+                const r = await fetch(API.BASE + '/api/safari/page?url=https://example.com', {
+                    method: 'HEAD',
+                    signal: AbortSignal.timeout(5000),
+                });
+                if (!cancelled) setProxyAvailable(r.status !== 404);
+            } catch {
+                if (!cancelled) setProxyAvailable(false);
+            }
+        };
+        probe();
+        const interval = setInterval(probe, 30000);
+        return () => { cancelled = true; clearInterval(interval); };
+    }, []);
     // Tab Groups
     const [tabGroupsOpen, setTabGroupsOpen] = React.useState(false);
     const [tabGroups, setTabGroups] = React.useState([
@@ -2463,35 +2484,49 @@ const SafariApp = () => {
         setSuggestions([]);
         setIframeError(false);
 
-        if (looksLikeUrl(trimmed)) {
-            const finalUrl = trimmed.startsWith('http') ? trimmed : 'https://' + trimmed;
+        const goToPage = (finalUrl) => {
             if (currentUrl && !opts.noHistory) {
-                setHistory(h => [...h, { mode, url: currentUrl, search: searchData }]);
+                setHistory(h => [...h, { mode, url: currentUrl, search: searchData, loadMode }]);
                 setForwardStack([]);
             }
             setCurrentUrl(finalUrl);
             setDisplayUrl(stripProto(finalUrl));
             setMode('page');
+            setLoadMode(proxyAvailable ? 'proxy' : 'direct');
             setIsLoading(true);
             setProxyKey(k => k + 1);
             const domain = stripProto(finalUrl);
             setTabs(prev => prev.map(t => t.id === activeTab ? { ...t, title: domain, url: finalUrl, mode: 'page' } : t));
             setUrl(finalUrl);
-        } else {
-            // Search — hit backend
-            if ((currentUrl || mode === 'search') && !opts.noHistory) {
-                setHistory(h => [...h, { mode, url: currentUrl, search: searchData }]);
-                setForwardStack([]);
-            }
-            setMode('search');
-            setIsLoading(true);
-            setDisplayUrl(trimmed);
-            setTabs(prev => prev.map(t => t.id === activeTab ? { ...t, title: trimmed, url: '', mode: 'search', query: trimmed } : t));
-            setUrl(trimmed);
-            API.get('/api/safari/search?q=' + encodeURIComponent(trimmed))
-                .then(data => { setSearchData(data); setIsLoading(false); })
-                .catch(() => { setSearchData({ query: trimmed, results: [], abstract: null }); setIsLoading(false); });
+        };
+
+        if (looksLikeUrl(trimmed)) {
+            goToPage(trimmed.startsWith('http') ? trimmed : 'https://' + trimmed);
+            return;
         }
+
+        // Search term
+        if (!proxyAvailable) {
+            // Backend isn't up yet — open DuckDuckGo directly in the iframe.
+            goToPage('https://duckduckgo.com/?q=' + encodeURIComponent(trimmed) + '&ia=web');
+            return;
+        }
+
+        if ((currentUrl || mode === 'search') && !opts.noHistory) {
+            setHistory(h => [...h, { mode, url: currentUrl, search: searchData, loadMode }]);
+            setForwardStack([]);
+        }
+        setMode('search');
+        setIsLoading(true);
+        setDisplayUrl(trimmed);
+        setTabs(prev => prev.map(t => t.id === activeTab ? { ...t, title: trimmed, url: '', mode: 'search', query: trimmed } : t));
+        setUrl(trimmed);
+        API.get('/api/safari/search?q=' + encodeURIComponent(trimmed))
+            .then(data => { setSearchData(data); setIsLoading(false); })
+            .catch(() => {
+                // Search endpoint failed — fall back to DuckDuckGo URL
+                goToPage('https://duckduckgo.com/?q=' + encodeURIComponent(trimmed) + '&ia=web');
+            });
     };
 
     // Receive nav events from inside the proxied iframe
@@ -2526,11 +2561,12 @@ const SafariApp = () => {
     const goBack = () => {
         if (!history.length) return;
         const prev = history[history.length - 1];
-        setForwardStack(f => [...f, { mode, url: currentUrl, search: searchData }]);
+        setForwardStack(f => [...f, { mode, url: currentUrl, search: searchData, loadMode }]);
         setHistory(h => h.slice(0, -1));
         setMode(prev.mode);
         setCurrentUrl(prev.url || '');
         setSearchData(prev.search || null);
+        setLoadMode(prev.loadMode || 'direct');
         if (prev.mode === 'page' && prev.url) { setDisplayUrl(stripProto(prev.url)); setUrl(prev.url); setProxyKey(k => k + 1); setIsLoading(true); }
         else if (prev.mode === 'search') { setDisplayUrl(prev.search?.query || ''); setUrl(prev.search?.query || ''); }
         else { setDisplayUrl(''); setUrl(''); }
@@ -2539,11 +2575,12 @@ const SafariApp = () => {
     const goForward = () => {
         if (!forwardStack.length) return;
         const next = forwardStack[forwardStack.length - 1];
-        setHistory(h => [...h, { mode, url: currentUrl, search: searchData }]);
+        setHistory(h => [...h, { mode, url: currentUrl, search: searchData, loadMode }]);
         setForwardStack(f => f.slice(0, -1));
         setMode(next.mode);
         setCurrentUrl(next.url || '');
         setSearchData(next.search || null);
+        setLoadMode(next.loadMode || 'direct');
         if (next.mode === 'page' && next.url) { setDisplayUrl(stripProto(next.url)); setUrl(next.url); setProxyKey(k => k + 1); setIsLoading(true); }
         else if (next.mode === 'search') { setDisplayUrl(next.search?.query || ''); setUrl(next.search?.query || ''); }
     };
@@ -2572,12 +2609,12 @@ const SafariApp = () => {
 
     const saveCurrentTab = () => {
         tabStateRef.current.set(activeTab, {
-            mode, currentUrl, searchData, displayUrl, history, forwardStack, proxyKey,
+            mode, currentUrl, searchData, displayUrl, history, forwardStack, proxyKey, loadMode,
         });
     };
 
     const loadTabState = (tabId) => {
-        const s = tabStateRef.current.get(tabId) || { mode: 'start', currentUrl: '', searchData: null, displayUrl: '', history: [], forwardStack: [], proxyKey: 0 };
+        const s = tabStateRef.current.get(tabId) || { mode: 'start', currentUrl: '', searchData: null, displayUrl: '', history: [], forwardStack: [], proxyKey: 0, loadMode: 'direct' };
         setActiveTab(tabId);
         setMode(s.mode);
         setCurrentUrl(s.currentUrl || '');
@@ -2587,6 +2624,7 @@ const SafariApp = () => {
         setHistory(s.history || []);
         setForwardStack(s.forwardStack || []);
         setProxyKey(s.proxyKey || 0);
+        setLoadMode(s.loadMode || 'direct');
         setIframeError(false);
         setUrlFocused(false);
         setSuggestions([]);
@@ -2624,7 +2662,12 @@ const SafariApp = () => {
     };
 
     const reload = () => {
-        if (mode === 'page' && currentUrl) { setIsLoading(true); setProxyKey(k => k + 1); }
+        if (mode === 'page' && currentUrl) {
+            setLoadMode(proxyAvailable ? 'proxy' : 'direct');
+            setIsLoading(true);
+            setIframeError(false);
+            setProxyKey(k => k + 1);
+        }
         else if (mode === 'search' && searchData?.query) { navigate(searchData.query, { noHistory: true }); }
     };
 
@@ -2894,9 +2937,24 @@ const SafariApp = () => {
                                 </div>
                             </div>
 
-                            <div className="text-[10.5px] font-bold text-gray-500 uppercase tracking-wider mb-4">Backend Proxy</div>
-                            <div className="bg-white/70 backdrop-blur rounded-2xl p-4 text-[12.5px] text-gray-700 border border-black/[0.05]">
-                                <span className="text-[#007aff] font-semibold">Powered by the Render backend.</span> Frame-blockers are stripped server-side, so most sites load. Type a search to get real results, or enter a URL.
+                            <div className="text-[10.5px] font-bold text-gray-500 uppercase tracking-wider mb-4">Backend</div>
+                            <div className={`rounded-2xl p-4 text-[12.5px] border backdrop-blur ${
+                                proxyAvailable === null ? 'bg-gray-50/80 border-gray-200 text-gray-600'
+                                : proxyAvailable ? 'bg-green-50/80 border-green-200 text-green-800'
+                                : 'bg-yellow-50/80 border-yellow-200 text-yellow-900'
+                            }`}>
+                                <div className="flex items-center gap-2.5">
+                                    <div className={`w-2 h-2 rounded-full ${
+                                        proxyAvailable === null ? 'bg-gray-400 animate-pulse'
+                                        : proxyAvailable ? 'bg-green-500'
+                                        : 'bg-yellow-500 animate-pulse'
+                                    }`}/>
+                                    <div className="flex-1">
+                                        {proxyAvailable === null && <span>Checking backend proxy…</span>}
+                                        {proxyAvailable === true && <><span className="font-semibold">Backend proxy active.</span> Any site will load — frame-blockers are stripped server-side.</>}
+                                        {proxyAvailable === false && <><span className="font-semibold">Backend proxy waking up.</span> Render is still deploying. Sites load directly for now (frame-friendly sites work; searches open DuckDuckGo). Auto-retries every 30s.</>}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2971,7 +3029,7 @@ const SafariApp = () => {
                         <iframe
                             ref={iframeRef}
                             key={proxyKey}
-                            src={proxiedUrl(currentUrl)}
+                            src={loadMode === 'proxy' ? proxiedUrl(currentUrl) : currentUrl}
                             className="w-full h-full border-none bg-white"
                             sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
                             referrerPolicy="no-referrer"
@@ -2979,6 +3037,11 @@ const SafariApp = () => {
                             onError={() => { setIsLoading(false); setIframeError(true); }}
                             title="Safari Browser"
                         />
+                        {loadMode === 'direct' && (
+                            <div className="absolute top-2 right-2 bg-yellow-100/95 backdrop-blur text-yellow-900 text-[11px] px-2.5 py-1 rounded-md border border-yellow-300/60 shadow-sm pointer-events-none">
+                                Direct mode — proxy waking up
+                            </div>
+                        )}
                         {iframeError && (
                             <div className="absolute inset-0 flex items-center justify-center bg-white">
                                 <div className="text-center p-8">
