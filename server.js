@@ -767,6 +767,182 @@ app.delete('/api/files', auth, (req, res) => {
     res.json({ success: true });
 });
 
+// ─── Safari Proxy (lets the in-app browser load frame-blocked sites) ─────────
+const safariCache = new Map(); // url -> { body, ct, t }
+const SAFARI_CACHE_TTL = 60 * 1000;
+const SAFARI_CACHE_MAX = 60;
+const SAFARI_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
+
+const isPrivateHost = (host) => {
+    host = (host || '').toLowerCase();
+    if (!host) return true;
+    if (host === 'localhost' || host === '0.0.0.0' || host.endsWith('.local') || host.endsWith('.internal')) return true;
+    if (/^127\./.test(host)) return true;
+    if (/^10\./.test(host)) return true;
+    if (/^192\.168\./.test(host)) return true;
+    if (/^169\.254\./.test(host)) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return true;
+    return false;
+};
+
+const rewriteHtmlForProxy = (html, finalUrl) => {
+    // Kill CSP / frame-busting meta tags
+    html = html.replace(/<meta[^>]+http-equiv=["']?Content-Security-Policy["']?[^>]*>/gi, '');
+    html = html.replace(/<meta[^>]+http-equiv=["']?X-Frame-Options["']?[^>]*>/gi, '');
+    // Remove any existing <base> so ours wins
+    html = html.replace(/<base\b[^>]*>/gi, '');
+
+    let baseHref;
+    try {
+        const u = new URL(finalUrl);
+        baseHref = u.origin + u.pathname.replace(/[^/]*$/, '');
+    } catch { baseHref = finalUrl; }
+
+    const injection = `<base href="${baseHref}">
+<style>html,body{background:#fff}</style>
+<script>(function(){
+  function send(url){ try { parent.postMessage({__safari:'navigate', url: url}, '*'); } catch(_){} }
+  function abs(href){ try { return new URL(href, document.baseURI).href; } catch(_) { return href; } }
+  document.addEventListener('click', function(e){
+    var a = e.target && e.target.closest && e.target.closest('a');
+    if (!a) return;
+    var href = a.getAttribute('href');
+    if (!href || href[0] === '#') return;
+    if (a.target === '_blank') { e.preventDefault(); send(abs(href)); return; }
+    if (/^(mailto:|tel:|javascript:)/i.test(href)) return;
+    e.preventDefault();
+    send(abs(href));
+  }, true);
+  document.addEventListener('submit', function(e){
+    var f = e.target;
+    if (!f || f.tagName !== 'FORM') return;
+    if ((f.method || 'get').toLowerCase() !== 'get') return;
+    e.preventDefault();
+    var params = new URLSearchParams(new FormData(f)).toString();
+    var action = f.getAttribute('action') || location.href;
+    var url = abs(action) + (action.indexOf('?') > -1 ? '&' : '?') + params;
+    send(url);
+  }, true);
+  try { parent.postMessage({__safari:'title', title: document.title}, '*'); } catch(_){}
+})();</script>`;
+
+    if (/<head[^>]*>/i.test(html)) {
+        html = html.replace(/<head[^>]*>/i, m => m + injection);
+    } else if (/<html[^>]*>/i.test(html)) {
+        html = html.replace(/<html[^>]*>/i, m => m + '<head>' + injection + '</head>');
+    } else {
+        html = injection + html;
+    }
+    return html;
+};
+
+app.get('/api/safari/page', async (req, res) => {
+    try {
+        const target = req.query.url;
+        if (!target) return res.status(400).send('missing url');
+        let u;
+        try { u = new URL(target); } catch { return res.status(400).send('bad url'); }
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return res.status(400).send('bad protocol');
+        if (isPrivateHost(u.hostname)) return res.status(403).send('blocked host');
+
+        const cached = safariCache.get(target);
+        if (cached && Date.now() - cached.t < SAFARI_CACHE_TTL) {
+            res.set('Content-Type', cached.ct);
+            res.set('Cache-Control', 'no-store');
+            res.set('X-Safari-Cache', 'hit');
+            return res.send(cached.body);
+        }
+
+        const upstream = await fetch(target, {
+            headers: {
+                'User-Agent': SAFARI_UA,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+            },
+            redirect: 'follow',
+        });
+
+        const ct = (upstream.headers.get('content-type') || 'text/html; charset=utf-8');
+        let body;
+        if (/text\/html|application\/xhtml/i.test(ct)) {
+            body = await upstream.text();
+            body = rewriteHtmlForProxy(body, upstream.url || target);
+        } else {
+            body = await upstream.buffer();
+        }
+
+        if (safariCache.size >= SAFARI_CACHE_MAX) {
+            const firstKey = safariCache.keys().next().value;
+            safariCache.delete(firstKey);
+        }
+        safariCache.set(target, { body, ct, t: Date.now() });
+
+        res.set('Content-Type', ct);
+        res.set('Cache-Control', 'no-store');
+        res.set('X-Safari-Cache', 'miss');
+        res.status(upstream.status).send(body);
+    } catch (e) {
+        console.error('[safari/page]', e.message);
+        res.status(502).send('Proxy error: ' + e.message);
+    }
+});
+
+app.get('/api/safari/search', async (req, res) => {
+    try {
+        const q = (req.query.q || '').trim();
+        if (!q) return res.json({ abstract: null, results: [] });
+        const r = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1&t=macos-sonoma`, {
+            headers: { 'User-Agent': SAFARI_UA },
+        });
+        const data = await r.json();
+        const flatten = (arr) => arr.flatMap(t => t.Topics ? t.Topics : [t]);
+        const results = flatten(data.RelatedTopics || [])
+            .filter(t => t.FirstURL && t.Text)
+            .slice(0, 15)
+            .map(t => {
+                const dashIdx = t.Text.indexOf(' - ');
+                return {
+                    url: t.FirstURL,
+                    title: dashIdx > 0 ? t.Text.slice(0, dashIdx) : t.Text,
+                    snippet: dashIdx > 0 ? t.Text.slice(dashIdx + 3) : '',
+                };
+            });
+        res.json({
+            query: q,
+            abstract: data.AbstractText ? {
+                title: data.Heading || q,
+                text: data.AbstractText,
+                url: data.AbstractURL,
+                source: data.AbstractSource,
+                image: data.Image ? (data.Image.startsWith('http') ? data.Image : `https://duckduckgo.com${data.Image}`) : null,
+            } : null,
+            answer: data.Answer || null,
+            definition: data.Definition || null,
+            results,
+        });
+    } catch (e) {
+        console.error('[safari/search]', e.message);
+        res.status(500).json({ error: e.message, results: [] });
+    }
+});
+
+app.get('/api/safari/suggest', async (req, res) => {
+    try {
+        const q = (req.query.q || '').trim();
+        if (!q) return res.json([]);
+        const r = await fetch(`https://duckduckgo.com/ac/?q=${encodeURIComponent(q)}&type=list`, {
+            headers: { 'User-Agent': SAFARI_UA },
+        });
+        const data = await r.json();
+        const list = Array.isArray(data)
+            ? data.map(d => (typeof d === 'string' ? d : d.phrase)).filter(Boolean).slice(0, 8)
+            : [];
+        res.json(list);
+    } catch {
+        res.json([]);
+    }
+});
+
 // ─── Weather ──────────────────────────────────────────────────────────────────
 app.get('/api/weather', async (req, res) => {
     try {
@@ -818,64 +994,8 @@ function broadcast(data, excludeId) {
 // Typing debounce timers: Map<`${userId}-${contextKey}`, timeout>
 const typingTimers = new Map();
 
-// ─── Velocity Racing Game — multiplayer rooms (no auth required) ─────────────
-const velocityRooms = new Map(); // roomId → Map<tag, { ws, data }>
-
-function velocityBroadcast(roomId, data, excludeTag) {
-    const room = velocityRooms.get(roomId);
-    if (!room) return;
-    const msg = JSON.stringify(data);
-    room.forEach((peer, tag) => {
-        if (tag !== excludeTag && peer.ws.readyState === 1) peer.ws.send(msg);
-    });
-}
-
-function handleVelocityConnection(ws, url) {
-    const tag = url.searchParams.get('tag') || '#unknown';
-    let roomId = url.searchParams.get('room') || 'freeroam';
-
-    if (!velocityRooms.has(roomId)) velocityRooms.set(roomId, new Map());
-    const room = velocityRooms.get(roomId);
-
-    room.set(tag, { ws, data: { x: 0, y: 0, z: 0, r: 0 } });
-
-    // Send current peer list
-    const tags = [...room.keys()].filter(t => t !== tag);
-    ws.send(JSON.stringify({ type: 'peer_list', tags }));
-
-    // Notify others
-    velocityBroadcast(roomId, { type: 'peer_join', tag }, tag);
-
-    ws.on('message', (raw) => {
-        try {
-            const msg = JSON.parse(raw);
-            if (msg.type === 'update') {
-                const peer = room.get(tag);
-                if (peer) peer.data = msg.data;
-                velocityBroadcast(roomId, { type: 'peer_update', tag, data: msg.data }, tag);
-            }
-            if (msg.type === 'race_event') {
-                // Relay race events (countdown, finish, etc.) to all in room
-                velocityBroadcast(roomId, { type: 'race_event', tag, event: msg.event, payload: msg.payload }, tag);
-            }
-        } catch {}
-    });
-
-    ws.on('close', () => {
-        room.delete(tag);
-        velocityBroadcast(roomId, { type: 'peer_leave', tag }, tag);
-        if (room.size === 0) velocityRooms.delete(roomId);
-    });
-}
-
 wss.on('connection', (ws, req) => {
     const url = new URL(req.url, 'http://localhost');
-
-    // Route Velocity game connections to the game room system
-    if (url.pathname === '/velocity') {
-        handleVelocityConnection(ws, url);
-        return;
-    }
 
     const token = url.searchParams.get('token');
     let userId = null;
